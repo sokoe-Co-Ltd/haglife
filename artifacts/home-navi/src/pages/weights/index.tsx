@@ -1,9 +1,32 @@
 import { Layout } from "@/components/layout";
 import { useGetWeightsMonthlyStatus } from "@workspace/api-client-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, CheckCircle2, Weight } from "lucide-react";
+import { AlertCircle, CheckCircle2, Weight, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
+
+function ResidentWeightCard({ status }: { status: any }) {
+  return (
+    <Link href={`/weights/${status.residentId}`} className="flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors">
+      <div className="flex items-center gap-3 min-w-0">
+        {status.isRecordedThisMonth ? (
+          <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-600">測定済</span>
+        ) : (
+          <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border border-orange-400 text-orange-500">未測定</span>
+        )}
+        <div className="min-w-0">
+          <span className="text-xs text-gray-400 mr-2">{status.roomNumber}</span>
+          <span className="text-sm font-semibold text-gray-800">{status.residentName}</span>
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        {status.isRecordedThisMonth && (
+          <span className="text-sm font-bold text-gray-700">{status.latestWeightKg} kg</span>
+        )}
+        <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
+      </div>
+    </Link>
+  );
+}
 
 export default function WeightsList() {
   const { data: statuses, isLoading } = useGetWeightsMonthlyStatus();
@@ -13,69 +36,50 @@ export default function WeightsList() {
 
   return (
     <Layout>
-      <div className="space-y-6 max-w-3xl mx-auto">
-        <h1 className="text-2xl font-bold tracking-tight">体重 (今月)</h1>
+      <div className="max-w-3xl mx-auto space-y-4">
+        <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+          <Weight className="h-5 w-5 text-amber-500" />
+          体重（今月）
+        </h1>
 
         {isLoading ? (
-          <div className="space-y-4">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y divide-gray-50">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="px-4 py-4"><Skeleton className="h-4 w-2/3" /></div>
+            ))}
           </div>
         ) : (
-          <div className="space-y-8">
-            <section>
-              <h2 className="text-lg font-semibold text-destructive flex items-center gap-2 mb-3">
-                <AlertCircle className="h-5 w-5" />
-                今月未測定 ({unrecorded.length})
-              </h2>
-              <div className="space-y-2">
-                {unrecorded.map((status) => (
-                  <ResidentWeightCard key={status.residentId} status={status} />
-                ))}
+          <div className="space-y-4">
+            {unrecorded.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-orange-500" />
+                    今月未測定（{unrecorded.length}名）
+                  </h2>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {unrecorded.map((s) => <ResidentWeightCard key={s.residentId} status={s} />)}
+                </div>
               </div>
-            </section>
+            )}
 
             {recorded.length > 0 && (
-              <section>
-                <h2 className="text-lg font-semibold text-green-600 flex items-center gap-2 mb-3">
-                  <CheckCircle2 className="h-5 w-5" />
-                  測定済み ({recorded.length})
-                </h2>
-                <div className="space-y-2">
-                  {recorded.map((status) => (
-                    <ResidentWeightCard key={status.residentId} status={status} />
-                  ))}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    測定済み（{recorded.length}名）
+                  </h2>
                 </div>
-              </section>
+                <div className="divide-y divide-gray-50">
+                  {recorded.map((s) => <ResidentWeightCard key={s.residentId} status={s} />)}
+                </div>
+              </div>
             )}
           </div>
         )}
       </div>
     </Layout>
-  );
-}
-
-function ResidentWeightCard({ status }: { status: any }) {
-  return (
-    <Link href={`/weights/${status.residentId}`}>
-      <Card className={`cursor-pointer transition-colors ${!status.isRecordedThisMonth ? 'border-destructive/50 bg-destructive/5 hover:bg-destructive/10' : 'hover:bg-muted/50'}`}>
-        <CardContent className="p-4 flex items-center justify-between">
-          <div className="font-medium text-lg">
-            {status.roomNumber && <span className="text-muted-foreground text-sm mr-2">{status.roomNumber}</span>}
-            {status.residentName}
-          </div>
-          {status.isRecordedThisMonth ? (
-            <div className="flex gap-4 text-sm font-bold">
-              <span>{status.latestWeightKg} kg</span>
-            </div>
-          ) : (
-            <div className="text-sm text-muted-foreground flex items-center gap-1">
-              <Weight className="h-4 w-4" />
-              未測定
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </Link>
   );
 }

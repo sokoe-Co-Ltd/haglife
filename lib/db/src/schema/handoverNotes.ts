@@ -18,6 +18,7 @@ export const handoverNotesTable = pgTable("handover_notes", {
   category: text("category").notNull().default("その他"),
   isImportant: boolean("is_important").notNull().default(false),
   isDoctorReport: boolean("is_doctor_report").notNull().default(false),
+  status: text("status").notNull().default("未対応"),
   content: text("content").notNull(),
   authorId: integer("author_id"),
   photo1Url: text("photo1_url"),

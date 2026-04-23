@@ -1,12 +1,46 @@
 import { Layout } from "@/components/layout";
 import { useGetEliminationRoundStatus, useCheckEliminationRound, useResetEliminationRound } from "@workspace/api-client-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Baby, AlertCircle, RefreshCw, Check } from "lucide-react";
+import { Baby, AlertCircle, RefreshCw, Check, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetEliminationRoundStatusQueryKey } from "@workspace/api-client-react";
+
+function ResidentEliminationCard({ status, onCheck }: { status: any; onCheck: (id: number, e: React.MouseEvent) => void }) {
+  const alert = status.daysSinceLastBm >= 2;
+  return (
+    <Link href={`/eliminations/${status.residentId}`} className="flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors">
+      <div className="flex items-center gap-3 min-w-0">
+        {alert ? (
+          <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-orange-100 text-orange-600">排便確認</span>
+        ) : (
+          <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-600">通常</span>
+        )}
+        <div className="min-w-0">
+          <span className="text-xs text-gray-400 mr-2">{status.roomNumber}</span>
+          <span className="text-sm font-semibold text-gray-800">{status.residentName}</span>
+        </div>
+        <span className={`text-xs ${alert ? "text-orange-500 font-bold" : "text-gray-500"}`}>
+          {status.daysSinceLastBm}日経過
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
+            status.isCheckedInRound
+              ? "bg-orange-500 text-white"
+              : "border-2 border-gray-200 text-gray-400 hover:border-orange-400 hover:text-orange-500"
+          }`}
+          onClick={(e) => onCheck(status.residentId, e)}
+        >
+          {status.isCheckedInRound ? <Check className="h-4 w-4" /> : <Baby className="h-4 w-4" />}
+        </button>
+        <ChevronRight className="h-4 w-4 text-gray-300" />
+      </div>
+    </Link>
+  );
+}
 
 export default function EliminationsList() {
   const queryClient = useQueryClient();
@@ -18,18 +52,14 @@ export default function EliminationsList() {
     e.preventDefault();
     e.stopPropagation();
     checkMutation.mutate({ data: { residentId } }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getGetEliminationRoundStatusQueryKey() });
-      }
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetEliminationRoundStatusQueryKey() }),
     });
   };
 
   const handleReset = () => {
     if (confirm("ラウンド状態をリセットしますか？")) {
       resetMutation.mutate(undefined, {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getGetEliminationRoundStatusQueryKey() });
-        }
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetEliminationRoundStatusQueryKey() }),
       });
     }
   };
@@ -39,77 +69,50 @@ export default function EliminationsList() {
 
   return (
     <Layout>
-      <div className="space-y-6 max-w-3xl mx-auto">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold tracking-tight">排泄</h1>
-          <Button variant="outline" onClick={handleReset} disabled={resetMutation.isPending}>
-            <RefreshCw className="h-4 w-4 mr-2" />
+      <div className="max-w-3xl mx-auto space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold text-gray-800">排泄</h1>
+          <Button variant="outline" size="sm" onClick={handleReset} disabled={resetMutation.isPending} className="gap-1.5">
+            <RefreshCw className="h-4 w-4" />
             ラウンドリセット
           </Button>
         </div>
 
         {isLoading ? (
-          <div className="space-y-4">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y divide-gray-50">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="px-4 py-4"><Skeleton className="h-4 w-2/3" /></div>
+            ))}
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-4">
             {needsAttention.length > 0 && (
-              <section>
-                <h2 className="text-lg font-semibold text-orange-500 flex items-center gap-2 mb-3">
-                  <AlertCircle className="h-5 w-5" />
-                  排便確認 ({needsAttention.length})
-                </h2>
-                <div className="space-y-2">
-                  {needsAttention.map((status) => (
-                    <ResidentEliminationCard key={status.residentId} status={status} onCheck={handleCheck} />
-                  ))}
+              <div className="bg-white rounded-2xl shadow-sm border border-orange-100 overflow-hidden">
+                <div className="px-4 py-3 border-b border-orange-100 bg-orange-50">
+                  <h2 className="text-sm font-bold text-orange-600 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    排便確認が必要（{needsAttention.length}名）
+                  </h2>
                 </div>
-              </section>
+                <div className="divide-y divide-gray-50">
+                  {needsAttention.map((s) => <ResidentEliminationCard key={s.residentId} status={s} onCheck={handleCheck} />)}
+                </div>
+              </div>
             )}
 
-            <section>
-              <h2 className="text-lg font-semibold flex items-center gap-2 mb-3">
-                通常 ({ok.length})
-              </h2>
-              <div className="space-y-2">
-                {ok.map((status) => (
-                  <ResidentEliminationCard key={status.residentId} status={status} onCheck={handleCheck} />
-                ))}
+            {ok.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <h2 className="text-sm font-bold text-gray-700">通常（{ok.length}名）</h2>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {ok.map((s) => <ResidentEliminationCard key={s.residentId} status={s} onCheck={handleCheck} />)}
+                </div>
               </div>
-            </section>
+            )}
           </div>
         )}
       </div>
     </Layout>
-  );
-}
-
-function ResidentEliminationCard({ status, onCheck }: { status: any, onCheck: (id: number, e: React.MouseEvent) => void }) {
-  return (
-    <Link href={`/eliminations/${status.residentId}`}>
-      <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-        <CardContent className="p-4 flex items-center justify-between">
-          <div>
-            <div className="font-medium text-lg flex items-center gap-2">
-              {status.roomNumber && <span className="text-muted-foreground text-sm">{status.roomNumber}</span>}
-              {status.residentName}
-            </div>
-            <div className="text-sm mt-1">
-              最終排便から: <span className={status.daysSinceLastBm >= 2 ? "text-orange-500 font-bold" : ""}>{status.daysSinceLastBm}日</span>
-            </div>
-          </div>
-          <Button
-            variant={status.isCheckedInRound ? "secondary" : "outline"}
-            size="icon"
-            className={`rounded-full h-12 w-12 ${status.isCheckedInRound ? 'bg-primary text-primary-foreground' : ''}`}
-            onClick={(e) => onCheck(status.residentId, e)}
-          >
-            {status.isCheckedInRound ? <Check className="h-6 w-6" /> : <Baby className="h-6 w-6" />}
-          </Button>
-        </CardContent>
-      </Card>
-    </Link>
   );
 }

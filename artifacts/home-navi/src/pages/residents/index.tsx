@@ -1,65 +1,76 @@
 import { Layout } from "@/components/layout";
 import { useListResidents } from "@workspace/api-client-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Plus } from "lucide-react";
+import { Users, Plus, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+
+const CARE_COLORS: Record<string, string> = {
+  "要介護1": "bg-green-100 text-green-700",
+  "要介護2": "bg-lime-100 text-lime-700",
+  "要介護3": "bg-yellow-100 text-yellow-700",
+  "要介護4": "bg-orange-100 text-orange-700",
+  "要介護5": "bg-red-100 text-red-700",
+};
 
 export default function ResidentsList() {
   const { data: residents, isLoading } = useListResidents();
 
   return (
     <Layout>
-      <div className="space-y-6 max-w-3xl mx-auto">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Users className="h-6 w-6" />
+      <div className="max-w-3xl mx-auto space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <Users className="h-5 w-5 text-orange-500" />
             利用者一覧
+            {residents && <span className="text-sm font-normal text-gray-500 ml-1">（{residents.length}名）</span>}
           </h1>
           <Link href="/residents/new">
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
+            <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white gap-1.5">
+              <Plus className="h-4 w-4" />
               新規登録
             </Button>
           </Link>
         </div>
 
-        <div className="space-y-3">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           {isLoading ? (
-            Array.from({ length: 5 }).map((_, i) => (
-              <Card key={i}>
-                <CardContent className="p-4 flex gap-4">
-                  <Skeleton className="h-12 w-12 rounded-full" />
-                  <div className="space-y-2 flex-1">
+            <div className="divide-y divide-gray-50">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4 px-4 py-3.5">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="space-y-1.5 flex-1">
                     <Skeleton className="h-4 w-1/3" />
-                    <Skeleton className="h-4 w-1/4" />
+                    <Skeleton className="h-3 w-1/4" />
                   </div>
-                </CardContent>
-              </Card>
-            ))
+                </div>
+              ))}
+            </div>
           ) : (
-            residents?.map((resident) => (
-              <Link key={resident.id} href={`/health/${resident.id}`}>
-                <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-                  <CardContent className="p-4 flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-bold text-lg shrink-0">
-                      {resident.lastName.charAt(0)}
+            <div className="divide-y divide-gray-50">
+              {residents?.map((resident) => (
+                <Link key={resident.id} href={`/health/${resident.id}`} className="flex items-center gap-4 px-4 py-3.5 hover:bg-gray-50 transition-colors">
+                  <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-sm shrink-0">
+                    {resident.lastName.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400">{resident.roomNumber}</span>
+                      <span className="text-sm font-bold text-gray-800">{resident.lastName} {resident.firstName}</span>
+                      <span className="text-xs text-gray-500">{resident.gender}</span>
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">{resident.roomNumber}</span>
-                        <span className="font-bold text-lg">{resident.lastName} {resident.firstName}</span>
-                      </div>
-                      <div className="text-sm text-muted-foreground mt-1 flex gap-3">
-                        <span>{resident.gender}</span>
-                        <span>要介護度: {resident.careLevel}</span>
-                      </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {resident.careLevel && (
+                        <span className={`text-xs px-2 py-0.5 rounded font-semibold ${CARE_COLORS[resident.careLevel] ?? "bg-gray-100 text-gray-600"}`}>
+                          {resident.careLevel}
+                        </span>
+                      )}
                     </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
+                </Link>
+              ))}
+            </div>
           )}
         </div>
       </div>
