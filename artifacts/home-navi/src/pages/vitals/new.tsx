@@ -44,6 +44,7 @@ export default function VitalsInput() {
     createMutation.mutate({
       data: {
         residentId,
+        recordedAt: new Date().toISOString(),
         temperature: values.temperature ? Number(values.temperature) : undefined,
         bpSystolic: values.bpSystolic ? Number(values.bpSystolic) : undefined,
         bpDiastolic: values.bpDiastolic ? Number(values.bpDiastolic) : undefined,

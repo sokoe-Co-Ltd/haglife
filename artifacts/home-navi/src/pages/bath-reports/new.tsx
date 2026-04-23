@@ -37,6 +37,7 @@ export default function BathReportsNew() {
       data: {
         residentId: Number(values.residentId),
         staffId: Number(values.staffId),
+        recordedAt: new Date().toISOString(),
         temperature: values.temperature ? Number(values.temperature) : undefined,
         bpSystolic: values.bpSystolic ? Number(values.bpSystolic) : undefined,
         bpDiastolic: values.bpDiastolic ? Number(values.bpDiastolic) : undefined,

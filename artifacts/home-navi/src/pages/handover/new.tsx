@@ -59,6 +59,7 @@ export default function HandoverNew() {
         authorId: parseInt(values.authorId),
         isImportant: values.isImportant,
         isDoctorReport: values.isDoctorReport,
+        recordedAt: new Date().toISOString(),
       }
     }, {
       onSuccess: () => {

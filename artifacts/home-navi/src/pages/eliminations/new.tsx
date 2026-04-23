@@ -31,6 +31,7 @@ export default function EliminationsNew() {
     createMutation.mutate({
       data: {
         residentId,
+        recordedAt: new Date().toISOString(),
         type: values.type,
         amount: values.amount,
         notes: values.notes,

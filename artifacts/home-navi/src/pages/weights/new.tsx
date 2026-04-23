@@ -30,6 +30,7 @@ export default function WeightsNew() {
     createMutation.mutate({
       data: {
         residentId,
+        recordedAt: new Date().toISOString(),
         weightKg: Number(values.weightKg),
         notes: values.notes,
       }
