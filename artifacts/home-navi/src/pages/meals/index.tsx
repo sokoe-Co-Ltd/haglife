@@ -1,14 +1,16 @@
 import { useState, useMemo } from "react";
 import { Layout } from "@/components/layout";
 import { useListResidents, useListMeals } from "@workspace/api-client-react";
+import type { Resident, Meal } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Utensils, CheckCircle2, AlertTriangle, ChevronRight,
-  Download, ClipboardCheck, FileSearch, Edit3, Settings2,
+  Utensils, CheckCircle2, AlertTriangle,
+  ChevronRight, Download, ClipboardCheck, FileSearch, Edit3, Settings2,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { format } from "date-fns";
 import { DayNav } from "@/components/date-nav";
 import {
@@ -17,11 +19,12 @@ import {
 
 type MealType = "朝食" | "昼食" | "夕食";
 type StatusFilter = "すべて" | "未記録" | "記録済み" | "要確認";
+type MealStatus = "未記録" | "確認OK" | "要確認";
 
 const MEAL_TYPES: MealType[] = ["朝食", "昼食", "夕食"];
 const STATUS_FILTERS: StatusFilter[] = ["すべて", "未記録", "記録済み", "要確認"];
 
-function deriveMealStatus(meal: any): "未記録" | "確認OK" | "要確認" {
+function deriveMealStatus(meal: Meal | undefined): MealStatus {
   if (!meal) return "未記録";
   if (meal.waterOnly) return "確認OK";
   const main = meal.mainDishPercent ?? 0;
@@ -29,7 +32,11 @@ function deriveMealStatus(meal: any): "未記録" | "確認OK" | "要確認" {
   return "確認OK";
 }
 
-function MealStatusCell({ meal }: { meal: any }) {
+function getMealFromList(meals: Meal[], residentId: number, type: MealType): Meal | undefined {
+  return meals.find((m) => m.residentId === residentId && m.mealType === type);
+}
+
+function MealStatusCell({ meal }: { meal: Meal | undefined }) {
   const status = deriveMealStatus(meal);
   if (status === "未記録") {
     return (
@@ -42,47 +49,59 @@ function MealStatusCell({ meal }: { meal: any }) {
     return (
       <div className="flex flex-col items-center gap-0.5">
         <span className="text-xs text-gray-600">
-          主:{meal.mainDishPercent}割 副:{meal.sideDishPercent ?? "—"}割
+          主:{meal?.mainDishPercent ?? "—"}割 副:{meal?.sideDishPercent ?? "—"}割
         </span>
         <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-600">
           <AlertTriangle className="h-3 w-3" />要確認
         </span>
-        {meal.medicationOk && <span className="text-xs text-green-600 font-semibold">服薬OK</span>}
-        {meal.mealMemo && <span className="text-xs text-gray-400 truncate max-w-[80px]">{meal.mealMemo}</span>}
+        {meal?.medicationOk && <span className="text-xs text-green-600 font-semibold">服薬OK</span>}
       </div>
     );
   }
   return (
     <div className="flex flex-col items-center gap-0.5">
-      {meal.waterOnly ? (
+      {meal?.waterOnly ? (
         <span className="text-xs text-blue-500 font-semibold">水分のみ</span>
       ) : (
         <span className="text-xs text-gray-600">
-          主:{meal.mainDishPercent}割 副:{meal.sideDishPercent ?? "—"}割
+          主:{meal?.mainDishPercent ?? "—"}割 副:{meal?.sideDishPercent ?? "—"}割
         </span>
       )}
       <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-600">
         <CheckCircle2 className="h-3 w-3" />確認OK
       </span>
-      {meal.medicationOk && <span className="text-xs text-green-600 font-semibold">服薬OK</span>}
+      {meal?.medicationOk && <span className="text-xs text-green-600 font-semibold">服薬OK</span>}
     </div>
   );
 }
 
-function AlertColumn({ resident }: { resident: any }) {
+function AlertColumn({ resident }: { resident: Resident }) {
   const alerts: Array<{ text: string; red: boolean }> = [];
-  const notes = (resident.notes ?? "").toLowerCase();
-  if (notes.includes("アレルギー") || notes.includes("allerg")) alerts.push({ text: "アレルギー注意", red: true });
-  if (notes.includes("むせ")) alerts.push({ text: "むせ注意", red: false });
-  if (notes.includes("嚥下")) alerts.push({ text: "嚥下注意", red: true });
-  if (resident.dietType && resident.dietType !== "普通食" && resident.dietType !== "") {
-    alerts.push({ text: resident.dietType, red: false });
+  const history = (resident.medicalHistory ?? "").toLowerCase();
+  const notes = (resident.characterNotes ?? "").toLowerCase();
+  const allText = history + " " + notes;
+  if (allText.includes("アレルギー") || allText.includes("allerg")) {
+    alerts.push({ text: "アレルギー注意", red: true });
+  }
+  if (allText.includes("むせ")) {
+    alerts.push({ text: "むせ注意", red: false });
+  }
+  if (allText.includes("嚥下")) {
+    alerts.push({ text: "嚥下注意", red: true });
+  }
+  if (resident.stomaManagement) {
+    alerts.push({ text: "ストーマ管理", red: false });
   }
   if (alerts.length === 0) return <span className="text-xs text-gray-300">特になし</span>;
   return (
     <div className="flex flex-col gap-1">
       {alerts.slice(0, 2).map((a, i) => (
-        <span key={i} className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${a.red ? "bg-red-100 text-red-600" : "bg-orange-100 text-orange-600"}`}>
+        <span
+          key={i}
+          className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${
+            a.red ? "bg-red-100 text-red-600" : "bg-orange-100 text-orange-600"
+          }`}
+        >
           <AlertTriangle className="h-3 w-3 shrink-0" />{a.text}
         </span>
       ))}
@@ -90,11 +109,17 @@ function AlertColumn({ resident }: { resident: any }) {
   );
 }
 
-function QuickActionBtn({ icon: Icon, label, bg, color }: { icon: any; label: string; bg: string; color: string }) {
+interface QuickActionBtnProps {
+  icon: LucideIcon;
+  label: string;
+  bg: string;
+  iconBg: string;
+}
+function QuickActionBtn({ icon: Icon, label, bg, iconBg }: QuickActionBtnProps) {
   return (
     <button className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl ${bg} hover:opacity-90 transition-opacity text-left`}>
-      <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${color} shrink-0`}>
-        <Icon className="h-4 w-4" />
+      <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${iconBg} shrink-0`}>
+        <Icon className="h-4 w-4 text-white" />
       </div>
       <span className="text-xs font-semibold text-gray-700">{label}</span>
       <ChevronRight className="h-3.5 w-3.5 text-gray-400 ml-auto shrink-0" />
@@ -102,24 +127,30 @@ function QuickActionBtn({ icon: Icon, label, bg, color }: { icon: any; label: st
   );
 }
 
-function SidePanel({ residents, meals }: { residents: any[]; meals: any[] }) {
+interface SidePanelProps {
+  allResidents: Resident[];
+  meals: Meal[];
+  floorFilter: string;
+}
+function SidePanel({ allResidents, meals, floorFilter }: SidePanelProps) {
   const [memo, setMemo] = useState("");
 
-  const getMeal = (residentId: number, type: string) =>
-    meals.find((m) => m.residentId === residentId && m.mealType === type);
+  const baseResidents = floorFilter === "all"
+    ? allResidents
+    : allResidents.filter((r) => Math.floor(parseInt(r.roomNumber) / 100) === parseInt(floorFilter));
 
-  const needsCheck = residents.filter((r) => {
-    return MEAL_TYPES.some((t) => deriveMealStatus(getMeal(r.id, t)) === "要確認");
-  });
+  const needsCheck = baseResidents.filter((r) =>
+    MEAL_TYPES.some((t) => deriveMealStatus(getMealFromList(meals, r.id, t)) === "要確認")
+  );
 
   return (
     <div className="w-64 shrink-0 flex flex-col gap-4">
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-2">
         <h3 className="text-xs font-bold text-gray-700 mb-3">クイック操作</h3>
-        <QuickActionBtn icon={Edit3} label="一括入力" bg="bg-orange-50" color="bg-orange-500 text-white" />
-        <QuickActionBtn icon={FileSearch} label="食事形態の確認" bg="bg-blue-50" color="bg-blue-500 text-white" />
-        <QuickActionBtn icon={ClipboardCheck} label="記録チェック" bg="bg-green-50" color="bg-green-500 text-white" />
-        <QuickActionBtn icon={Download} label="栄養エクスポート" bg="bg-purple-50" color="bg-purple-500 text-white" />
+        <QuickActionBtn icon={Edit3} label="一括入力" bg="bg-orange-50" iconBg="bg-orange-500" />
+        <QuickActionBtn icon={FileSearch} label="食事形態の確認" bg="bg-blue-50" iconBg="bg-blue-500" />
+        <QuickActionBtn icon={ClipboardCheck} label="記録チェック" bg="bg-green-50" iconBg="bg-green-500" />
+        <QuickActionBtn icon={Download} label="栄養エクスポート" bg="bg-purple-50" iconBg="bg-purple-500" />
       </div>
 
       {needsCheck.length > 0 && (
@@ -139,7 +170,7 @@ function SidePanel({ residents, meals }: { residents: any[]; meals: any[] }) {
                 </div>
                 <div className="flex gap-0.5 shrink-0">
                   {MEAL_TYPES.map((t) => {
-                    const s = deriveMealStatus(getMeal(r.id, t));
+                    const s = deriveMealStatus(getMealFromList(meals, r.id, t));
                     if (s !== "要確認") return null;
                     return (
                       <span key={t} className="px-1 py-0.5 rounded text-xs font-bold bg-red-100 text-red-600">{t[0]}</span>
@@ -168,11 +199,12 @@ function SidePanel({ residents, meals }: { residents: any[]; meals: any[] }) {
   );
 }
 
-function MobileMealCard({ resident, meals, activeMealType }: { resident: any; meals: any[]; activeMealType: MealType }) {
-  const getMeal = (type: string) => meals.find((m) => m.residentId === resident.id && m.mealType === type);
-  const meal = getMeal(activeMealType);
-  const status = deriveMealStatus(meal);
-
+interface MobileMealCardProps {
+  resident: Resident;
+  meals: Meal[];
+  activeMealType: MealType;
+}
+function MobileMealCard({ resident, meals, activeMealType }: MobileMealCardProps) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
@@ -184,15 +216,15 @@ function MobileMealCard({ resident, meals, activeMealType }: { resident: any; me
       </div>
       <div className="px-4 py-3 grid grid-cols-3 gap-2">
         {MEAL_TYPES.map((t) => {
-          const m = getMeal(t);
-          const s = deriveMealStatus(m);
+          const meal = getMealFromList(meals, resident.id, t);
+          const status = deriveMealStatus(meal);
           const isActive = t === activeMealType;
           return (
             <div key={t} className={`rounded-xl p-2 text-center ${isActive ? "bg-orange-50 ring-1 ring-orange-200" : "bg-gray-50"}`}>
               <div className={`text-xs font-bold mb-1 ${isActive ? "text-primary" : "text-gray-500"}`}>{t[0]}</div>
-              {s === "未記録" ? (
+              {status === "未記録" ? (
                 <span className="inline-flex px-1.5 py-0.5 rounded text-xs font-bold border border-orange-400 text-orange-500">未記録</span>
-              ) : s === "要確認" ? (
+              ) : status === "要確認" ? (
                 <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-600">
                   <AlertTriangle className="h-3 w-3" />要確認
                 </span>
@@ -201,8 +233,8 @@ function MobileMealCard({ resident, meals, activeMealType }: { resident: any; me
                   <CheckCircle2 className="h-3 w-3" />OK
                 </span>
               )}
-              {m && !m.waterOnly && s !== "未記録" && (
-                <div className="text-xs text-gray-400 mt-0.5 leading-none">主:{m.mainDishPercent ?? "—"}割</div>
+              {meal && !meal.waterOnly && status !== "未記録" && (
+                <div className="text-xs text-gray-400 mt-0.5 leading-none">主:{meal.mainDishPercent ?? "—"}割</div>
               )}
             </div>
           );
@@ -224,48 +256,38 @@ export default function MealsList() {
 
   const isLoading = isResidentsLoading || isMealsLoading;
 
-  const getMeal = (residentId: number, type: string) =>
-    meals.find((m: any) => m.residentId === residentId && m.mealType === type);
-
   const floors = useMemo(() => {
     const set = new Set<number>();
-    residents.forEach((r: any) => {
+    residents.forEach((r) => {
       const n = parseInt(r.roomNumber);
       if (!isNaN(n)) set.add(Math.floor(n / 100));
     });
     return Array.from(set).sort();
   }, [residents]);
 
-  const filteredResidents = useMemo(() => {
-    let list = [...residents] as any[];
-    if (floorFilter !== "all") {
-      const floor = parseInt(floorFilter);
-      list = list.filter((r) => Math.floor(parseInt(r.roomNumber) / 100) === floor);
-    }
-    if (statusFilter !== "すべて") {
-      list = list.filter((r) => {
-        const meal = getMeal(r.id, activeMealType);
-        const status = deriveMealStatus(meal);
-        if (statusFilter === "未記録") return status === "未記録";
-        if (statusFilter === "記録済み") return status === "確認OK";
-        if (statusFilter === "要確認") return status === "要確認";
-        return true;
-      });
-    }
-    return list;
-  }, [residents, meals, floorFilter, statusFilter, activeMealType]);
+  const floorResidents = useMemo<Resident[]>(() => {
+    if (floorFilter === "all") return residents;
+    const floor = parseInt(floorFilter);
+    return residents.filter((r) => Math.floor(parseInt(r.roomNumber) / 100) === floor);
+  }, [residents, floorFilter]);
 
-  const statusCounts: Record<StatusFilter, number> = useMemo(() => {
-    const base = floorFilter === "all" ? (residents as any[]) : (residents as any[]).filter(
-      (r) => Math.floor(parseInt(r.roomNumber) / 100) === parseInt(floorFilter)
-    );
-    return {
-      "すべて": base.length,
-      "未記録": base.filter((r) => deriveMealStatus(getMeal(r.id, activeMealType)) === "未記録").length,
-      "記録済み": base.filter((r) => deriveMealStatus(getMeal(r.id, activeMealType)) === "確認OK").length,
-      "要確認": base.filter((r) => deriveMealStatus(getMeal(r.id, activeMealType)) === "要確認").length,
-    };
-  }, [residents, meals, floorFilter, activeMealType]);
+  const filteredResidents = useMemo<Resident[]>(() => {
+    if (statusFilter === "すべて") return floorResidents;
+    return floorResidents.filter((r) => {
+      const status = deriveMealStatus(getMealFromList(meals, r.id, activeMealType));
+      if (statusFilter === "未記録") return status === "未記録";
+      if (statusFilter === "記録済み") return status === "確認OK";
+      if (statusFilter === "要確認") return status === "要確認";
+      return true;
+    });
+  }, [floorResidents, meals, statusFilter, activeMealType]);
+
+  const statusCounts = useMemo<Record<StatusFilter, number>>(() => ({
+    "すべて": floorResidents.length,
+    "未記録": floorResidents.filter((r) => deriveMealStatus(getMealFromList(meals, r.id, activeMealType)) === "未記録").length,
+    "記録済み": floorResidents.filter((r) => deriveMealStatus(getMealFromList(meals, r.id, activeMealType)) === "確認OK").length,
+    "要確認": floorResidents.filter((r) => deriveMealStatus(getMealFromList(meals, r.id, activeMealType)) === "要確認").length,
+  }), [floorResidents, meals, activeMealType]);
 
   return (
     <Layout>
@@ -281,7 +303,6 @@ export default function MealsList() {
 
         {/* Filter bar */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 flex flex-wrap items-center gap-3">
-          {/* Unit/Floor selector */}
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-xs font-semibold text-gray-500 hidden sm:block">ユニット/フロア</span>
             <Select value={floorFilter} onValueChange={setFloorFilter}>
@@ -349,7 +370,6 @@ export default function MealsList() {
 
         {/* Desktop: table + side panel */}
         <div className="hidden md:flex gap-4 items-start">
-          {/* Main table */}
           <div className="flex-1 min-w-0 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
@@ -382,9 +402,9 @@ export default function MealsList() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredResidents.map((resident: any) => {
+                    filteredResidents.map((resident) => {
                       const needsAttn = MEAL_TYPES.some(
-                        (t) => deriveMealStatus(getMeal(resident.id, t)) === "要確認"
+                        (t) => deriveMealStatus(getMealFromList(meals, resident.id, t)) === "要確認"
                       );
                       return (
                         <TableRow key={resident.id} className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${needsAttn ? "bg-red-50/30" : ""}`}>
@@ -393,13 +413,13 @@ export default function MealsList() {
                             {resident.lastName} {resident.firstName}
                           </TableCell>
                           <TableCell className="py-3">
-                            <MealStatusCell meal={getMeal(resident.id, "朝食")} />
+                            <MealStatusCell meal={getMealFromList(meals, resident.id, "朝食")} />
                           </TableCell>
                           <TableCell className="py-3">
-                            <MealStatusCell meal={getMeal(resident.id, "昼食")} />
+                            <MealStatusCell meal={getMealFromList(meals, resident.id, "昼食")} />
                           </TableCell>
                           <TableCell className="py-3">
-                            <MealStatusCell meal={getMeal(resident.id, "夕食")} />
+                            <MealStatusCell meal={getMealFromList(meals, resident.id, "夕食")} />
                           </TableCell>
                           <TableCell className="py-2">
                             <AlertColumn resident={resident} />
@@ -416,8 +436,7 @@ export default function MealsList() {
             </div>
           </div>
 
-          {/* Side panel */}
-          <SidePanel residents={filteredResidents} meals={meals as any[]} />
+          <SidePanel allResidents={residents} meals={meals} floorFilter={floorFilter} />
         </div>
 
         {/* Mobile: card layout */}
@@ -436,11 +455,11 @@ export default function MealsList() {
               該当する利用者がいません
             </div>
           ) : (
-            filteredResidents.map((resident: any) => (
+            filteredResidents.map((resident) => (
               <MobileMealCard
                 key={resident.id}
                 resident={resident}
-                meals={meals as any[]}
+                meals={meals}
                 activeMealType={activeMealType}
               />
             ))
