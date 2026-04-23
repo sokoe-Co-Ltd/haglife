@@ -45,7 +45,7 @@ export default function WeightsList() {
       <div className="max-w-3xl mx-auto space-y-4">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <Weight className="h-5 w-5 text-amber-500" />
+            <Weight className="h-5 w-5 text-primary" />
             体重
           </h1>
           <MonthNav year={year} month={month} onChange={(y, m) => { setYear(y); setMonth(m); }} />

@@ -47,7 +47,7 @@ export default function MealsList() {
       <div className="max-w-4xl mx-auto space-y-4">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <Utensils className="h-5 w-5 text-green-500" />
+            <Utensils className="h-5 w-5 text-primary" />
             食事
           </h1>
           <DayNav date={date} onChange={setDate} />

@@ -142,8 +142,8 @@ export default function Dashboard() {
             value={today?.vitalsMissingCount}
             unit="名"
             icon={Activity}
-            iconBg="bg-blue-50"
-            iconColor="text-blue-500"
+            iconBg="bg-primary/10"
+            iconColor="text-primary"
             action="記録する"
             href="/vitals"
           />
@@ -152,8 +152,8 @@ export default function Dashboard() {
             value={today?.mealsMissingCount}
             unit="名"
             icon={Utensils}
-            iconBg="bg-green-50"
-            iconColor="text-green-500"
+            iconBg="bg-primary/10"
+            iconColor="text-primary"
             action="記録する"
             href="/meals"
           />
@@ -162,8 +162,8 @@ export default function Dashboard() {
             value={today?.eliminationAlertCount}
             unit="名"
             icon={Baby}
-            iconBg="bg-purple-50"
-            iconColor="text-purple-500"
+            iconBg="bg-primary/10"
+            iconColor="text-primary"
             action="確認する"
             href="/eliminations"
           />
@@ -273,11 +273,11 @@ export default function Dashboard() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-4">
             <h2 className="font-bold text-gray-800 text-sm">今日の記録ショートカット</h2>
             <div className="grid grid-cols-2 gap-3">
-              <ShortcutBtn label="バイタル記録" icon={Activity} bg="bg-blue-50" color="text-blue-600" href="/vitals" />
-              <ShortcutBtn label="食事記録（昼）" icon={Utensils} bg="bg-green-50" color="text-green-600" href="/meals" />
-              <ShortcutBtn label="排泄確認" icon={Baby} bg="bg-purple-50" color="text-purple-600" href="/eliminations" />
-              <ShortcutBtn label="入浴報告" icon={Bath} bg="bg-teal-50" color="text-teal-600" href="/bath-reports" />
-              <ShortcutBtn label="体重記録" icon={Weight} bg="bg-amber-50" color="text-amber-600" href="/weights" />
+              <ShortcutBtn label="バイタル記録" icon={Activity} bg="bg-primary/10" color="text-primary" href="/vitals" />
+              <ShortcutBtn label="食事記録（昼）" icon={Utensils} bg="bg-primary/10" color="text-primary" href="/meals" />
+              <ShortcutBtn label="排泄確認" icon={Baby} bg="bg-primary/10" color="text-primary" href="/eliminations" />
+              <ShortcutBtn label="入浴報告" icon={Bath} bg="bg-primary/10" color="text-primary" href="/bath-reports" />
+              <ShortcutBtn label="体重記録" icon={Weight} bg="bg-primary/10" color="text-primary" href="/weights" />
               <ShortcutBtn label="デイ準備物" icon={Briefcase} bg="bg-primary/10" color="text-primary" href="/day-services" />
             </div>
           </div>

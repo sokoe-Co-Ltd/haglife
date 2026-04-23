@@ -20,7 +20,7 @@ export default function BathReportsList() {
       <div className="max-w-3xl mx-auto space-y-4">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <Bath className="h-5 w-5 text-teal-500" />
+            <Bath className="h-5 w-5 text-primary" />
             入浴報告
           </h1>
           <div className="flex items-center gap-2">
