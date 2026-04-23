@@ -80,7 +80,7 @@ router.patch("/meals/:id", async (req, res): Promise<void> => {
   }
   const updateData: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(parsed.data)) {
-    if (v !== null && v !== undefined) updateData[k] = v;
+    if (v !== undefined) updateData[k] = v;
   }
   const [meal] = await db
     .update(mealsTable)
