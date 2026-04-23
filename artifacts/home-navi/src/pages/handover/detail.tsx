@@ -2,8 +2,9 @@ import { Layout } from "@/components/layout";
 import { useGetHandoverNote } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, Stethoscope, ChevronLeft } from "lucide-react";
+import { Stethoscope, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/StatusBadge";
 import { Link, useParams } from "wouter";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -39,13 +40,11 @@ export default function HandoverDetail() {
           <Card>
             <CardHeader className="pb-3 border-b">
               <div className="flex justify-between items-start">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <CardTitle className="text-xl">
                     {note.category === "利用者" ? note.residentName : "その他"}
                   </CardTitle>
-                  {note.isImportant && (
-                    <AlertCircle className="h-5 w-5 text-destructive" />
-                  )}
+                  <StatusBadge status={note.status} isImportant={note.isImportant} />
                   {note.isDoctorReport && (
                     <Stethoscope className="h-5 w-5 text-primary" />
                   )}
