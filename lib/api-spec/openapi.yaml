@@ -3,20 +3,42 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Home-Navi - Care Facility Management System API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: residents
+    description: Resident management
+  - name: staff
+    description: Staff management
+  - name: handover-notes
+    description: Shift handover notes
+  - name: vitals
+    description: Vital signs records
+  - name: meals
+    description: Meal records
+  - name: weights
+    description: Weight records
+  - name: eliminations
+    description: Elimination records
+  - name: day-services
+    description: Day service preparation
+  - name: bath-reports
+    description: Bathing reports
+  - name: insurances
+    description: Insurance records
+  - name: dashboard
+    description: Dashboard summaries
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +46,983 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── Dashboard ───────────────────────────────────────────────────
+  /dashboard/today:
+    get:
+      operationId: getDashboardToday
+      tags: [dashboard]
+      summary: Today's summary - who needs vitals, meals, etc.
+      responses:
+        "200":
+          description: Today's summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardToday"
+
+  /dashboard/alerts:
+    get:
+      operationId: getDashboardAlerts
+      tags: [dashboard]
+      summary: Get all active alerts (vital re-checks, elimination warnings)
+      responses:
+        "200":
+          description: Active alerts list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardAlerts"
+
+  # ── Residents ───────────────────────────────────────────────────
+  /residents:
+    get:
+      operationId: listResidents
+      tags: [residents]
+      summary: List all residents
+      parameters:
+        - name: visible_only
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of residents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Resident"
+    post:
+      operationId: createResident
+      tags: [residents]
+      summary: Create a new resident
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateResidentBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resident"
+
+  /residents/{id}:
+    get:
+      operationId: getResident
+      tags: [residents]
+      summary: Get a resident by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Resident
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resident"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateResident
+      tags: [residents]
+      summary: Update a resident
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateResidentBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resident"
+    delete:
+      operationId: deleteResident
+      tags: [residents]
+      summary: Delete a resident
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /residents/{id}/health-summary:
+    get:
+      operationId: getResidentHealthSummary
+      tags: [residents]
+      summary: Get all health data for a resident (for health management screen)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Health summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResidentHealthSummary"
+
+  # ── Staff ────────────────────────────────────────────────────────
+  /staff:
+    get:
+      operationId: listStaff
+      tags: [staff]
+      summary: List all staff
+      parameters:
+        - name: visible_only
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of staff
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Staff"
+    post:
+      operationId: createStaff
+      tags: [staff]
+      summary: Create a staff member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStaffBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Staff"
+
+  /staff/{id}:
+    get:
+      operationId: getStaff
+      tags: [staff]
+      summary: Get a staff member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Staff member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Staff"
+    patch:
+      operationId: updateStaff
+      tags: [staff]
+      summary: Update a staff member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStaffBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Staff"
+    delete:
+      operationId: deleteStaff
+      tags: [staff]
+      summary: Delete a staff member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Handover Notes ───────────────────────────────────────────────
+  /handover-notes:
+    get:
+      operationId: listHandoverNotes
+      tags: [handover-notes]
+      summary: List handover notes
+      parameters:
+        - name: resident_id
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: is_doctor_report
+          in: query
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: List of handover notes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HandoverNote"
+    post:
+      operationId: createHandoverNote
+      tags: [handover-notes]
+      summary: Create a handover note
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateHandoverNoteBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HandoverNote"
+
+  /handover-notes/{id}:
+    get:
+      operationId: getHandoverNote
+      tags: [handover-notes]
+      summary: Get a handover note
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Handover note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HandoverNote"
+    patch:
+      operationId: updateHandoverNote
+      tags: [handover-notes]
+      summary: Update a handover note
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateHandoverNoteBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HandoverNote"
+    delete:
+      operationId: deleteHandoverNote
+      tags: [handover-notes]
+      summary: Delete a handover note
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Vitals ───────────────────────────────────────────────────────
+  /vitals:
+    get:
+      operationId: listVitals
+      tags: [vitals]
+      summary: List vital records
+      parameters:
+        - name: resident_id
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: date
+          in: query
+          schema:
+            type: ["string", "null"]
+            description: Filter by date (YYYY-MM-DD). Omit for all records.
+        - name: today_only
+          in: query
+          schema:
+            type: boolean
+            description: If true, only return today's records
+      responses:
+        "200":
+          description: List of vital records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Vital"
+    post:
+      operationId: createVital
+      tags: [vitals]
+      summary: Record vital signs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateVitalBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vital"
+
+  /vitals/{id}:
+    patch:
+      operationId: updateVital
+      tags: [vitals]
+      summary: Update a vital record (e.g. set recheck flag)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateVitalBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vital"
+    delete:
+      operationId: deleteVital
+      tags: [vitals]
+      summary: Delete a vital record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /vitals/today-status:
+    get:
+      operationId: getVitalsTodayStatus
+      tags: [vitals]
+      summary: Get today's vitals status for all residents (for dashboard)
+      responses:
+        "200":
+          description: Today's vital status per resident
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ResidentVitalStatus"
+
+  # ── Meals ────────────────────────────────────────────────────────
+  /meals:
+    get:
+      operationId: listMeals
+      tags: [meals]
+      summary: List meal records
+      parameters:
+        - name: resident_id
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: today_only
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of meal records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Meal"
+    post:
+      operationId: createMeal
+      tags: [meals]
+      summary: Record a meal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMealBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Meal"
+
+  /meals/{id}:
+    patch:
+      operationId: updateMeal
+      tags: [meals]
+      summary: Update a meal record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMealBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Meal"
+    delete:
+      operationId: deleteMeal
+      tags: [meals]
+      summary: Delete a meal record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Weights ──────────────────────────────────────────────────────
+  /weights:
+    get:
+      operationId: listWeights
+      tags: [weights]
+      summary: List weight records
+      parameters:
+        - name: resident_id
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: this_month
+          in: query
+          schema:
+            type: boolean
+            description: If true, only return this month's records
+      responses:
+        "200":
+          description: List of weight records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Weight"
+    post:
+      operationId: createWeight
+      tags: [weights]
+      summary: Record weight
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWeightBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Weight"
+
+  /weights/{id}:
+    patch:
+      operationId: updateWeight
+      tags: [weights]
+      summary: Update a weight record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateWeightBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Weight"
+    delete:
+      operationId: deleteWeight
+      tags: [weights]
+      summary: Delete a weight record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /weights/monthly-status:
+    get:
+      operationId: getWeightsMonthlyStatus
+      tags: [weights]
+      summary: Get this month's weight status for all residents
+      responses:
+        "200":
+          description: Monthly weight status per resident
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ResidentWeightStatus"
+
+  # ── Eliminations ─────────────────────────────────────────────────
+  /eliminations:
+    get:
+      operationId: listEliminations
+      tags: [eliminations]
+      summary: List elimination records
+      parameters:
+        - name: resident_id
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: List of elimination records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Elimination"
+    post:
+      operationId: createElimination
+      tags: [eliminations]
+      summary: Record elimination
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEliminationBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Elimination"
+
+  /eliminations/{id}:
+    delete:
+      operationId: deleteElimination
+      tags: [eliminations]
+      summary: Delete an elimination record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /eliminations/round-status:
+    get:
+      operationId: getEliminationRoundStatus
+      tags: [eliminations]
+      summary: Get current round check status for all residents
+      responses:
+        "200":
+          description: Round status per resident
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ResidentEliminationStatus"
+
+  /eliminations/rounds/check:
+    post:
+      operationId: checkEliminationRound
+      tags: [eliminations]
+      summary: Mark a resident as checked in current round
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckEliminationRoundBody"
+      responses:
+        "200":
+          description: Round check recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /eliminations/rounds/reset:
+    post:
+      operationId: resetEliminationRound
+      tags: [eliminations]
+      summary: Reset all round checks (start a new round)
+      responses:
+        "200":
+          description: Round reset
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  # ── Day Services ─────────────────────────────────────────────────
+  /day-services:
+    get:
+      operationId: listDayServices
+      tags: [day-services]
+      summary: List day service records
+      parameters:
+        - name: day_of_week
+          in: query
+          schema:
+            type: ["string", "null"]
+            description: Filter by day (月/火/水/木/金/土/日)
+        - name: resident_id
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: List of day service records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DayService"
+    post:
+      operationId: createDayService
+      tags: [day-services]
+      summary: Create a day service record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDayServiceBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DayService"
+
+  /day-services/{id}:
+    patch:
+      operationId: updateDayService
+      tags: [day-services]
+      summary: Update a day service record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDayServiceBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DayService"
+    delete:
+      operationId: deleteDayService
+      tags: [day-services]
+      summary: Delete a day service record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /day-services/{id}/toggle-prepared:
+    post:
+      operationId: toggleDayServicePrepared
+      tags: [day-services]
+      summary: Toggle the prepared/collected status for a day service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Toggled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DayService"
+
+  # ── Bath Reports ─────────────────────────────────────────────────
+  /bath-reports:
+    get:
+      operationId: listBathReports
+      tags: [bath-reports]
+      summary: List bath reports
+      parameters:
+        - name: resident_id
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: today_only
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of bath reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BathReport"
+    post:
+      operationId: createBathReport
+      tags: [bath-reports]
+      summary: Create a bath report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBathReportBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BathReport"
+
+  /bath-reports/{id}:
+    patch:
+      operationId: updateBathReport
+      tags: [bath-reports]
+      summary: Update a bath report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBathReportBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BathReport"
+    delete:
+      operationId: deleteBathReport
+      tags: [bath-reports]
+      summary: Delete a bath report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Insurances ───────────────────────────────────────────────────
+  /insurances:
+    get:
+      operationId: listInsurances
+      tags: [insurances]
+      summary: List insurance records for a resident
+      parameters:
+        - name: resident_id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of insurance records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Insurance"
+    post:
+      operationId: createInsurance
+      tags: [insurances]
+      summary: Create an insurance record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInsuranceBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Insurance"
+
+  /insurances/{id}:
+    patch:
+      operationId: updateInsurance
+      tags: [insurances]
+      summary: Update an insurance record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateInsuranceBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Insurance"
+    delete:
+      operationId: deleteInsurance
+      tags: [insurances]
+      summary: Delete an insurance record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +1033,1077 @@ components:
       required:
         - status
 
+    # ── Resident ──────────────────────────────────────────────────
+    Resident:
+      type: object
+      properties:
+        id:
+          type: integer
+        roomNumber:
+          type: string
+        lastName:
+          type: string
+        firstName:
+          type: string
+        lastNameKana:
+          type: string
+        firstNameKana:
+          type: string
+        lastNameRoman:
+          type: ["string", "null"]
+        firstNameRoman:
+          type: ["string", "null"]
+        gender:
+          type: string
+          enum: [男性, 女性]
+        birthEra:
+          type: string
+          enum: [大正, 昭和, 平成]
+        birthYear:
+          type: integer
+        birthMonth:
+          type: integer
+        birthDay:
+          type: integer
+        careLevel:
+          type: string
+          enum: [支1, 支2, 介1, 介2, 介3, 介4, 介5, 新規申請中, 区分変更中]
+        stomaManagement:
+          type: boolean
+        photoUrl:
+          type: ["string", "null"]
+        moveInDate:
+          type: ["string", "null"]
+        characterNotes:
+          type: ["string", "null"]
+        clinic1:
+          type: ["string", "null"]
+        clinic2:
+          type: ["string", "null"]
+        medicalHistory:
+          type: ["string", "null"]
+        doctorInstructions:
+          type: ["string", "null"]
+        keyPersonName:
+          type: ["string", "null"]
+        keyPersonRelation:
+          type: ["string", "null"]
+        keyPersonMemo:
+          type: ["string", "null"]
+        keyPersonAddress:
+          type: ["string", "null"]
+        keyPersonTel1:
+          type: ["string", "null"]
+        careManagerCompany:
+          type: ["string", "null"]
+        careManagerName:
+          type: ["string", "null"]
+        isVisible:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - roomNumber
+        - lastName
+        - firstName
+        - lastNameKana
+        - firstNameKana
+        - gender
+        - birthEra
+        - birthYear
+        - birthMonth
+        - birthDay
+        - careLevel
+        - stomaManagement
+        - isVisible
+        - createdAt
+        - updatedAt
+
+    CreateResidentBody:
+      type: object
+      properties:
+        roomNumber:
+          type: string
+        lastName:
+          type: string
+        firstName:
+          type: string
+        lastNameKana:
+          type: string
+        firstNameKana:
+          type: string
+        lastNameRoman:
+          type: ["string", "null"]
+        firstNameRoman:
+          type: ["string", "null"]
+        gender:
+          type: string
+          enum: [男性, 女性]
+        birthEra:
+          type: string
+          enum: [大正, 昭和, 平成]
+        birthYear:
+          type: integer
+        birthMonth:
+          type: integer
+        birthDay:
+          type: integer
+        careLevel:
+          type: string
+          enum: [支1, 支2, 介1, 介2, 介3, 介4, 介5, 新規申請中, 区分変更中]
+        stomaManagement:
+          type: boolean
+        photoUrl:
+          type: ["string", "null"]
+        moveInDate:
+          type: ["string", "null"]
+        characterNotes:
+          type: ["string", "null"]
+        clinic1:
+          type: ["string", "null"]
+        clinic2:
+          type: ["string", "null"]
+        medicalHistory:
+          type: ["string", "null"]
+        doctorInstructions:
+          type: ["string", "null"]
+        keyPersonName:
+          type: ["string", "null"]
+        keyPersonRelation:
+          type: ["string", "null"]
+        keyPersonMemo:
+          type: ["string", "null"]
+        keyPersonAddress:
+          type: ["string", "null"]
+        keyPersonTel1:
+          type: ["string", "null"]
+        careManagerCompany:
+          type: ["string", "null"]
+        careManagerName:
+          type: ["string", "null"]
+        isVisible:
+          type: boolean
+      required:
+        - roomNumber
+        - lastName
+        - firstName
+        - lastNameKana
+        - firstNameKana
+        - gender
+        - birthEra
+        - birthYear
+        - birthMonth
+        - birthDay
+        - careLevel
+        - stomaManagement
+        - isVisible
+
+    UpdateResidentBody:
+      type: object
+      properties:
+        roomNumber:
+          type: ["string", "null"]
+        lastName:
+          type: ["string", "null"]
+        firstName:
+          type: ["string", "null"]
+        lastNameKana:
+          type: ["string", "null"]
+        firstNameKana:
+          type: ["string", "null"]
+        lastNameRoman:
+          type: ["string", "null"]
+        firstNameRoman:
+          type: ["string", "null"]
+        gender:
+          type: ["string", "null"]
+        birthEra:
+          type: ["string", "null"]
+        birthYear:
+          type: ["integer", "null"]
+        birthMonth:
+          type: ["integer", "null"]
+        birthDay:
+          type: ["integer", "null"]
+        careLevel:
+          type: ["string", "null"]
+        stomaManagement:
+          type: ["boolean", "null"]
+        photoUrl:
+          type: ["string", "null"]
+        moveInDate:
+          type: ["string", "null"]
+        characterNotes:
+          type: ["string", "null"]
+        clinic1:
+          type: ["string", "null"]
+        clinic2:
+          type: ["string", "null"]
+        medicalHistory:
+          type: ["string", "null"]
+        doctorInstructions:
+          type: ["string", "null"]
+        keyPersonName:
+          type: ["string", "null"]
+        keyPersonRelation:
+          type: ["string", "null"]
+        keyPersonMemo:
+          type: ["string", "null"]
+        keyPersonAddress:
+          type: ["string", "null"]
+        keyPersonTel1:
+          type: ["string", "null"]
+        careManagerCompany:
+          type: ["string", "null"]
+        careManagerName:
+          type: ["string", "null"]
+        isVisible:
+          type: ["boolean", "null"]
+
+    ResidentHealthSummary:
+      type: object
+      properties:
+        resident:
+          $ref: "#/components/schemas/Resident"
+        recentVitals:
+          type: array
+          items:
+            $ref: "#/components/schemas/Vital"
+        recentMeals:
+          type: array
+          items:
+            $ref: "#/components/schemas/Meal"
+        recentWeights:
+          type: array
+          items:
+            $ref: "#/components/schemas/Weight"
+        recentEliminations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Elimination"
+        doctorReportNotes:
+          type: array
+          items:
+            $ref: "#/components/schemas/HandoverNote"
+      required:
+        - resident
+        - recentVitals
+        - recentMeals
+        - recentWeights
+        - recentEliminations
+        - doctorReportNotes
+
+    # ── Staff ─────────────────────────────────────────────────────
+    Staff:
+      type: object
+      properties:
+        id:
+          type: integer
+        lastName:
+          type: string
+        firstName:
+          type: string
+        lastNameKana:
+          type: ["string", "null"]
+        firstNameKana:
+          type: ["string", "null"]
+        tel:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [管理者, 一般職員]
+        isVisible:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - lastName
+        - firstName
+        - role
+        - isVisible
+        - createdAt
+
+    CreateStaffBody:
+      type: object
+      properties:
+        lastName:
+          type: string
+        firstName:
+          type: string
+        lastNameKana:
+          type: ["string", "null"]
+        firstNameKana:
+          type: ["string", "null"]
+        tel:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [管理者, 一般職員]
+        isVisible:
+          type: boolean
+      required:
+        - lastName
+        - firstName
+        - role
+        - isVisible
+
+    UpdateStaffBody:
+      type: object
+      properties:
+        lastName:
+          type: ["string", "null"]
+        firstName:
+          type: ["string", "null"]
+        lastNameKana:
+          type: ["string", "null"]
+        firstNameKana:
+          type: ["string", "null"]
+        tel:
+          type: ["string", "null"]
+        role:
+          type: ["string", "null"]
+        isVisible:
+          type: ["boolean", "null"]
+
+    # ── Handover Note ─────────────────────────────────────────────
+    HandoverNote:
+      type: object
+      properties:
+        id:
+          type: integer
+        residentId:
+          type: ["integer", "null"]
+        residentName:
+          type: ["string", "null"]
+        recordedAt:
+          type: string
+        category:
+          type: string
+          enum: [利用者, その他]
+        isImportant:
+          type: boolean
+        isDoctorReport:
+          type: boolean
+        content:
+          type: string
+        authorId:
+          type: ["integer", "null"]
+        authorName:
+          type: ["string", "null"]
+        photo1Url:
+          type: ["string", "null"]
+        photo2Url:
+          type: ["string", "null"]
+        photo3Url:
+          type: ["string", "null"]
+        photo4Url:
+          type: ["string", "null"]
+        photo5Url:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - recordedAt
+        - category
+        - isImportant
+        - isDoctorReport
+        - content
+        - createdAt
+
+    CreateHandoverNoteBody:
+      type: object
+      properties:
+        residentId:
+          type: ["integer", "null"]
+        recordedAt:
+          type: string
+        category:
+          type: string
+          enum: [利用者, その他]
+        isImportant:
+          type: boolean
+        isDoctorReport:
+          type: boolean
+        content:
+          type: string
+        authorId:
+          type: ["integer", "null"]
+        photo1Url:
+          type: ["string", "null"]
+        photo2Url:
+          type: ["string", "null"]
+        photo3Url:
+          type: ["string", "null"]
+        photo4Url:
+          type: ["string", "null"]
+        photo5Url:
+          type: ["string", "null"]
+      required:
+        - recordedAt
+        - category
+        - isImportant
+        - isDoctorReport
+        - content
+
+    UpdateHandoverNoteBody:
+      type: object
+      properties:
+        isImportant:
+          type: ["boolean", "null"]
+        isDoctorReport:
+          type: ["boolean", "null"]
+        content:
+          type: ["string", "null"]
+        photo1Url:
+          type: ["string", "null"]
+        photo2Url:
+          type: ["string", "null"]
+        photo3Url:
+          type: ["string", "null"]
+        photo4Url:
+          type: ["string", "null"]
+        photo5Url:
+          type: ["string", "null"]
+
+    # ── Vital ─────────────────────────────────────────────────────
+    Vital:
+      type: object
+      properties:
+        id:
+          type: integer
+        residentId:
+          type: integer
+        residentName:
+          type: ["string", "null"]
+        recordedAt:
+          type: string
+        temperature:
+          type: ["number", "null"]
+        bpSystolic:
+          type: ["integer", "null"]
+        bpDiastolic:
+          type: ["integer", "null"]
+        pulse:
+          type: ["integer", "null"]
+        spo2:
+          type: ["integer", "null"]
+        needsRecheck:
+          type: boolean
+        isBath:
+          type: boolean
+        bathType:
+          type: ["string", "null"]
+          enum: [個浴, 小浴, 機械浴, その他, null]
+        bathStaffId:
+          type: ["integer", "null"]
+        bathMemo:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - residentId
+        - recordedAt
+        - needsRecheck
+        - isBath
+        - createdAt
+
+    CreateVitalBody:
+      type: object
+      properties:
+        residentId:
+          type: integer
+        recordedAt:
+          type: string
+        temperature:
+          type: ["number", "null"]
+        bpSystolic:
+          type: ["integer", "null"]
+        bpDiastolic:
+          type: ["integer", "null"]
+        pulse:
+          type: ["integer", "null"]
+        spo2:
+          type: ["integer", "null"]
+        needsRecheck:
+          type: boolean
+        isBath:
+          type: boolean
+        bathType:
+          type: ["string", "null"]
+        bathStaffId:
+          type: ["integer", "null"]
+        bathMemo:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+      required:
+        - residentId
+        - recordedAt
+        - needsRecheck
+        - isBath
+
+    UpdateVitalBody:
+      type: object
+      properties:
+        needsRecheck:
+          type: ["boolean", "null"]
+        temperature:
+          type: ["number", "null"]
+        bpSystolic:
+          type: ["integer", "null"]
+        bpDiastolic:
+          type: ["integer", "null"]
+        pulse:
+          type: ["integer", "null"]
+        spo2:
+          type: ["integer", "null"]
+        isBath:
+          type: ["boolean", "null"]
+        bathType:
+          type: ["string", "null"]
+        bathStaffId:
+          type: ["integer", "null"]
+        bathMemo:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+
+    ResidentVitalStatus:
+      type: object
+      properties:
+        residentId:
+          type: integer
+        residentName:
+          type: string
+        roomNumber:
+          type: string
+        photoUrl:
+          type: ["string", "null"]
+        latestVital:
+          $ref: "#/components/schemas/Vital"
+        needsRecheck:
+          type: boolean
+        recordedToday:
+          type: boolean
+      required:
+        - residentId
+        - residentName
+        - roomNumber
+        - needsRecheck
+        - recordedToday
+
+    # ── Meal ──────────────────────────────────────────────────────
+    Meal:
+      type: object
+      properties:
+        id:
+          type: integer
+        residentId:
+          type: integer
+        residentName:
+          type: ["string", "null"]
+        recordedAt:
+          type: string
+        mealType:
+          type: string
+          enum: [朝食, 昼食, 夕食]
+        mealLocation:
+          type: ["string", "null"]
+        mainDishPercent:
+          type: ["integer", "null"]
+        sideDishPercent:
+          type: ["integer", "null"]
+        waterMl:
+          type: ["integer", "null"]
+        nutritionSupplementPercent:
+          type: ["integer", "null"]
+        waterOnly:
+          type: boolean
+        medicationOk:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - residentId
+        - recordedAt
+        - mealType
+        - waterOnly
+        - medicationOk
+        - createdAt
+
+    CreateMealBody:
+      type: object
+      properties:
+        residentId:
+          type: integer
+        recordedAt:
+          type: string
+        mealType:
+          type: string
+          enum: [朝食, 昼食, 夕食]
+        mealLocation:
+          type: ["string", "null"]
+        mainDishPercent:
+          type: ["integer", "null"]
+        sideDishPercent:
+          type: ["integer", "null"]
+        waterMl:
+          type: ["integer", "null"]
+        nutritionSupplementPercent:
+          type: ["integer", "null"]
+        waterOnly:
+          type: boolean
+        medicationOk:
+          type: boolean
+      required:
+        - residentId
+        - recordedAt
+        - mealType
+        - waterOnly
+        - medicationOk
+
+    UpdateMealBody:
+      type: object
+      properties:
+        mealType:
+          type: ["string", "null"]
+        mealLocation:
+          type: ["string", "null"]
+        mainDishPercent:
+          type: ["integer", "null"]
+        sideDishPercent:
+          type: ["integer", "null"]
+        waterMl:
+          type: ["integer", "null"]
+        nutritionSupplementPercent:
+          type: ["integer", "null"]
+        waterOnly:
+          type: ["boolean", "null"]
+        medicationOk:
+          type: ["boolean", "null"]
+
+    # ── Weight ────────────────────────────────────────────────────
+    Weight:
+      type: object
+      properties:
+        id:
+          type: integer
+        residentId:
+          type: integer
+        residentName:
+          type: ["string", "null"]
+        recordedAt:
+          type: string
+        weightKg:
+          type: number
+        photoUrl:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - residentId
+        - recordedAt
+        - weightKg
+        - createdAt
+
+    CreateWeightBody:
+      type: object
+      properties:
+        residentId:
+          type: integer
+        recordedAt:
+          type: string
+        weightKg:
+          type: number
+        photoUrl:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+      required:
+        - residentId
+        - recordedAt
+        - weightKg
+
+    UpdateWeightBody:
+      type: object
+      properties:
+        weightKg:
+          type: ["number", "null"]
+        photoUrl:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+
+    ResidentWeightStatus:
+      type: object
+      properties:
+        residentId:
+          type: integer
+        residentName:
+          type: string
+        roomNumber:
+          type: string
+        photoUrl:
+          type: ["string", "null"]
+        latestWeight:
+          type: ["number", "null"]
+        recordedThisMonth:
+          type: boolean
+        lastRecordedAt:
+          type: ["string", "null"]
+      required:
+        - residentId
+        - residentName
+        - roomNumber
+        - recordedThisMonth
+
+    # ── Elimination ───────────────────────────────────────────────
+    Elimination:
+      type: object
+      properties:
+        id:
+          type: integer
+        residentId:
+          type: integer
+        residentName:
+          type: ["string", "null"]
+        recordedAt:
+          type: string
+        type:
+          type: string
+          enum: [尿, 便, 入浴時, その他]
+        amount:
+          type: ["string", "null"]
+          enum: [多, 中, 少, 無, null]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - residentId
+        - recordedAt
+        - type
+        - createdAt
+
+    CreateEliminationBody:
+      type: object
+      properties:
+        residentId:
+          type: integer
+        recordedAt:
+          type: string
+        type:
+          type: string
+          enum: [尿, 便, 入浴時, その他]
+        amount:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+      required:
+        - residentId
+        - recordedAt
+        - type
+
+    ResidentEliminationStatus:
+      type: object
+      properties:
+        residentId:
+          type: integer
+        residentName:
+          type: string
+        roomNumber:
+          type: string
+        photoUrl:
+          type: ["string", "null"]
+        stomaManagement:
+          type: boolean
+        lastBmRecordedAt:
+          type: ["string", "null"]
+        daysSinceLastBm:
+          type: ["integer", "null"]
+        checkedThisRound:
+          type: boolean
+        needsAttention:
+          type: boolean
+      required:
+        - residentId
+        - residentName
+        - roomNumber
+        - stomaManagement
+        - checkedThisRound
+        - needsAttention
+
+    CheckEliminationRoundBody:
+      type: object
+      properties:
+        residentId:
+          type: integer
+        staffId:
+          type: ["integer", "null"]
+      required:
+        - residentId
+
+    # ── Day Service ───────────────────────────────────────────────
+    DayService:
+      type: object
+      properties:
+        id:
+          type: integer
+        residentId:
+          type: integer
+        residentName:
+          type: ["string", "null"]
+        facilityName:
+          type: ["string", "null"]
+        usageDays:
+          type: array
+          items:
+            type: string
+        itemsToBring:
+          type: ["string", "null"]
+        itemLocations:
+          type: ["string", "null"]
+        itemPhotoUrl:
+          type: ["string", "null"]
+        isPrepared:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - residentId
+        - usageDays
+        - isPrepared
+        - createdAt
+
+    CreateDayServiceBody:
+      type: object
+      properties:
+        residentId:
+          type: integer
+        facilityName:
+          type: ["string", "null"]
+        usageDays:
+          type: array
+          items:
+            type: string
+        itemsToBring:
+          type: ["string", "null"]
+        itemLocations:
+          type: ["string", "null"]
+        itemPhotoUrl:
+          type: ["string", "null"]
+      required:
+        - residentId
+        - usageDays
+
+    UpdateDayServiceBody:
+      type: object
+      properties:
+        facilityName:
+          type: ["string", "null"]
+        usageDays:
+          type: array
+          items:
+            type: string
+        itemsToBring:
+          type: ["string", "null"]
+        itemLocations:
+          type: ["string", "null"]
+        itemPhotoUrl:
+          type: ["string", "null"]
+
+    # ── Bath Report ───────────────────────────────────────────────
+    BathReport:
+      type: object
+      properties:
+        id:
+          type: integer
+        residentId:
+          type: integer
+        residentName:
+          type: ["string", "null"]
+        staffId:
+          type: ["integer", "null"]
+        staffName:
+          type: ["string", "null"]
+        recordedAt:
+          type: string
+        temperature:
+          type: ["number", "null"]
+        bpSystolic:
+          type: ["integer", "null"]
+        bpDiastolic:
+          type: ["integer", "null"]
+        pulse:
+          type: ["integer", "null"]
+        spo2:
+          type: ["integer", "null"]
+        bathMemo:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - residentId
+        - recordedAt
+        - createdAt
+
+    CreateBathReportBody:
+      type: object
+      properties:
+        residentId:
+          type: integer
+        staffId:
+          type: ["integer", "null"]
+        recordedAt:
+          type: string
+        temperature:
+          type: ["number", "null"]
+        bpSystolic:
+          type: ["integer", "null"]
+        bpDiastolic:
+          type: ["integer", "null"]
+        pulse:
+          type: ["integer", "null"]
+        spo2:
+          type: ["integer", "null"]
+        bathMemo:
+          type: ["string", "null"]
+      required:
+        - residentId
+        - recordedAt
+
+    UpdateBathReportBody:
+      type: object
+      properties:
+        staffId:
+          type: ["integer", "null"]
+        temperature:
+          type: ["number", "null"]
+        bpSystolic:
+          type: ["integer", "null"]
+        bpDiastolic:
+          type: ["integer", "null"]
+        pulse:
+          type: ["integer", "null"]
+        spo2:
+          type: ["integer", "null"]
+        bathMemo:
+          type: ["string", "null"]
+
+    # ── Insurance ─────────────────────────────────────────────────
+    Insurance:
+      type: object
+      properties:
+        id:
+          type: integer
+        residentId:
+          type: integer
+        insuranceType:
+          type: ["string", "null"]
+        insuranceNumber:
+          type: ["string", "null"]
+        validFrom:
+          type: ["string", "null"]
+        validUntil:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - residentId
+        - createdAt
+
+    CreateInsuranceBody:
+      type: object
+      properties:
+        residentId:
+          type: integer
+        insuranceType:
+          type: ["string", "null"]
+        insuranceNumber:
+          type: ["string", "null"]
+        validFrom:
+          type: ["string", "null"]
+        validUntil:
+          type: ["string", "null"]
+      required:
+        - residentId
+
+    UpdateInsuranceBody:
+      type: object
+      properties:
+        insuranceType:
+          type: ["string", "null"]
+        insuranceNumber:
+          type: ["string", "null"]
+        validFrom:
+          type: ["string", "null"]
+        validUntil:
+          type: ["string", "null"]
+
+    # ── Dashboard ─────────────────────────────────────────────────
+    DashboardToday:
+      type: object
+      properties:
+        date:
+          type: string
+        totalResidents:
+          type: integer
+        vitalsRecordedCount:
+          type: integer
+        vitalsNeedRecheckCount:
+          type: integer
+        mealsRecordedBreakfastCount:
+          type: integer
+        mealsRecordedLunchCount:
+          type: integer
+        mealsRecordedDinnerCount:
+          type: integer
+        recentHandoverNotes:
+          type: array
+          items:
+            $ref: "#/components/schemas/HandoverNote"
+      required:
+        - date
+        - totalResidents
+        - vitalsRecordedCount
+        - vitalsNeedRecheckCount
+        - mealsRecordedBreakfastCount
+        - mealsRecordedLunchCount
+        - mealsRecordedDinnerCount
+        - recentHandoverNotes
+
+    DashboardAlerts:
+      type: object
+      properties:
+        vitalsNeedingRecheck:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResidentVitalStatus"
+        eliminationNeedingAttention:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResidentEliminationStatus"
+        weightsNotRecordedThisMonth:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResidentWeightStatus"
+      required:
+        - vitalsNeedingRecheck
+        - eliminationNeedingAttention
+        - weightsNotRecordedThisMonth
