@@ -16,6 +16,7 @@ import {
   FileDown,
   Menu,
 } from "lucide-react";
+import logoSrc from "/logo.png";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
@@ -38,7 +39,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const NavLinks = () => (
     <>
       <div className="py-4 px-6 font-bold text-xl text-primary flex items-center gap-2">
-        <Activity className="h-6 w-6" />
+        <img src={logoSrc} alt="Huglife ロゴ" className="h-8 w-auto" />
         ハグライフ南摂津
       </div>
       <nav className="space-y-1 px-2">
@@ -75,7 +76,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <div className="flex-1 flex flex-col min-w-0">
         <header className="md:hidden flex items-center justify-between p-4 border-b bg-card sticky top-0 z-10">
           <div className="font-bold text-lg text-primary flex items-center gap-2">
-            <Activity className="h-5 w-5" />
+            <img src={logoSrc} alt="Huglife ロゴ" className="h-7 w-auto" />
             ハグライフ南摂津
           </div>
           <Sheet>
