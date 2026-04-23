@@ -266,12 +266,12 @@ export default function Dashboard() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-4">
             <h2 className="font-bold text-gray-800 text-sm">今日の記録ショートカット</h2>
             <div className="grid grid-cols-2 gap-3">
-              <ShortcutBtn label="バイタル記録" icon={Activity} bg="bg-primary/10" color="text-primary" href="/vitals" />
-              <ShortcutBtn label="食事記録（昼）" icon={Utensils} bg="bg-primary/10" color="text-primary" href="/meals" />
-              <ShortcutBtn label="排泄確認" icon={Baby} bg="bg-primary/10" color="text-primary" href="/eliminations" />
-              <ShortcutBtn label="入浴報告" icon={Bath} bg="bg-primary/10" color="text-primary" href="/bath-reports" />
-              <ShortcutBtn label="体重記録" icon={Weight} bg="bg-primary/10" color="text-primary" href="/weights" />
-              <ShortcutBtn label="デイ準備物" icon={Briefcase} bg="bg-primary/10" color="text-primary" href="/day-services" />
+              <ShortcutBtn label="バイタル記録" icon={Activity} bg="bg-red-50" color="text-red-500" href="/vitals" />
+              <ShortcutBtn label="食事記録（昼）" icon={Utensils} bg="bg-orange-50" color="text-orange-500" href="/meals" />
+              <ShortcutBtn label="排泄確認" icon={Baby} bg="bg-blue-50" color="text-blue-500" href="/eliminations" />
+              <ShortcutBtn label="入浴報告" icon={Bath} bg="bg-cyan-50" color="text-cyan-600" href="/bath-reports" />
+              <ShortcutBtn label="体重記録" icon={Weight} bg="bg-green-50" color="text-green-600" href="/weights" />
+              <ShortcutBtn label="デイ準備物" icon={Briefcase} bg="bg-purple-50" color="text-purple-600" href="/day-services" />
             </div>
           </div>
         </div>
