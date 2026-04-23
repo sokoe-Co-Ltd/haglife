@@ -88,6 +88,7 @@ export function MealEntryModal({
   const [sideDishPercent, setSideDishPercent] = useState<number | "">(100);
   const [waterMl, setWaterMl] = useState<number | "">("");
   const [medicationOk, setMedicationOk] = useState(false);
+  const [notes, setNotes] = useState("");
 
   useEffect(() => {
     if (open) {
@@ -96,6 +97,7 @@ export function MealEntryModal({
       setSideDishPercent(existingMeal?.sideDishPercent ?? 100);
       setWaterMl(existingMeal?.waterMl ?? "");
       setMedicationOk(existingMeal?.medicationOk ?? false);
+      setNotes(existingMeal?.notes ?? "");
     }
   }, [open, existingMeal]);
 
@@ -121,6 +123,7 @@ export function MealEntryModal({
             mainDishPercent: waterOnly ? null : resolvedMain,
             sideDishPercent: waterOnly ? null : resolvedSide,
             waterMl: resolvedWater,
+            notes: notes.trim() || null,
           },
         },
         { onSuccess }
@@ -137,6 +140,7 @@ export function MealEntryModal({
             mainDishPercent: waterOnly ? null : resolvedMain,
             sideDishPercent: waterOnly ? null : resolvedSide,
             waterMl: resolvedWater,
+            notes: notes.trim() || null,
           },
         },
         { onSuccess }
@@ -228,6 +232,20 @@ export function MealEntryModal({
               <CheckCircle2 className="h-4 w-4 text-green-500 ml-auto" />
             )}
           </label>
+
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700">
+              メモ{" "}
+              <span className="text-gray-400 font-normal text-xs">(任意)</span>
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              placeholder="特記事項があれば入力してください"
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-orange-300 resize-none"
+            />
+          </div>
         </div>
 
         <DialogFooter className="gap-2 pt-2">

@@ -303,6 +303,8 @@ export interface Meal {
   nutritionSupplementPercent?: number | null;
   waterOnly: boolean;
   medicationOk: boolean;
+  /** @nullable */
+  notes?: string | null;
   createdAt: string;
 }
 
@@ -598,6 +600,8 @@ export interface CreateMealBody {
   nutritionSupplementPercent?: number | null;
   waterOnly: boolean;
   medicationOk: boolean;
+  /** @nullable */
+  notes?: string | null;
 }
 
 export interface UpdateMealBody {
@@ -617,6 +621,8 @@ export interface UpdateMealBody {
   waterOnly?: boolean | null;
   /** @nullable */
   medicationOk?: boolean | null;
+  /** @nullable */
+  notes?: string | null;
 }
 
 export interface CreateWeightBody {

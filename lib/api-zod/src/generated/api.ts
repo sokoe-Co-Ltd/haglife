@@ -912,6 +912,7 @@ export const CreateMealBody = zod.object({
   nutritionSupplementPercent: zod.number().nullish(),
   waterOnly: zod.boolean(),
   medicationOk: zod.boolean(),
+  notes: zod.string().nullish(),
 });
 
 /**
@@ -930,6 +931,7 @@ export const UpdateMealBody = zod.object({
   nutritionSupplementPercent: zod.number().nullish(),
   waterOnly: zod.boolean().nullish(),
   medicationOk: zod.boolean().nullish(),
+  notes: zod.string().nullish(),
 });
 
 export const UpdateMealResponse = zod.object({
@@ -945,6 +947,7 @@ export const UpdateMealResponse = zod.object({
   nutritionSupplementPercent: zod.number().nullish(),
   waterOnly: zod.boolean(),
   medicationOk: zod.boolean(),
+  notes: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
