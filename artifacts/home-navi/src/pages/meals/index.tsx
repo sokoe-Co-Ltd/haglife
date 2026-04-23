@@ -32,8 +32,8 @@ function deriveMealStatus(meal: Meal | undefined): MealStatus {
   return "確認OK";
 }
 
-function getMealFromList(meals: Meal[], residentId: number, type: MealType): Meal | undefined {
-  return meals.find((m) => m.residentId === residentId && m.mealType === type);
+function getMeal(map: Record<string, Meal>, residentId: number, type: MealType): Meal | undefined {
+  return map[`${residentId}-${type}`];
 }
 
 function MealStatusCell({ meal }: { meal: Meal | undefined }) {
@@ -129,10 +129,10 @@ function QuickActionBtn({ icon: Icon, label, bg, iconBg }: QuickActionBtnProps) 
 
 interface SidePanelProps {
   allResidents: Resident[];
-  meals: Meal[];
+  mealMap: Record<string, Meal>;
   floorFilter: string;
 }
-function SidePanel({ allResidents, meals, floorFilter }: SidePanelProps) {
+function SidePanel({ allResidents, mealMap, floorFilter }: SidePanelProps) {
   const [memo, setMemo] = useState("");
 
   const baseResidents = floorFilter === "all"
@@ -140,7 +140,7 @@ function SidePanel({ allResidents, meals, floorFilter }: SidePanelProps) {
     : allResidents.filter((r) => Math.floor(parseInt(r.roomNumber) / 100) === parseInt(floorFilter));
 
   const needsCheck = baseResidents.filter((r) =>
-    MEAL_TYPES.some((t) => deriveMealStatus(getMealFromList(meals, r.id, t)) === "要確認")
+    MEAL_TYPES.some((t) => deriveMealStatus(getMeal(mealMap, r.id, t)) === "要確認")
   );
 
   return (
@@ -170,7 +170,7 @@ function SidePanel({ allResidents, meals, floorFilter }: SidePanelProps) {
                 </div>
                 <div className="flex gap-0.5 shrink-0">
                   {MEAL_TYPES.map((t) => {
-                    const s = deriveMealStatus(getMealFromList(meals, r.id, t));
+                    const s = deriveMealStatus(getMeal(mealMap, r.id, t));
                     if (s !== "要確認") return null;
                     return (
                       <span key={t} className="px-1 py-0.5 rounded text-xs font-bold bg-red-100 text-red-600">{t[0]}</span>
@@ -201,10 +201,10 @@ function SidePanel({ allResidents, meals, floorFilter }: SidePanelProps) {
 
 interface MobileMealCardProps {
   resident: Resident;
-  meals: Meal[];
+  mealMap: Record<string, Meal>;
   activeMealType: MealType;
 }
-function MobileMealCard({ resident, meals, activeMealType }: MobileMealCardProps) {
+function MobileMealCard({ resident, mealMap, activeMealType }: MobileMealCardProps) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
@@ -216,7 +216,7 @@ function MobileMealCard({ resident, meals, activeMealType }: MobileMealCardProps
       </div>
       <div className="px-4 py-3 grid grid-cols-3 gap-2">
         {MEAL_TYPES.map((t) => {
-          const meal = getMealFromList(meals, resident.id, t);
+          const meal = getMeal(mealMap, resident.id, t);
           const status = deriveMealStatus(meal);
           const isActive = t === activeMealType;
           return (
@@ -256,6 +256,12 @@ export default function MealsList() {
 
   const isLoading = isResidentsLoading || isMealsLoading;
 
+  const mealMap = useMemo<Record<string, Meal>>(() => {
+    const map: Record<string, Meal> = {};
+    meals.forEach((m) => { map[`${m.residentId}-${m.mealType}`] = m; });
+    return map;
+  }, [meals]);
+
   const floors = useMemo(() => {
     const set = new Set<number>();
     residents.forEach((r) => {
@@ -274,20 +280,20 @@ export default function MealsList() {
   const filteredResidents = useMemo<Resident[]>(() => {
     if (statusFilter === "すべて") return floorResidents;
     return floorResidents.filter((r) => {
-      const status = deriveMealStatus(getMealFromList(meals, r.id, activeMealType));
+      const status = deriveMealStatus(getMeal(mealMap, r.id, activeMealType));
       if (statusFilter === "未記録") return status === "未記録";
       if (statusFilter === "記録済み") return status === "確認OK";
       if (statusFilter === "要確認") return status === "要確認";
       return true;
     });
-  }, [floorResidents, meals, statusFilter, activeMealType]);
+  }, [floorResidents, mealMap, statusFilter, activeMealType]);
 
   const statusCounts = useMemo<Record<StatusFilter, number>>(() => ({
     "すべて": floorResidents.length,
-    "未記録": floorResidents.filter((r) => deriveMealStatus(getMealFromList(meals, r.id, activeMealType)) === "未記録").length,
-    "記録済み": floorResidents.filter((r) => deriveMealStatus(getMealFromList(meals, r.id, activeMealType)) === "確認OK").length,
-    "要確認": floorResidents.filter((r) => deriveMealStatus(getMealFromList(meals, r.id, activeMealType)) === "要確認").length,
-  }), [floorResidents, meals, activeMealType]);
+    "未記録": floorResidents.filter((r) => deriveMealStatus(getMeal(mealMap, r.id, activeMealType)) === "未記録").length,
+    "記録済み": floorResidents.filter((r) => deriveMealStatus(getMeal(mealMap, r.id, activeMealType)) === "確認OK").length,
+    "要確認": floorResidents.filter((r) => deriveMealStatus(getMeal(mealMap, r.id, activeMealType)) === "要確認").length,
+  }), [floorResidents, mealMap, activeMealType]);
 
   return (
     <Layout>
@@ -404,7 +410,7 @@ export default function MealsList() {
                   ) : (
                     filteredResidents.map((resident) => {
                       const needsAttn = MEAL_TYPES.some(
-                        (t) => deriveMealStatus(getMealFromList(meals, resident.id, t)) === "要確認"
+                        (t) => deriveMealStatus(getMeal(mealMap, resident.id, t)) === "要確認"
                       );
                       return (
                         <TableRow key={resident.id} className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${needsAttn ? "bg-red-50/30" : ""}`}>
@@ -413,13 +419,13 @@ export default function MealsList() {
                             {resident.lastName} {resident.firstName}
                           </TableCell>
                           <TableCell className="py-3">
-                            <MealStatusCell meal={getMealFromList(meals, resident.id, "朝食")} />
+                            <MealStatusCell meal={getMeal(mealMap, resident.id, "朝食")} />
                           </TableCell>
                           <TableCell className="py-3">
-                            <MealStatusCell meal={getMealFromList(meals, resident.id, "昼食")} />
+                            <MealStatusCell meal={getMeal(mealMap, resident.id, "昼食")} />
                           </TableCell>
                           <TableCell className="py-3">
-                            <MealStatusCell meal={getMealFromList(meals, resident.id, "夕食")} />
+                            <MealStatusCell meal={getMeal(mealMap, resident.id, "夕食")} />
                           </TableCell>
                           <TableCell className="py-2">
                             <AlertColumn resident={resident} />
@@ -436,7 +442,7 @@ export default function MealsList() {
             </div>
           </div>
 
-          <SidePanel allResidents={residents} meals={meals} floorFilter={floorFilter} />
+          <SidePanel allResidents={residents} mealMap={mealMap} floorFilter={floorFilter} />
         </div>
 
         {/* Mobile: card layout */}
@@ -459,7 +465,7 @@ export default function MealsList() {
               <MobileMealCard
                 key={resident.id}
                 resident={resident}
-                meals={meals}
+                mealMap={mealMap}
                 activeMealType={activeMealType}
               />
             ))
