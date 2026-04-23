@@ -70,7 +70,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {/* Logo */}
         <div className="px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2.5">
-            <img src={logoSrc} alt="ハグライフ南摂津" className="h-9 w-9 object-contain" />
+            <img src={logoSrc} alt="ハグライフ南摂津" className="h-9 w-9 object-contain dark:bg-white dark:rounded dark:p-0.5" />
             <span className="font-bold text-base text-gray-800 leading-tight">
               ハグライフ<br />南摂津
             </span>
@@ -121,7 +121,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center justify-between px-4 md:px-6 h-14">
             {/* Mobile: Logo + Name */}
             <div className="flex items-center gap-2 md:hidden">
-              <img src={logoSrc} alt="" className="h-7 w-7 object-contain" />
+              <img src={logoSrc} alt="" className="h-7 w-7 object-contain dark:bg-white dark:rounded dark:p-0.5" />
               <span className="font-bold text-sm text-gray-800">ハグライフ南摂津</span>
             </div>
 
@@ -193,7 +193,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <div className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-xl flex flex-col">
               <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <img src={logoSrc} alt="" className="h-8 w-8 object-contain" />
+                  <img src={logoSrc} alt="" className="h-8 w-8 object-contain dark:bg-white dark:rounded dark:p-0.5" />
                   <span className="font-bold text-gray-800">ハグライフ南摂津</span>
                 </div>
                 <button onClick={() => setMobileMenuOpen(false)} className="p-1 rounded text-gray-500 hover:bg-gray-100">
