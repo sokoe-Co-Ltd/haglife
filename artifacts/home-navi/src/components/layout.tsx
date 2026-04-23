@@ -39,7 +39,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <>
       <div className="py-4 px-6 font-bold text-xl text-primary flex items-center gap-2">
         <Activity className="h-6 w-6" />
-        Home-Navi
+        ハグライフ南摂津
       </div>
       <nav className="space-y-1 px-2">
         {NAV_ITEMS.map((item) => {
@@ -76,7 +76,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <header className="md:hidden flex items-center justify-between p-4 border-b bg-card sticky top-0 z-10">
           <div className="font-bold text-lg text-primary flex items-center gap-2">
             <Activity className="h-5 w-5" />
-            Home-Navi
+            ハグライフ南摂津
           </div>
           <Sheet>
             <SheetTrigger asChild>
