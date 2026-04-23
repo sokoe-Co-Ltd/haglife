@@ -14,8 +14,11 @@ import {
   Bell,
   ChevronRight,
   ClipboardList,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react";
-import { useDarkMode } from "@/hooks/use-dark-mode";
+import { useDarkMode, ColorMode } from "@/hooks/use-dark-mode";
 
 const NAV_ITEMS = [
   { href: "/", label: "ホーム", icon: Home },
@@ -57,8 +60,23 @@ function getGreeting() {
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const isDark = useDarkMode();
+  const { isDark, mode, setMode } = useDarkMode();
   const logoSrc = isDark ? "/logo-dark.png" : "/logo.png";
+
+  const MODE_OPTIONS: { value: ColorMode; icon: React.ElementType; label: string }[] = [
+    { value: "light", icon: Sun, label: "ライト" },
+    { value: "dark", icon: Moon, label: "ダーク" },
+    { value: "system", icon: Monitor, label: "システム" },
+  ];
+
+  function cycleMode() {
+    const order: ColorMode[] = ["light", "dark", "system"];
+    const next = order[(order.indexOf(mode) + 1) % order.length];
+    setMode(next);
+  }
+
+  const currentModeOption = MODE_OPTIONS.find((o) => o.value === mode) ?? MODE_OPTIONS[2];
+  const ModeIcon = currentModeOption.icon;
 
   function isActive(href: string) {
     return location === href || (href !== "/" && location.startsWith(href));
@@ -141,8 +159,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 {formatDate()}
               </span>
 
+              {/* Dark mode toggle */}
+              <button
+                onClick={cycleMode}
+                title={`モード: ${currentModeOption.label}`}
+                className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-primary transition-colors"
+              >
+                <ModeIcon className="h-5 w-5" />
+                <span className="sr-only">{currentModeOption.label}モード</span>
+              </button>
+
               {/* Notification bell */}
-              <button className="relative p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-primary transition-colors">
+              <button className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-primary transition-colors">
                 <Bell className="h-5 w-5" />
                 <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full" />
               </button>
