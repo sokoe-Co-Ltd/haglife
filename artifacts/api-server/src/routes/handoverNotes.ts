@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, gte, lte } from "drizzle-orm";
 import { db, handoverNotesTable, residentsTable, staffTable } from "@workspace/db";
 import {
   CreateHandoverNoteBody,
@@ -26,6 +26,13 @@ async function withNames(note: typeof handoverNotesTable.$inferSelect) {
   return { ...note, residentName, authorName };
 }
 
+function dayRange(dateStr?: string | null) {
+  const d = dateStr ? new Date(dateStr) : new Date();
+  const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+  const end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+  return { start, end };
+}
+
 router.get("/handover-notes", async (req, res): Promise<void> => {
   const query = ListHandoverNotesQueryParams.safeParse(req.query);
   const conditions = [];
@@ -35,7 +42,16 @@ router.get("/handover-notes", async (req, res): Promise<void> => {
   if (query.success && query.data.is_doctor_report != null) {
     conditions.push(eq(handoverNotesTable.isDoctorReport, query.data.is_doctor_report));
   }
-  const limit = (query.success && query.data.limit) ? query.data.limit : 50;
+  if (query.success && query.data.today_only) {
+    const { start, end } = dayRange();
+    conditions.push(gte(handoverNotesTable.recordedAt, start));
+    conditions.push(lte(handoverNotesTable.recordedAt, end));
+  } else if (query.success && query.data.date) {
+    const { start, end } = dayRange(query.data.date);
+    conditions.push(gte(handoverNotesTable.recordedAt, start));
+    conditions.push(lte(handoverNotesTable.recordedAt, end));
+  }
+  const limit = (query.success && query.data.limit) ? query.data.limit : 100;
   const rows = await db
     .select()
     .from(handoverNotesTable)

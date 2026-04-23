@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Layout } from "@/components/layout";
 import { useListBathReports } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -6,24 +7,31 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
+import { DayNav } from "@/components/date-nav";
 
 export default function BathReportsList() {
-  const { data: reports, isLoading } = useListBathReports();
+  const [date, setDate] = useState(new Date());
+  const dateStr = format(date, "yyyy-MM-dd");
+
+  const { data: reports, isLoading } = useListBathReports({ date: dateStr });
 
   return (
     <Layout>
       <div className="max-w-3xl mx-auto space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <Bath className="h-5 w-5 text-teal-500" />
             入浴報告
           </h1>
-          <Link href="/bath-reports/new">
-            <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white gap-1.5">
-              <Plus className="h-4 w-4" />
-              新規作成
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <DayNav date={date} onChange={setDate} />
+            <Link href="/bath-reports/new">
+              <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white gap-1.5">
+                <Plus className="h-4 w-4" />
+                新規
+              </Button>
+            </Link>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -37,7 +45,7 @@ export default function BathReportsList() {
               ))}
             </div>
           ) : reports?.length === 0 ? (
-            <div className="text-center py-16 text-gray-400">入浴報告はまだありません</div>
+            <div className="text-center py-16 text-gray-400">この日の入浴報告はありません</div>
           ) : (
             <div className="divide-y divide-gray-50">
               {reports?.map((report) => (
@@ -46,7 +54,7 @@ export default function BathReportsList() {
                     <div className="flex items-center justify-between gap-2 mb-1">
                       <span className="text-sm font-bold text-gray-800">{report.residentName}</span>
                       <span className="text-xs text-gray-400 shrink-0">
-                        {format(new Date(report.recordedAt), "MM/dd HH:mm", { locale: ja })}
+                        {format(new Date(report.recordedAt), "HH:mm", { locale: ja })}
                       </span>
                     </div>
                     <p className="text-xs text-gray-500">担当: {report.staffName}</p>

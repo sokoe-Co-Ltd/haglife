@@ -864,7 +864,22 @@ export type ListHandoverNotesParams = {
    */
   resident_id?: number | null;
   is_doctor_report?: boolean;
+  today_only?: boolean;
+  /** Filter by date (YYYY-MM-DD). @nullable */
+  date?: string | null;
   limit?: number;
+};
+
+export type GetVitalsTodayStatusParams = {
+  /** Filter by date (YYYY-MM-DD). Defaults to today. */
+  date?: string | null;
+};
+
+export type GetWeightsMonthlyStatusParams = {
+  /** Year (e.g. 2026) */
+  year?: number;
+  /** Month 1-12 */
+  month?: number;
 };
 
 export type ListVitalsParams = {
@@ -889,6 +904,8 @@ export type ListMealsParams = {
    */
   resident_id?: number | null;
   today_only?: boolean;
+  /** Filter by date (YYYY-MM-DD). @nullable */
+  date?: string | null;
 };
 
 export type ListWeightsParams = {
@@ -935,6 +952,8 @@ export type ListBathReportsParams = {
    */
   resident_id?: number | null;
   today_only?: boolean;
+  /** Filter by date (YYYY-MM-DD). @nullable */
+  date?: string | null;
 };
 
 export type ListInsurancesParams = {

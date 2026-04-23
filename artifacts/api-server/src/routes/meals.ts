@@ -18,6 +18,13 @@ function todayRange() {
   return { start, end };
 }
 
+function dayRange(dateStr?: string | null) {
+  const d = dateStr ? new Date(dateStr) : new Date();
+  const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+  const end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+  return { start, end };
+}
+
 router.get("/meals", async (req, res): Promise<void> => {
   const query = ListMealsQueryParams.safeParse(req.query);
   const conditions = [];
@@ -26,6 +33,10 @@ router.get("/meals", async (req, res): Promise<void> => {
   }
   if (query.success && query.data.today_only) {
     const { start, end } = todayRange();
+    conditions.push(gte(mealsTable.recordedAt, start));
+    conditions.push(lte(mealsTable.recordedAt, end));
+  } else if (query.success && query.data.date) {
+    const { start, end } = dayRange(query.data.date);
     conditions.push(gte(mealsTable.recordedAt, start));
     conditions.push(lte(mealsTable.recordedAt, end));
   }

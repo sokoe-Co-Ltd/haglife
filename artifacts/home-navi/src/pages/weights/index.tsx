@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Layout } from "@/components/layout";
 import { useGetWeightsMonthlyStatus } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, CheckCircle2, Weight, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
+import { MonthNav } from "@/components/date-nav";
 
 function ResidentWeightCard({ status }: { status: any }) {
   return (
@@ -29,7 +31,11 @@ function ResidentWeightCard({ status }: { status: any }) {
 }
 
 export default function WeightsList() {
-  const { data: statuses, isLoading } = useGetWeightsMonthlyStatus();
+  const today = new Date();
+  const [year, setYear] = useState(today.getFullYear());
+  const [month, setMonth] = useState(today.getMonth() + 1);
+
+  const { data: statuses, isLoading } = useGetWeightsMonthlyStatus({ year, month });
 
   const unrecorded = statuses?.filter((s) => !s.isRecordedThisMonth) || [];
   const recorded = statuses?.filter((s) => s.isRecordedThisMonth) || [];
@@ -37,10 +43,13 @@ export default function WeightsList() {
   return (
     <Layout>
       <div className="max-w-3xl mx-auto space-y-4">
-        <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-          <Weight className="h-5 w-5 text-amber-500" />
-          体重（今月）
-        </h1>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <Weight className="h-5 w-5 text-amber-500" />
+            体重
+          </h1>
+          <MonthNav year={year} month={month} onChange={(y, m) => { setYear(y); setMonth(m); }} />
+        </div>
 
         {isLoading ? (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y divide-gray-50">
@@ -55,7 +64,7 @@ export default function WeightsList() {
                 <div className="px-4 py-3 border-b border-gray-100">
                   <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
                     <AlertCircle className="h-4 w-4 text-orange-500" />
-                    今月未測定（{unrecorded.length}名）
+                    未測定（{unrecorded.length}名）
                   </h2>
                 </div>
                 <div className="divide-y divide-gray-50">
@@ -75,6 +84,12 @@ export default function WeightsList() {
                 <div className="divide-y divide-gray-50">
                   {recorded.map((s) => <ResidentWeightCard key={s.residentId} status={s} />)}
                 </div>
+              </div>
+            )}
+
+            {!isLoading && unrecorded.length === 0 && recorded.length === 0 && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 py-16 text-center text-gray-400">
+                この月の体重データがありません
               </div>
             )}
           </div>

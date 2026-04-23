@@ -7,6 +7,7 @@ import { ja } from "date-fns/locale";
 import { AlertCircle, Stethoscope, Plus, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+import { DayNav } from "@/components/date-nav";
 
 type Tab = "すべて" | "未対応" | "対応中" | "完了";
 
@@ -18,8 +19,11 @@ function StatusBadge({ status, isImportant }: { status?: string; isImportant?: b
 }
 
 export default function HandoverList() {
-  const { data: notes, isLoading } = useListHandoverNotes();
+  const [date, setDate] = useState(new Date());
   const [activeTab, setActiveTab] = useState<Tab>("すべて");
+  const dateStr = format(date, "yyyy-MM-dd");
+
+  const { data: notes, isLoading } = useListHandoverNotes({ date: dateStr });
 
   const tabs: Tab[] = ["すべて", "未対応", "対応中", "完了"];
   const tabCounts: Record<Tab, number> = {
@@ -38,20 +42,20 @@ export default function HandoverList() {
   return (
     <Layout>
       <div className="max-w-3xl mx-auto space-y-4">
-        {/* Page header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <h1 className="text-xl font-bold text-gray-800">申し送り</h1>
-          <Link href="/handover/new">
-            <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white gap-1.5">
-              <Plus className="h-4 w-4" />
-              新規作成
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <DayNav date={date} onChange={setDate} />
+            <Link href="/handover/new">
+              <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white gap-1.5">
+                <Plus className="h-4 w-4" />
+                新規
+              </Button>
+            </Link>
+          </div>
         </div>
 
-        {/* Card with tabs */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          {/* Tabs */}
           <div className="flex border-b border-gray-100 px-4">
             {tabs.map((t) => (
               <button
@@ -73,7 +77,6 @@ export default function HandoverList() {
             ))}
           </div>
 
-          {/* List */}
           {isLoading ? (
             <div className="space-y-0 divide-y divide-gray-50">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -84,7 +87,7 @@ export default function HandoverList() {
               ))}
             </div>
           ) : filtered.length === 0 ? (
-            <div className="text-center py-16 text-gray-400">データがありません</div>
+            <div className="text-center py-16 text-gray-400">この日の申し送りはありません</div>
           ) : (
             <div className="divide-y divide-gray-50">
               {filtered.map((note: any) => (
@@ -108,7 +111,7 @@ export default function HandoverList() {
                     <div className="flex items-center justify-between mt-1.5">
                       <span className="text-xs text-gray-400">{note.authorName}</span>
                       <span className="text-xs text-gray-400">
-                        {format(new Date(note.recordedAt), "MM/dd HH:mm", { locale: ja })}
+                        {format(new Date(note.recordedAt), "HH:mm", { locale: ja })}
                       </span>
                     </div>
                   </div>

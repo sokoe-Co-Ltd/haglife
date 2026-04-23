@@ -114,7 +114,10 @@ router.delete("/vitals/:id", async (req, res): Promise<void> => {
 });
 
 router.get("/vitals/today-status", async (req, res): Promise<void> => {
-  const { start, end } = todayRange();
+  const dateParam = typeof req.query.date === "string" ? req.query.date : undefined;
+  const { start, end } = dateParam
+    ? (() => { const d = new Date(dateParam); return { start: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0), end: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999) }; })()
+    : todayRange();
   const residents = await db
     .select()
     .from(residentsTable)

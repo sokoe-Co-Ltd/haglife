@@ -106,7 +106,11 @@ router.delete("/weights/:id", async (req, res): Promise<void> => {
 });
 
 router.get("/weights/monthly-status", async (req, res): Promise<void> => {
-  const { start, end } = thisMonthRange();
+  const yearParam = typeof req.query.year === "string" ? parseInt(req.query.year, 10) : undefined;
+  const monthParam = typeof req.query.month === "string" ? parseInt(req.query.month, 10) : undefined;
+  const { start, end } = (yearParam !== undefined && monthParam !== undefined)
+    ? { start: new Date(yearParam, monthParam - 1, 1, 0, 0, 0, 0), end: new Date(yearParam, monthParam, 0, 23, 59, 59, 999) }
+    : thisMonthRange();
   const residents = await db
     .select()
     .from(residentsTable)

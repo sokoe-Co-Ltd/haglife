@@ -43,7 +43,13 @@ router.get("/bath-reports", async (req, res): Promise<void> => {
   if (query.success && query.data.resident_id != null) {
     conditions.push(eq(bathReportsTable.residentId, query.data.resident_id));
   }
-  if (query.success && query.data.today_only) {
+  if (query.success && query.data.date) {
+    const d = new Date(query.data.date);
+    const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+    const end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+    conditions.push(gte(bathReportsTable.recordedAt, start));
+    conditions.push(lte(bathReportsTable.recordedAt, end));
+  } else if (query.success && query.data.today_only) {
     const { start, end } = todayRange();
     conditions.push(gte(bathReportsTable.recordedAt, start));
     conditions.push(lte(bathReportsTable.recordedAt, end));

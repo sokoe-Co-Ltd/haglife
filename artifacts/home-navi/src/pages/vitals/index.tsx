@@ -1,15 +1,18 @@
+import { useState } from "react";
 import { Layout } from "@/components/layout";
 import { useGetVitalsTodayStatus } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Activity, AlertCircle, CheckCircle2, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
+import { DayNav } from "@/components/date-nav";
+import { format } from "date-fns";
 
 function ResidentVitalCard({ status }: { status: any }) {
   const needsRecheck = status.needsRecheck;
-  const isRecorded = status.isRecorded;
+  const isRecorded = status.recordedToday;
 
   return (
-    <Link href={`/vitals/${status.residentId}`} className={`flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors rounded-none`}>
+    <Link href={`/vitals/${status.residentId}`} className="flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors">
       <div className="flex items-center gap-3 min-w-0">
         {needsRecheck ? (
           <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-600">要再測定</span>
@@ -24,12 +27,12 @@ function ResidentVitalCard({ status }: { status: any }) {
         </div>
       </div>
       <div className="flex items-center gap-4 shrink-0">
-        {isRecorded && (
+        {isRecorded && status.latestVital && (
           <div className="hidden sm:flex gap-3 text-xs text-gray-500">
-            <span>KT: <strong className={`${needsRecheck ? "text-red-600" : "text-gray-700"}`}>{status.temperature}</strong></span>
-            <span>BP: <strong className="text-gray-700">{status.bpSystolic}/{status.bpDiastolic}</strong></span>
-            <span>P: <strong className="text-gray-700">{status.pulse}</strong></span>
-            <span>SpO2: <strong className="text-gray-700">{status.spo2}%</strong></span>
+            <span>KT: <strong className={needsRecheck ? "text-red-600" : "text-gray-700"}>{status.latestVital.temperature}</strong></span>
+            <span>BP: <strong className="text-gray-700">{status.latestVital.bpSystolic}/{status.latestVital.bpDiastolic}</strong></span>
+            <span>P: <strong className="text-gray-700">{status.latestVital.pulse}</strong></span>
+            <span>SpO2: <strong className="text-gray-700">{status.latestVital.spo2}%</strong></span>
           </div>
         )}
         <ChevronRight className="h-4 w-4 text-gray-300" />
@@ -39,16 +42,22 @@ function ResidentVitalCard({ status }: { status: any }) {
 }
 
 export default function VitalsList() {
-  const { data: statuses, isLoading } = useGetVitalsTodayStatus();
+  const [date, setDate] = useState(new Date());
+  const dateStr = format(date, "yyyy-MM-dd");
+
+  const { data: statuses, isLoading } = useGetVitalsTodayStatus({ date: dateStr });
 
   const recheckNeeded = statuses?.filter((s) => s.needsRecheck) || [];
-  const ok = statuses?.filter((s) => !s.needsRecheck && s.isRecorded) || [];
-  const unrecorded = statuses?.filter((s) => !s.isRecorded) || [];
+  const ok = statuses?.filter((s) => !s.needsRecheck && s.recordedToday) || [];
+  const unrecorded = statuses?.filter((s) => !s.recordedToday) || [];
 
   return (
     <Layout>
       <div className="max-w-3xl mx-auto space-y-4">
-        <h1 className="text-xl font-bold text-gray-800">バイタル</h1>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <h1 className="text-xl font-bold text-gray-800">バイタル</h1>
+          <DayNav date={date} onChange={setDate} />
+        </div>
 
         {isLoading ? (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y divide-gray-50">
@@ -99,6 +108,12 @@ export default function VitalsList() {
                 <div className="divide-y divide-gray-50">
                   {ok.map((s) => <ResidentVitalCard key={s.residentId} status={s} />)}
                 </div>
+              </div>
+            )}
+
+            {!isLoading && recheckNeeded.length === 0 && unrecorded.length === 0 && ok.length === 0 && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 py-16 text-center text-gray-400">
+                この日のバイタルデータがありません
               </div>
             )}
           </div>

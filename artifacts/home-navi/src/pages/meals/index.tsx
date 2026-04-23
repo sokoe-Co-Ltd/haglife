@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Layout } from "@/components/layout";
 import { useListResidents, useListMeals } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Utensils } from "lucide-react";
 import { format } from "date-fns";
+import { DayNav } from "@/components/date-nav";
 
 function MealCell({ meal }: { meal: any }) {
   if (!meal) {
@@ -28,11 +30,11 @@ function MealCell({ meal }: { meal: any }) {
 }
 
 export default function MealsList() {
+  const [date, setDate] = useState(new Date());
+  const dateStr = format(date, "yyyy-MM-dd");
+
   const { data: residents, isLoading: isResidentsLoading } = useListResidents();
-  const { data: meals, isLoading: isMealsLoading } = useListMeals({
-    startDate: format(new Date(), "yyyy-MM-dd"),
-    endDate: format(new Date(), "yyyy-MM-dd"),
-  });
+  const { data: meals, isLoading: isMealsLoading } = useListMeals({ date: dateStr });
 
   const isLoading = isResidentsLoading || isMealsLoading;
 
@@ -43,10 +45,13 @@ export default function MealsList() {
   return (
     <Layout>
       <div className="max-w-4xl mx-auto space-y-4">
-        <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-          <Utensils className="h-5 w-5 text-green-500" />
-          食事（{format(new Date(), "M月d日")}）
-        </h1>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <Utensils className="h-5 w-5 text-green-500" />
+            食事
+          </h1>
+          <DayNav date={date} onChange={setDate} />
+        </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
