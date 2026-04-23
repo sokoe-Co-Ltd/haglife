@@ -20,7 +20,7 @@ export default function DayServicesList() {
     <Layout>
       <div className="max-w-3xl mx-auto space-y-4">
         <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-          <Briefcase className="h-5 w-5 text-orange-500" />
+          <Briefcase className="h-5 w-5 text-primary" />
           デイ準備物
         </h1>
 
@@ -48,7 +48,7 @@ export default function DayServicesList() {
               >
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-orange-600">{service.residentName}</p>
+                    <p className="text-sm font-bold text-primary">{service.residentName}</p>
                     <p className="text-xs text-gray-500 mt-0.5">{service.facilityName}</p>
                   </div>
                   <button
@@ -56,7 +56,7 @@ export default function DayServicesList() {
                     className={`p-1.5 rounded-full transition-colors shrink-0 ${
                       service.isPrepared
                         ? "text-green-500 hover:text-green-600"
-                        : "text-gray-300 hover:text-orange-400"
+                        : "text-gray-300 hover:text-primary/70"
                     }`}
                   >
                     {service.isPrepared

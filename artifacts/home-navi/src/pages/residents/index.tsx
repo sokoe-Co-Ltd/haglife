@@ -21,12 +21,12 @@ export default function ResidentsList() {
       <div className="max-w-3xl mx-auto space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <Users className="h-5 w-5 text-orange-500" />
+            <Users className="h-5 w-5 text-primary" />
             利用者一覧
             {residents && <span className="text-sm font-normal text-gray-500 ml-1">（{residents.length}名）</span>}
           </h1>
           <Link href="/residents/new">
-            <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white gap-1.5">
+            <Button size="sm" className="gap-1.5">
               <Plus className="h-4 w-4" />
               新規登録
             </Button>
@@ -50,7 +50,7 @@ export default function ResidentsList() {
             <div className="divide-y divide-gray-50">
               {residents?.map((resident) => (
                 <Link key={resident.id} href={`/health/${resident.id}`} className="flex items-center gap-4 px-4 py-3.5 hover:bg-gray-50 transition-colors">
-                  <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-sm shrink-0">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
                     {resident.lastName.charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">

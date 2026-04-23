@@ -13,7 +13,7 @@ function ResidentWeightCard({ status }: { status: any }) {
         {status.isRecordedThisMonth ? (
           <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-600">測定済</span>
         ) : (
-          <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border border-orange-400 text-orange-500">未測定</span>
+          <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border border-primary text-primary">未測定</span>
         )}
         <div className="min-w-0">
           <span className="text-xs text-gray-400 mr-2">{status.roomNumber}</span>
@@ -63,8 +63,8 @@ export default function WeightsList() {
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-100">
                   <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4 text-orange-500" />
-                    未測定（{unrecorded.length}名）
+                    <AlertCircle className="h-4 w-4 text-primary" />
+                    今月未測定（{unrecorded.length}名）
                   </h2>
                 </div>
                 <div className="divide-y divide-gray-50">

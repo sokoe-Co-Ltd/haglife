@@ -88,8 +88,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 href={item.href}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                   active
-                    ? "bg-orange-500 text-white shadow-sm"
-                    : "text-gray-600 hover:bg-orange-50 hover:text-orange-600"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-gray-600 hover:bg-primary/10 hover:text-primary"
                 }`}
               >
                 <Icon className="h-4.5 w-4.5 shrink-0" style={{ width: 18, height: 18 }} />
@@ -102,7 +102,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {/* User profile */}
         <div className="border-t border-gray-100 px-4 py-3">
           <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
-            <div className="h-9 w-9 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-sm shrink-0">
+            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
               職
             </div>
             <div className="flex-1 min-w-0">
@@ -141,7 +141,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </span>
 
               {/* Notification bell */}
-              <button className="relative p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-orange-500 transition-colors">
+              <button className="relative p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-primary transition-colors">
                 <Bell className="h-5 w-5" />
                 <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full" />
               </button>
@@ -165,10 +165,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   key={item.href}
                   href={item.href}
                   className={`flex flex-col items-center justify-center gap-1 text-xs font-medium transition-colors ${
-                    active ? "text-orange-500" : "text-gray-500"
+                    active ? "text-primary" : "text-gray-500"
                   }`}
                 >
-                  <Icon className={`h-5 w-5 ${active ? "text-orange-500" : "text-gray-400"}`} />
+                  <Icon className={`h-5 w-5 ${active ? "text-primary" : "text-gray-400"}`} />
                   {item.label}
                 </Link>
               );
@@ -213,8 +213,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                         active
-                          ? "bg-orange-500 text-white"
-                          : "text-gray-600 hover:bg-orange-50 hover:text-orange-600"
+                          ? "bg-primary text-primary-foreground"
+                          : "text-gray-600 hover:bg-primary/10 hover:text-primary"
                       }`}
                     >
                       <Icon style={{ width: 18, height: 18 }} className="shrink-0" />
@@ -225,7 +225,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </nav>
               <div className="border-t border-gray-100 px-4 py-3">
                 <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-sm">
+                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
                     職
                   </div>
                   <div>

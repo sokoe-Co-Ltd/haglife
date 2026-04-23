@@ -57,7 +57,7 @@ export default function ResidentDetail() {
                     <span>{resident.gender}</span>
                     <span>{resident.birthEra}{resident.birthYear}年{resident.birthMonth}月{resident.birthDay}日</span>
                     <span>要介護度: <span className="text-primary">{resident.careLevel}</span></span>
-                    {resident.stomaManagement && <span className="text-orange-600 bg-orange-100 px-2 py-0.5 rounded">排泄管理</span>}
+                    {resident.stomaManagement && <span className="text-primary bg-primary/10 px-2 py-0.5 rounded">排泄管理</span>}
                   </div>
                 </div>
               </CardContent>

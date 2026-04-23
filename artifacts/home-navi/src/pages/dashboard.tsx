@@ -8,8 +8,8 @@ import { FileText, Activity, Utensils, Baby, Weight, Bath, Briefcase, AlertTrian
 function StatusBadge({ status, isImportant }: { status?: string; isImportant?: boolean }) {
   if (isImportant) return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-600">重要</span>;
   if (status === "対応中") return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-600">対応中</span>;
-  if (status === "完了") return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-gray-100 text-gray-500">完了</span>;
-  return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border border-orange-400 text-orange-500">未対応</span>;
+  if (status === "完了") return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-secondary text-muted-foreground">完了</span>;
+  return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border border-primary text-primary">未対応</span>;
 }
 
 // ---- Stat card ----
@@ -46,7 +46,7 @@ function StatCard({
           <Icon className={`h-5 w-5 ${iconColor}`} />
         </div>
       </div>
-      <Link href={href} className="flex items-center gap-1 text-xs text-orange-500 font-medium hover:text-orange-600 transition-colors">
+      <Link href={href} className="flex items-center gap-1 text-xs text-primary font-medium hover:text-primary/80 transition-colors">
         {action} <ChevronRight className="h-3.5 w-3.5" />
       </Link>
     </div>
@@ -132,8 +132,8 @@ export default function Dashboard() {
             value={today?.handoverCount}
             unit="件"
             icon={FileText}
-            iconBg="bg-orange-50"
-            iconColor="text-orange-500"
+            iconBg="bg-primary/10"
+            iconColor="text-primary"
             action="一覧を見る"
             href="/handover"
           />
@@ -177,7 +177,7 @@ export default function Dashboard() {
                 <AlertTriangle className="h-4 w-4" />
                 アラート（再測定・確認が必要な項目）
               </div>
-              <Link href="/vitals" className="text-xs text-orange-500 font-medium flex items-center gap-0.5 hover:text-orange-600">
+              <Link href="/vitals" className="text-xs text-primary font-medium flex items-center gap-0.5 hover:text-primary/80">
                 すべて見る <ChevronRight className="h-3.5 w-3.5" />
               </Link>
             </div>
@@ -209,7 +209,7 @@ export default function Dashboard() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col">
             <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-gray-100">
               <h2 className="font-bold text-gray-800 text-sm">本日の申し送り</h2>
-              <Link href="/handover" className="text-xs text-orange-500 font-medium flex items-center gap-0.5 hover:text-orange-600">
+              <Link href="/handover" className="text-xs text-primary font-medium flex items-center gap-0.5 hover:text-primary/80">
                 すべて見る <ChevronRight className="h-3.5 w-3.5" />
               </Link>
             </div>
@@ -222,13 +222,13 @@ export default function Dashboard() {
                   onClick={() => setActiveTab(t)}
                   className={`py-2.5 px-3 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
                     activeTab === t
-                      ? "border-orange-500 text-orange-600"
+                      ? "border-primary text-primary"
                       : "border-transparent text-gray-500 hover:text-gray-700"
                   }`}
                 >
                   {t}
                   {tabCounts[t] > 0 && (
-                    <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === t ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-500"}`}>
+                    <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === t ? "bg-primary/10 text-primary" : "bg-gray-100 text-gray-500"}`}>
                       {tabCounts[t]}
                     </span>
                   )}
@@ -262,7 +262,7 @@ export default function Dashboard() {
 
             {filteredNotes.length > 6 && (
               <div className="border-t border-gray-100 px-4 py-3">
-                <Link href="/handover" className="flex items-center justify-center gap-1 text-xs text-orange-500 font-medium hover:text-orange-600">
+                <Link href="/handover" className="flex items-center justify-center gap-1 text-xs text-primary font-medium hover:text-primary/80">
                   もっと見る <ChevronRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
@@ -278,7 +278,7 @@ export default function Dashboard() {
               <ShortcutBtn label="排泄確認" icon={Baby} bg="bg-purple-50" color="text-purple-600" href="/eliminations" />
               <ShortcutBtn label="入浴報告" icon={Bath} bg="bg-teal-50" color="text-teal-600" href="/bath-reports" />
               <ShortcutBtn label="体重記録" icon={Weight} bg="bg-amber-50" color="text-amber-600" href="/weights" />
-              <ShortcutBtn label="デイ準備物" icon={Briefcase} bg="bg-orange-50" color="text-orange-600" href="/day-services" />
+              <ShortcutBtn label="デイ準備物" icon={Briefcase} bg="bg-primary/10" color="text-primary" href="/day-services" />
             </div>
           </div>
         </div>

@@ -19,7 +19,7 @@ function ResidentVitalCard({ status }: { status: any }) {
         ) : isRecorded ? (
           <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-600">記録済</span>
         ) : (
-          <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border border-orange-400 text-orange-500">未記録</span>
+          <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border border-primary text-primary">未記録</span>
         )}
         <div className="min-w-0">
           <span className="text-xs text-gray-400 mr-2">{status.roomNumber}</span>
@@ -87,7 +87,7 @@ export default function VitalsList() {
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-100">
                   <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-orange-500" />
+                    <Activity className="h-4 w-4 text-primary" />
                     未記録（{unrecorded.length}名）
                   </h2>
                 </div>

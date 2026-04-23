@@ -13,7 +13,7 @@ function ResidentEliminationCard({ status, onCheck }: { status: any; onCheck: (i
     <Link href={`/eliminations/${status.residentId}`} className="flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors">
       <div className="flex items-center gap-3 min-w-0">
         {alert ? (
-          <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-orange-100 text-orange-600">排便確認</span>
+          <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-primary/10 text-primary">排便確認</span>
         ) : (
           <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-600">通常</span>
         )}
@@ -21,7 +21,7 @@ function ResidentEliminationCard({ status, onCheck }: { status: any; onCheck: (i
           <span className="text-xs text-gray-400 mr-2">{status.roomNumber}</span>
           <span className="text-sm font-semibold text-gray-800">{status.residentName}</span>
         </div>
-        <span className={`text-xs ${alert ? "text-orange-500 font-bold" : "text-gray-500"}`}>
+        <span className={`text-xs ${alert ? "text-primary font-bold" : "text-gray-500"}`}>
           {status.daysSinceLastBm}日経過
         </span>
       </div>
@@ -29,8 +29,8 @@ function ResidentEliminationCard({ status, onCheck }: { status: any; onCheck: (i
         <button
           className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
             status.isCheckedInRound
-              ? "bg-orange-500 text-white"
-              : "border-2 border-gray-200 text-gray-400 hover:border-orange-400 hover:text-orange-500"
+              ? "bg-primary text-primary-foreground"
+              : "border-2 border-gray-200 text-gray-400 hover:border-primary hover:text-primary"
           }`}
           onClick={(e) => onCheck(status.residentId, e)}
         >
@@ -87,9 +87,9 @@ export default function EliminationsList() {
         ) : (
           <div className="space-y-4">
             {needsAttention.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-sm border border-orange-100 overflow-hidden">
-                <div className="px-4 py-3 border-b border-orange-100 bg-orange-50">
-                  <h2 className="text-sm font-bold text-orange-600 flex items-center gap-2">
+              <div className="bg-white rounded-2xl shadow-sm border border-primary/10 overflow-hidden">
+                <div className="px-4 py-3 border-b border-primary/10 bg-primary/5">
+                  <h2 className="text-sm font-bold text-primary flex items-center gap-2">
                     <AlertCircle className="h-4 w-4" />
                     排便確認が必要（{needsAttention.length}名）
                   </h2>

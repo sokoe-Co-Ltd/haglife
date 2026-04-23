@@ -14,8 +14,8 @@ type Tab = "すべて" | "未対応" | "対応中" | "完了";
 function StatusBadge({ status, isImportant }: { status?: string; isImportant?: boolean }) {
   if (isImportant) return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-600">重要</span>;
   if (status === "対応中") return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-600">対応中</span>;
-  if (status === "完了") return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-gray-100 text-gray-500">完了</span>;
-  return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border border-orange-400 text-orange-500">未対応</span>;
+  if (status === "完了") return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-secondary text-muted-foreground">完了</span>;
+  return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border border-primary text-primary">未対応</span>;
 }
 
 export default function HandoverList() {
@@ -47,9 +47,9 @@ export default function HandoverList() {
           <div className="flex items-center gap-2">
             <DayNav date={date} onChange={setDate} />
             <Link href="/handover/new">
-              <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white gap-1.5">
+              <Button size="sm" className="gap-1.5">
                 <Plus className="h-4 w-4" />
-                新規
+                新規作成
               </Button>
             </Link>
           </div>
@@ -63,13 +63,13 @@ export default function HandoverList() {
                 onClick={() => setActiveTab(t)}
                 className={`py-3 px-3 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
                   activeTab === t
-                    ? "border-orange-500 text-orange-600"
+                    ? "border-primary text-primary"
                     : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
                 {t}
                 {tabCounts[t] > 0 && (
-                  <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === t ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-500"}`}>
+                  <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${activeTab === t ? "bg-primary/10 text-primary" : "bg-gray-100 text-gray-500"}`}>
                     {tabCounts[t]}
                   </span>
                 )}

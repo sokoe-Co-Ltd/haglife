@@ -26,9 +26,9 @@ export default function BathReportsList() {
           <div className="flex items-center gap-2">
             <DayNav date={date} onChange={setDate} />
             <Link href="/bath-reports/new">
-              <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white gap-1.5">
+              <Button size="sm" className="gap-1.5">
                 <Plus className="h-4 w-4" />
-                新規
+                新規作成
               </Button>
             </Link>
           </div>

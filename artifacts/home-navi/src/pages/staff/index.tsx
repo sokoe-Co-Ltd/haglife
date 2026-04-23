@@ -13,12 +13,12 @@ export default function StaffList() {
       <div className="max-w-3xl mx-auto space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <UserCircle className="h-5 w-5 text-orange-500" />
+            <UserCircle className="h-5 w-5 text-primary" />
             職員一覧
             {staff && <span className="text-sm font-normal text-gray-500 ml-1">（{staff.length}名）</span>}
           </h1>
           <Link href="/staff/new">
-            <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white gap-1.5">
+            <Button size="sm" className="gap-1.5">
               <Plus className="h-4 w-4" />
               新規登録
             </Button>
@@ -40,7 +40,7 @@ export default function StaffList() {
             staff?.map((person) => (
               <div key={person.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="h-11 w-11 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-base shrink-0">
+                  <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-base shrink-0">
                     {person.lastName.charAt(0)}
                   </div>
                   <div>
@@ -50,7 +50,7 @@ export default function StaffList() {
                 </div>
                 {person.tel && (
                   <a href={`tel:${person.tel}`}>
-                    <button className="h-9 w-9 rounded-full bg-orange-50 flex items-center justify-center text-orange-500 hover:bg-orange-100 transition-colors">
+                    <button className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors">
                       <Phone className="h-4 w-4" />
                     </button>
                   </a>
