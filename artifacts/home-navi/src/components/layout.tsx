@@ -130,12 +130,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-10">
           <div className="flex items-center justify-between px-4 md:px-6 h-14">
             {/* Mobile: Logo + Name */}
-            <div className="flex items-center gap-2 md:hidden">
-              <HagulifeLogo size={30} />
-              <div className="flex flex-col leading-none">
-                <span className="font-bold text-[13px] text-gray-800">ハグライフ南摂津</span>
-                <span className="text-[10px] text-gray-400 mt-0.5">{formatDate()}</span>
-              </div>
+            <div className="flex items-center gap-2.5 md:hidden">
+              <HagulifeLogo size={32} />
+              <span className="font-bold text-base text-gray-800">ハグライフ南摂津</span>
             </div>
 
             {/* Desktop: Greeting */}
@@ -182,8 +179,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   {active && (
                     <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[3px] bg-primary rounded-b-full" />
                   )}
-                  <Icon className={`h-[22px] w-[22px] transition-colors ${active ? "text-primary" : "text-gray-400"}`} />
-                  <span className={`text-[10px] font-medium transition-colors ${active ? "text-primary" : "text-gray-400"}`}>
+                  <Icon className={`h-[24px] w-[24px] transition-colors ${active ? "text-primary" : "text-gray-400"}`} />
+                  <span className={`text-xs font-medium transition-colors ${active ? "text-primary" : "text-gray-400"}`}>
                     {item.label}
                   </span>
                 </Link>
@@ -194,10 +191,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
               onClick={() => setMobileMenuOpen(true)}
               className="flex flex-col items-center justify-center gap-1 text-gray-400"
             >
-              <svg className="h-[22px] w-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-[24px] w-[24px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
-              <span className="text-[10px] font-medium">メニュー</span>
+              <span className="text-xs font-medium">メニュー</span>
             </button>
           </div>
         </nav>
