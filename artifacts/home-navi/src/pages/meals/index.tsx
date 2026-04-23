@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Layout } from "@/components/layout";
 import { useListResidents, useListMeals } from "@workspace/api-client-react";
 import type { Resident, Meal } from "@workspace/api-client-react";
+import { MealEntryModal } from "@/components/MealEntryModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -36,18 +37,27 @@ function getMeal(map: Record<string, Meal>, residentId: number, type: MealType):
   return map[`${residentId}-${type}`];
 }
 
-function MealStatusCell({ meal }: { meal: Meal | undefined }) {
+function MealStatusCell({
+  meal,
+  onClick,
+}: {
+  meal: Meal | undefined;
+  onClick?: () => void;
+}) {
   const status = deriveMealStatus(meal);
+  const base =
+    "w-full rounded-lg py-2 px-1 transition-colors hover:bg-gray-50 active:bg-gray-100 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40";
+
   if (status === "未記録") {
     return (
-      <div className="flex justify-center">
+      <button type="button" onClick={onClick} className={`${base} flex justify-center`}>
         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border border-orange-400 text-orange-500">未記録</span>
-      </div>
+      </button>
     );
   }
   if (status === "要確認") {
     return (
-      <div className="flex flex-col items-center gap-0.5">
+      <button type="button" onClick={onClick} className={`${base} flex flex-col items-center gap-0.5`}>
         <span className="text-xs text-gray-600">
           主:{meal?.mainDishPercent ?? "—"}割 副:{meal?.sideDishPercent ?? "—"}割
         </span>
@@ -55,11 +65,11 @@ function MealStatusCell({ meal }: { meal: Meal | undefined }) {
           <AlertTriangle className="h-3 w-3" />要確認
         </span>
         {meal?.medicationOk && <span className="text-xs text-green-600 font-semibold">服薬OK</span>}
-      </div>
+      </button>
     );
   }
   return (
-    <div className="flex flex-col items-center gap-0.5">
+    <button type="button" onClick={onClick} className={`${base} flex flex-col items-center gap-0.5`}>
       {meal?.waterOnly ? (
         <span className="text-xs text-blue-500 font-semibold">水分のみ</span>
       ) : (
@@ -71,7 +81,7 @@ function MealStatusCell({ meal }: { meal: Meal | undefined }) {
         <CheckCircle2 className="h-3 w-3" />確認OK
       </span>
       {meal?.medicationOk && <span className="text-xs text-green-600 font-semibold">服薬OK</span>}
-    </div>
+    </button>
   );
 }
 
@@ -203,8 +213,9 @@ interface MobileMealCardProps {
   resident: Resident;
   mealMap: Record<string, Meal>;
   activeMealType: MealType;
+  onEdit: (mealType: MealType) => void;
 }
-function MobileMealCard({ resident, mealMap, activeMealType }: MobileMealCardProps) {
+function MobileMealCard({ resident, mealMap, activeMealType, onEdit }: MobileMealCardProps) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
@@ -220,7 +231,12 @@ function MobileMealCard({ resident, mealMap, activeMealType }: MobileMealCardPro
           const status = deriveMealStatus(meal);
           const isActive = t === activeMealType;
           return (
-            <div key={t} className={`rounded-xl p-2 text-center ${isActive ? "bg-orange-50 ring-1 ring-orange-200" : "bg-gray-50"}`}>
+            <button
+              key={t}
+              type="button"
+              onClick={() => onEdit(t)}
+              className={`rounded-xl p-2 text-center cursor-pointer transition-colors hover:opacity-80 active:opacity-70 focus:outline-none focus:ring-2 focus:ring-primary/40 ${isActive ? "bg-orange-50 ring-1 ring-orange-200" : "bg-gray-50"}`}
+            >
               <div className={`text-xs font-bold mb-1 ${isActive ? "text-primary" : "text-gray-500"}`}>{t[0]}</div>
               {status === "未記録" ? (
                 <span className="inline-flex px-1.5 py-0.5 rounded text-xs font-bold border border-orange-400 text-orange-500">未記録</span>
@@ -236,7 +252,7 @@ function MobileMealCard({ resident, mealMap, activeMealType }: MobileMealCardPro
               {meal && !meal.waterOnly && status !== "未記録" && (
                 <div className="text-xs text-gray-400 mt-0.5 leading-none">主:{meal.mainDishPercent ?? "—"}割</div>
               )}
-            </div>
+            </button>
           );
         })}
       </div>
@@ -244,12 +260,21 @@ function MobileMealCard({ resident, mealMap, activeMealType }: MobileMealCardPro
   );
 }
 
+interface EditTarget {
+  resident: Resident;
+  mealType: MealType;
+}
+
 export default function MealsList() {
   const [date, setDate] = useState(new Date());
   const [activeMealType, setActiveMealType] = useState<MealType>("昼食");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("すべて");
   const [floorFilter, setFloorFilter] = useState("all");
+  const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
   const dateStr = format(date, "yyyy-MM-dd");
+
+  const openEdit = (resident: Resident, mealType: MealType) =>
+    setEditTarget({ resident, mealType });
 
   const { data: residents = [], isLoading: isResidentsLoading } = useListResidents();
   const { data: meals = [], isLoading: isMealsLoading } = useListMeals({ date: dateStr });
@@ -418,14 +443,14 @@ export default function MealsList() {
                           <TableCell className="text-sm font-semibold text-gray-800 whitespace-nowrap">
                             {resident.lastName} {resident.firstName}
                           </TableCell>
-                          <TableCell className="py-3">
-                            <MealStatusCell meal={getMeal(mealMap, resident.id, "朝食")} />
+                          <TableCell className="py-1">
+                            <MealStatusCell meal={getMeal(mealMap, resident.id, "朝食")} onClick={() => openEdit(resident, "朝食")} />
                           </TableCell>
-                          <TableCell className="py-3">
-                            <MealStatusCell meal={getMeal(mealMap, resident.id, "昼食")} />
+                          <TableCell className="py-1">
+                            <MealStatusCell meal={getMeal(mealMap, resident.id, "昼食")} onClick={() => openEdit(resident, "昼食")} />
                           </TableCell>
-                          <TableCell className="py-3">
-                            <MealStatusCell meal={getMeal(mealMap, resident.id, "夕食")} />
+                          <TableCell className="py-1">
+                            <MealStatusCell meal={getMeal(mealMap, resident.id, "夕食")} onClick={() => openEdit(resident, "夕食")} />
                           </TableCell>
                           <TableCell className="py-2">
                             <AlertColumn resident={resident} />
@@ -467,11 +492,23 @@ export default function MealsList() {
                 resident={resident}
                 mealMap={mealMap}
                 activeMealType={activeMealType}
+                onEdit={(t) => openEdit(resident, t)}
               />
             ))
           )}
         </div>
       </div>
+
+      {editTarget && (
+        <MealEntryModal
+          open={!!editTarget}
+          onClose={() => setEditTarget(null)}
+          resident={editTarget.resident}
+          mealType={editTarget.mealType}
+          date={dateStr}
+          existingMeal={getMeal(mealMap, editTarget.resident.id, editTarget.mealType)}
+        />
+      )}
     </Layout>
   );
 }
