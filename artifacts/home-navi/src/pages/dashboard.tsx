@@ -83,7 +83,7 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto space-y-4">
+      <div className="space-y-4">
 
         {/* ---- Stats row ---- */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
