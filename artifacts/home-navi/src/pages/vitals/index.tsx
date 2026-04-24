@@ -2,25 +2,50 @@ import { useState } from "react";
 import { Layout } from "@/components/layout";
 import { useGetVitalsTodayStatus } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Activity, AlertCircle, CheckCircle2, ChevronRight, Plus, ClipboardList, Download } from "lucide-react";
+import { Activity, AlertCircle, CheckCircle2, ChevronRight, Plus, Settings } from "lucide-react";
 import { Link } from "wouter";
 import { DayNav } from "@/components/date-nav";
 import { format } from "date-fns";
 import { QuickActionsCard, StaffMemoCard, InfoCard } from "@/components/PageRightPanel";
+import { Button } from "@/components/ui/button";
 
-function ResidentVitalCard({ status }: { status: any }) {
+const SESSION_KEY = "vitals-selected-date";
+
+function saveDate(d: Date) {
+  sessionStorage.setItem(SESSION_KEY, d.toISOString());
+}
+
+function loadDate(): Date {
+  const stored = sessionStorage.getItem(SESSION_KEY);
+  if (stored) {
+    const d = new Date(stored);
+    if (!isNaN(d.getTime())) return d;
+  }
+  return new Date();
+}
+
+function ResidentVitalCard({ status, dateStr }: { status: any; dateStr: string }) {
   const needsRecheck = status.needsRecheck;
   const isRecorded = status.recordedToday;
 
   return (
-    <Link href={`/vitals/${status.residentId}`} className="flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors">
+    <Link
+      href={`/vitals/${status.residentId}?date=${dateStr}`}
+      className="flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors"
+    >
       <div className="flex items-center gap-3 min-w-0">
         {needsRecheck ? (
-          <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-600">要再測定</span>
+          <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-600">
+            要再測定
+          </span>
         ) : isRecorded ? (
-          <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-600">記録済</span>
+          <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-600">
+            記録済
+          </span>
         ) : (
-          <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border border-primary text-primary">未記録</span>
+          <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border border-primary text-primary">
+            未記録
+          </span>
         )}
         <div className="min-w-0">
           <span className="text-xs text-gray-400 mr-2">{status.roomNumber}</span>
@@ -30,10 +55,18 @@ function ResidentVitalCard({ status }: { status: any }) {
       <div className="flex items-center gap-4 shrink-0">
         {isRecorded && status.latestVital && (
           <div className="hidden sm:flex gap-3 text-xs text-gray-500">
-            <span>KT: <strong className={needsRecheck ? "text-red-600" : "text-gray-700"}>{status.latestVital.temperature}</strong></span>
-            <span>BP: <strong className="text-gray-700">{status.latestVital.bpSystolic}/{status.latestVital.bpDiastolic}</strong></span>
-            <span>P: <strong className="text-gray-700">{status.latestVital.pulse}</strong></span>
-            <span>SpO2: <strong className="text-gray-700">{status.latestVital.spo2}%</strong></span>
+            {status.latestVital.temperature != null && (
+              <span>KT: <strong className={needsRecheck ? "text-red-600" : "text-gray-700"}>{status.latestVital.temperature}</strong></span>
+            )}
+            {status.latestVital.bpSystolic != null && (
+              <span>BP: <strong className="text-gray-700">{status.latestVital.bpSystolic}/{status.latestVital.bpDiastolic}</strong></span>
+            )}
+            {status.latestVital.pulse != null && (
+              <span>P: <strong className="text-gray-700">{status.latestVital.pulse}</strong></span>
+            )}
+            {status.latestVital.spo2 != null && (
+              <span>SpO2: <strong className="text-gray-700">{status.latestVital.spo2}%</strong></span>
+            )}
           </div>
         )}
         <ChevronRight className="h-4 w-4 text-gray-300" />
@@ -43,8 +76,13 @@ function ResidentVitalCard({ status }: { status: any }) {
 }
 
 export default function VitalsList() {
-  const [date, setDate] = useState(new Date());
+  const [date, setDate] = useState<Date>(loadDate);
   const dateStr = format(date, "yyyy-MM-dd");
+
+  function handleDateChange(d: Date) {
+    saveDate(d);
+    setDate(d);
+  }
 
   const { data: statuses, isLoading } = useGetVitalsTodayStatus({ date: dateStr });
 
@@ -54,8 +92,7 @@ export default function VitalsList() {
 
   const quickActions = [
     { label: "新規記録", icon: Plus, href: "/vitals/new", color: "bg-primary" },
-    { label: "一括記録", icon: ClipboardList },
-    { label: "記録エクスポート", icon: Download },
+    { label: "基準値設定", icon: Settings, href: "/vitals/thresholds" },
   ];
 
   return (
@@ -64,14 +101,22 @@ export default function VitalsList() {
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <h1 className="text-xl font-bold text-gray-800">
             バイタル
-            {statuses && <span className="ml-2 text-sm font-normal text-gray-500">（{statuses.length}名）</span>}
+            {statuses && (
+              <span className="ml-2 text-sm font-normal text-gray-500">（{statuses.length}名）</span>
+            )}
           </h1>
-          <DayNav date={date} onChange={setDate} />
+          <div className="flex items-center gap-2">
+            <DayNav date={date} onChange={handleDateChange} />
+            <Link href="/vitals/new">
+              <Button size="sm" className="gap-1.5">
+                <Plus className="h-4 w-4" />
+                新規記録
+              </Button>
+            </Link>
+          </div>
         </div>
 
-        {/* PC: two-column layout */}
         <div className="lg:grid lg:grid-cols-[1fr_260px] lg:gap-5 lg:items-start space-y-4 lg:space-y-0">
-          {/* Main content */}
           <div className="space-y-4">
             {isLoading ? (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y divide-gray-50">
@@ -92,7 +137,9 @@ export default function VitalsList() {
                       </h2>
                     </div>
                     <div className="divide-y divide-gray-50">
-                      {recheckNeeded.map((s) => <ResidentVitalCard key={s.residentId} status={s} />)}
+                      {recheckNeeded.map((s) => (
+                        <ResidentVitalCard key={s.residentId} status={s} dateStr={dateStr} />
+                      ))}
                     </div>
                   </div>
                 )}
@@ -106,7 +153,9 @@ export default function VitalsList() {
                       </h2>
                     </div>
                     <div className="divide-y divide-gray-50">
-                      {unrecorded.map((s) => <ResidentVitalCard key={s.residentId} status={s} />)}
+                      {unrecorded.map((s) => (
+                        <ResidentVitalCard key={s.residentId} status={s} dateStr={dateStr} />
+                      ))}
                     </div>
                   </div>
                 )}
@@ -120,7 +169,9 @@ export default function VitalsList() {
                       </h2>
                     </div>
                     <div className="divide-y divide-gray-50">
-                      {ok.map((s) => <ResidentVitalCard key={s.residentId} status={s} />)}
+                      {ok.map((s) => (
+                        <ResidentVitalCard key={s.residentId} status={s} dateStr={dateStr} />
+                      ))}
                     </div>
                   </div>
                 )}
@@ -134,7 +185,6 @@ export default function VitalsList() {
             )}
           </div>
 
-          {/* Right panel (desktop only) */}
           <div className="hidden lg:flex flex-col gap-4">
             <QuickActionsCard actions={quickActions} />
 
@@ -154,7 +204,17 @@ export default function VitalsList() {
               </InfoCard>
             )}
 
-            <StaffMemoCard memo="バイタルは自動で新しい順に表示されます。「追加」から新しいバイタルを記録できます。" />
+            <InfoCard title="基準値（高齢者標準）">
+              <div className="space-y-1.5 text-xs text-gray-600">
+                <div className="flex justify-between"><span>体温 (KT)</span><span className="font-mono text-gray-700">35.8 – 37.4°C</span></div>
+                <div className="flex justify-between"><span>血圧上 (BP)</span><span className="font-mono text-gray-700">90 – 159 mmHg</span></div>
+                <div className="flex justify-between"><span>血圧下</span><span className="font-mono text-gray-700">60 – 99 mmHg</span></div>
+                <div className="flex justify-between"><span>脈拍 (P)</span><span className="font-mono text-gray-700">50 – 100 bpm</span></div>
+                <div className="flex justify-between"><span>SpO2</span><span className="font-mono text-gray-700">95 – 100%</span></div>
+              </div>
+            </InfoCard>
+
+            <StaffMemoCard memo="基準値を外れた場合は自動で「要再測定」に分類されます。" />
           </div>
         </div>
       </div>
