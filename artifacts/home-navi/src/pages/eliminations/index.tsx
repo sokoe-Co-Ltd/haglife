@@ -1,7 +1,7 @@
 import { Layout } from "@/components/layout";
 import { useGetEliminationRoundStatus, useCheckEliminationRound, useResetEliminationRound } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Toilet, AlertCircle, RefreshCw, Check, ChevronRight } from "lucide-react";
+import { Toilet, AlertCircle, RefreshCw, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
@@ -10,6 +10,7 @@ import { QuickActionsCard, StaffMemoCard, InfoCard } from "@/components/PageRigh
 
 function ResidentEliminationCard({ status, onCheck }: { status: any; onCheck: (id: number, e: React.MouseEvent) => void }) {
   const alert = status.daysSinceLastBm >= 2;
+  const checked = status.checkedThisRound;
   return (
     <Link href={`/eliminations/${status.residentId}`} className="flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors">
       <div className="flex items-center gap-3 min-w-0">
@@ -28,14 +29,15 @@ function ResidentEliminationCard({ status, onCheck }: { status: any; onCheck: (i
       </div>
       <div className="flex items-center gap-2">
         <button
-          className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
-            status.isCheckedInRound
-              ? "bg-primary text-primary-foreground"
+          className={`h-9 w-9 rounded-full flex items-center justify-center transition-all duration-200 ${
+            checked
+              ? "bg-primary text-white shadow-[0_0_10px_2px_rgba(249,115,22,0.5)]"
               : "border-2 border-gray-200 text-gray-400 hover:border-primary hover:text-primary"
           }`}
           onClick={(e) => onCheck(status.residentId, e)}
+          title={checked ? "確認済み" : "確認する"}
         >
-          {status.isCheckedInRound ? <Check className="h-4 w-4" /> : <Toilet className="h-4 w-4" />}
+          <Toilet className="h-4 w-4" />
         </button>
         <ChevronRight className="h-4 w-4 text-gray-300" />
       </div>
