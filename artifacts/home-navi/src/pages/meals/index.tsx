@@ -322,7 +322,7 @@ export default function MealsList() {
 
   return (
     <Layout>
-      <div className="max-w-screen-xl mx-auto space-y-4">
+      <div className="space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">

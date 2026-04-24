@@ -14,6 +14,7 @@ import {
   Bell,
   ClipboardList,
   ChevronRight,
+  LogOut,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -152,6 +153,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <button className="relative p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-primary transition-colors">
                 <Bell className="h-5 w-5" />
                 <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full" />
+              </button>
+
+              {/* Logout button (desktop only) */}
+              <button className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-800 transition-colors">
+                <LogOut className="h-4 w-4" />
+                ログアウト
               </button>
             </div>
           </div>

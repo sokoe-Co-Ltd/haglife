@@ -2,10 +2,11 @@ import { useState } from "react";
 import { Layout } from "@/components/layout";
 import { useGetVitalsTodayStatus } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Activity, AlertCircle, CheckCircle2, ChevronRight } from "lucide-react";
+import { Activity, AlertCircle, CheckCircle2, ChevronRight, Plus, ClipboardList, Download } from "lucide-react";
 import { Link } from "wouter";
 import { DayNav } from "@/components/date-nav";
 import { format } from "date-fns";
+import { QuickActionsCard, StaffMemoCard, InfoCard } from "@/components/PageRightPanel";
 
 function ResidentVitalCard({ status }: { status: any }) {
   const needsRecheck = status.needsRecheck;
@@ -51,73 +52,111 @@ export default function VitalsList() {
   const ok = statuses?.filter((s) => !s.needsRecheck && s.recordedToday) || [];
   const unrecorded = statuses?.filter((s) => !s.recordedToday) || [];
 
+  const quickActions = [
+    { label: "新規記録", icon: Plus, href: "/vitals/new", color: "bg-primary" },
+    { label: "一括記録", icon: ClipboardList },
+    { label: "記録エクスポート", icon: Download },
+  ];
+
   return (
     <Layout>
-      <div className="max-w-3xl mx-auto space-y-4">
+      <div className="space-y-4">
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <h1 className="text-xl font-bold text-gray-800">バイタル</h1>
+          <h1 className="text-xl font-bold text-gray-800">
+            バイタル
+            {statuses && <span className="ml-2 text-sm font-normal text-gray-500">（{statuses.length}名）</span>}
+          </h1>
           <DayNav date={date} onChange={setDate} />
         </div>
 
-        {isLoading ? (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y divide-gray-50">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="px-4 py-4">
-                <Skeleton className="h-4 w-2/3" />
-              </div>
-            ))}
-          </div>
-        ) : (
+        {/* PC: two-column layout */}
+        <div className="lg:grid lg:grid-cols-[1fr_260px] lg:gap-5 lg:items-start space-y-4 lg:space-y-0">
+          {/* Main content */}
           <div className="space-y-4">
-            {recheckNeeded.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-sm border border-red-100 overflow-hidden">
-                <div className="px-4 py-3 border-b border-red-100 bg-red-50">
-                  <h2 className="text-sm font-bold text-red-600 flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    再測定必要（{recheckNeeded.length}名）
-                  </h2>
-                </div>
-                <div className="divide-y divide-gray-50">
-                  {recheckNeeded.map((s) => <ResidentVitalCard key={s.residentId} status={s} />)}
-                </div>
+            {isLoading ? (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y divide-gray-50">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="px-4 py-4">
+                    <Skeleton className="h-4 w-2/3" />
+                  </div>
+                ))}
               </div>
-            )}
+            ) : (
+              <>
+                {recheckNeeded.length > 0 && (
+                  <div className="bg-white rounded-2xl shadow-sm border border-red-100 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-red-100 bg-red-50">
+                      <h2 className="text-sm font-bold text-red-600 flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4" />
+                        再測定必要（{recheckNeeded.length}名）
+                      </h2>
+                    </div>
+                    <div className="divide-y divide-gray-50">
+                      {recheckNeeded.map((s) => <ResidentVitalCard key={s.residentId} status={s} />)}
+                    </div>
+                  </div>
+                )}
 
-            {unrecorded.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-100">
-                  <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-primary" />
-                    未記録（{unrecorded.length}名）
-                  </h2>
-                </div>
-                <div className="divide-y divide-gray-50">
-                  {unrecorded.map((s) => <ResidentVitalCard key={s.residentId} status={s} />)}
-                </div>
-              </div>
-            )}
+                {unrecorded.length > 0 && (
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                        <Activity className="h-4 w-4 text-primary" />
+                        未記録（{unrecorded.length}名）
+                      </h2>
+                    </div>
+                    <div className="divide-y divide-gray-50">
+                      {unrecorded.map((s) => <ResidentVitalCard key={s.residentId} status={s} />)}
+                    </div>
+                  </div>
+                )}
 
-            {ok.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-100">
-                  <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    記録済み・異常なし（{ok.length}名）
-                  </h2>
-                </div>
-                <div className="divide-y divide-gray-50">
-                  {ok.map((s) => <ResidentVitalCard key={s.residentId} status={s} />)}
-                </div>
-              </div>
-            )}
+                {ok.length > 0 && (
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        記録済み・異常なし（{ok.length}名）
+                      </h2>
+                    </div>
+                    <div className="divide-y divide-gray-50">
+                      {ok.map((s) => <ResidentVitalCard key={s.residentId} status={s} />)}
+                    </div>
+                  </div>
+                )}
 
-            {!isLoading && recheckNeeded.length === 0 && unrecorded.length === 0 && ok.length === 0 && (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 py-16 text-center text-gray-400">
-                この日のバイタルデータがありません
-              </div>
+                {!isLoading && recheckNeeded.length === 0 && unrecorded.length === 0 && ok.length === 0 && (
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 py-16 text-center text-gray-400">
+                    この日のバイタルデータがありません
+                  </div>
+                )}
+              </>
             )}
           </div>
-        )}
+
+          {/* Right panel (desktop only) */}
+          <div className="hidden lg:flex flex-col gap-4">
+            <QuickActionsCard actions={quickActions} />
+
+            {recheckNeeded.length > 0 && (
+              <InfoCard title="再測定対象" titleColor="text-red-600" borderColor="border-red-100">
+                <div className="space-y-2">
+                  {recheckNeeded.slice(0, 5).map((s: any) => (
+                    <div key={s.residentId} className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-red-400 shrink-0" />
+                      <span className="text-xs text-gray-700">{s.residentName}</span>
+                    </div>
+                  ))}
+                  {recheckNeeded.length > 5 && (
+                    <p className="text-xs text-primary">他 {recheckNeeded.length - 5}名</p>
+                  )}
+                </div>
+              </InfoCard>
+            )}
+
+            <StaffMemoCard memo="バイタルは自動で新しい順に表示されます。「追加」から新しいバイタルを記録できます。" />
+          </div>
+        </div>
       </div>
     </Layout>
   );
