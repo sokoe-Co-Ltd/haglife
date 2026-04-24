@@ -125,44 +125,46 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top header bar */}
-        <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-10">
-          <div className="flex items-center justify-between px-4 md:px-6 h-14">
-            {/* Mobile: Logo + Name */}
-            <div className="flex items-center gap-2.5 md:hidden">
-              <HagulifeLogo size={32} />
-              <span className="font-bold text-base text-gray-800">ハグライフ南摂津</span>
+        {/* Top header bar — home page only */}
+        {location === "/" && (
+          <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-10">
+            <div className="flex items-center justify-between px-4 md:px-6 h-14">
+              {/* Mobile: Logo + Name */}
+              <div className="flex items-center gap-2.5 md:hidden">
+                <HagulifeLogo size={32} />
+                <span className="font-bold text-base text-gray-800">ハグライフ南摂津</span>
+              </div>
+
+              {/* Desktop: Greeting */}
+              <div className="hidden md:flex items-center gap-2 text-sm text-gray-600">
+                <span className="text-yellow-400 text-base">☀</span>
+                <span>
+                  {getGreeting()}、<span className="font-semibold text-gray-800">山田 花子</span>さん
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* Date (desktop only) */}
+                <span className="hidden md:flex items-center gap-1 text-sm text-gray-500">
+                  <span className="text-base">📅</span>
+                  {formatDate()}
+                </span>
+
+                {/* Notification bell */}
+                <button className="relative p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-primary transition-colors">
+                  <Bell className="h-5 w-5" />
+                  <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full" />
+                </button>
+
+                {/* Logout button (desktop only) */}
+                <button className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-800 transition-colors">
+                  <LogOut className="h-4 w-4" />
+                  ログアウト
+                </button>
+              </div>
             </div>
-
-            {/* Desktop: Greeting */}
-            <div className="hidden md:flex items-center gap-2 text-sm text-gray-600">
-              <span className="text-yellow-400 text-base">☀</span>
-              <span>
-                {getGreeting()}、<span className="font-semibold text-gray-800">山田 花子</span>さん
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Date (desktop only) */}
-              <span className="hidden md:flex items-center gap-1 text-sm text-gray-500">
-                <span className="text-base">📅</span>
-                {formatDate()}
-              </span>
-
-              {/* Notification bell */}
-              <button className="relative p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-primary transition-colors">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full" />
-              </button>
-
-              {/* Logout button (desktop only) */}
-              <button className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-800 transition-colors">
-                <LogOut className="h-4 w-4" />
-                ログアウト
-              </button>
-            </div>
-          </div>
-        </header>
+          </header>
+        )}
 
         {/* Page content */}
         <main className="flex-1 p-4 md:p-6 pb-20 md:pb-6 overflow-x-hidden">
