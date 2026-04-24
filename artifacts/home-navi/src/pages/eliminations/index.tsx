@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Layout } from "@/components/layout";
 import { useCheckEliminationRound, useResetEliminationRound } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Toilet, AlertCircle, RefreshCw, ChevronRight, ShieldCheck, ShieldAlert } from "lucide-react";
+import { Toilet, AlertCircle, RefreshCw, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -21,31 +21,40 @@ type RoundStatus = {
   daysSinceLastBm: number | null;
   checkedThisRound: boolean;
   needsAttention: boolean;
-  lastBackCheckAt: string | null;
-  daysSinceLastBackCheck: number | null;
 };
 
-function BackCheckBadge({ days }: { days: number | null }) {
+function BmBadge({ days, stomaManagement }: { days: number | null; stomaManagement: boolean }) {
+  if (stomaManagement) {
+    return (
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-gray-100 text-gray-500">
+        ストーマ
+      </span>
+    );
+  }
   if (days === null) {
     return (
-      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-600">
-        <ShieldAlert className="h-3 w-3" />
-        背面未確認
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-600">
+        排便未記録
       </span>
     );
   }
   if (days === 0) {
     return (
-      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-bold bg-green-100 text-green-600">
-        <ShieldCheck className="h-3 w-3" />
-        背面確認済
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-green-100 text-green-600">
+        本日排便あり
+      </span>
+    );
+  }
+  if (days >= 3) {
+    return (
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-primary/10 text-primary">
+        排便{days}日経過
       </span>
     );
   }
   return (
-    <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-bold ${days >= 3 ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-600"}`}>
-      <ShieldAlert className="h-3 w-3" />
-      背面{days}日経過
+    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-600">
+      排便{days}日経過
     </span>
   );
 }
@@ -59,31 +68,19 @@ function ResidentEliminationCard({
   onCheck: (id: number, e: React.MouseEvent) => void;
   dateIsToday: boolean;
 }) {
-  const alert = status.daysSinceLastBm !== null && status.daysSinceLastBm >= 2;
+  const needsAttention = status.needsAttention;
   const checked = status.checkedThisRound;
-  const backDays = status.daysSinceLastBackCheck;
-  const backAlert = backDays === null || backDays >= 3;
 
   return (
     <Link href={`/eliminations/${status.residentId}`} className="flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors">
       <div className="flex items-center gap-2 min-w-0 flex-1">
-        {alert && !status.stomaManagement ? (
-          <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-primary/10 text-primary">排便確認</span>
-        ) : (
-          <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-600">通常</span>
-        )}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-xs text-gray-400">{status.roomNumber}</span>
             <span className="text-sm font-semibold text-gray-800">{status.residentName}</span>
-            {status.daysSinceLastBm !== null && (
-              <span className={`text-xs ${alert && !status.stomaManagement ? "text-primary font-bold" : "text-gray-500"}`}>
-                排便{status.daysSinceLastBm}日
-              </span>
-            )}
           </div>
-          <div className="mt-0.5">
-            <BackCheckBadge days={backDays} />
+          <div className="mt-1">
+            <BmBadge days={status.daysSinceLastBm} stomaManagement={status.stomaManagement} />
           </div>
         </div>
       </div>
@@ -151,7 +148,6 @@ export default function EliminationsList() {
 
   const needsAttention = statuses?.filter((s) => s.needsAttention) || [];
   const ok = statuses?.filter((s) => !s.needsAttention) || [];
-  const backCheckAlert = statuses?.filter((s) => s.daysSinceLastBackCheck === null || s.daysSinceLastBackCheck >= 3) || [];
 
   const quickActions = [
     ...(dateIsToday ? [{ label: "ラウンドリセット", icon: RefreshCw, onClick: handleReset }] : []),
@@ -192,7 +188,7 @@ export default function EliminationsList() {
                     <div className="px-4 py-3 border-b border-primary/10 bg-primary/5">
                       <h2 className="text-sm font-bold text-primary flex items-center gap-2">
                         <AlertCircle className="h-4 w-4" />
-                        要確認（{needsAttention.length}名）
+                        排便要確認（{needsAttention.length}名）
                       </h2>
                     </div>
                     <div className="divide-y divide-gray-50">
@@ -221,27 +217,6 @@ export default function EliminationsList() {
 
           <div className="hidden lg:flex flex-col gap-4">
             {dateIsToday && <QuickActionsCard actions={quickActions} />}
-
-            {backCheckAlert.length > 0 && (
-              <InfoCard title="背面確認が必要" titleColor="text-red-600" borderColor="border-red-200">
-                <div className="space-y-2">
-                  {backCheckAlert.slice(0, 5).map((s) => (
-                    <div key={s.residentId} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-red-400 shrink-0" />
-                        <span className="text-xs text-gray-700">{s.residentName}</span>
-                      </div>
-                      <span className="text-xs text-red-600 font-bold">
-                        {s.daysSinceLastBackCheck === null ? "未確認" : `${s.daysSinceLastBackCheck}日経過`}
-                      </span>
-                    </div>
-                  ))}
-                  {backCheckAlert.length > 5 && (
-                    <p className="text-xs text-red-500">他 {backCheckAlert.length - 5}名</p>
-                  )}
-                </div>
-              </InfoCard>
-            )}
 
             {needsAttention.length > 0 && (
               <InfoCard title="排便要確認" titleColor="text-primary" borderColor="border-primary/20">
