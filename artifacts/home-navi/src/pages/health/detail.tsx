@@ -106,10 +106,10 @@ export default function HealthDetail() {
                   
                   <div className="flex-1 overflow-y-auto mt-4 pr-2">
                     <TabsContent value="dr-report" className="m-0 space-y-3">
-                      {summary.doctorReports.length === 0 ? (
+                      {(summary.doctorReports ?? []).length === 0 ? (
                          <div className="text-center py-8 text-muted-foreground">Dr.報告はありません</div>
                       ) : (
-                        summary.doctorReports.map((report) => (
+                        (summary.doctorReports ?? []).map((report) => (
                           <div key={report.id} className="p-4 rounded-lg border bg-card">
                             <div className="flex justify-between items-center mb-2">
                                <span className="text-sm font-medium text-primary">
@@ -124,10 +124,10 @@ export default function HealthDetail() {
                     </TabsContent>
 
                     <TabsContent value="vitals" className="m-0 space-y-3">
-                      {summary.recentVitals.length === 0 ? (
+                      {(summary.recentVitals ?? []).length === 0 ? (
                          <div className="text-center py-8 text-muted-foreground">記録はありません</div>
                       ) : (
-                        summary.recentVitals.map((vital) => (
+                        (summary.recentVitals ?? []).map((vital) => (
                           <div key={vital.id} className="p-4 rounded-lg border flex flex-col gap-2">
                              <div className="text-sm font-medium text-primary">
                                {format(new Date(vital.recordedAt), "yyyy/MM/dd HH:mm", { locale: ja })}
@@ -150,10 +150,10 @@ export default function HealthDetail() {
                     </TabsContent>
 
                     <TabsContent value="meals" className="m-0 space-y-3">
-                       {summary.recentMeals.length === 0 ? (
+                       {(summary.recentMeals ?? []).length === 0 ? (
                          <div className="text-center py-8 text-muted-foreground">記録はありません</div>
                       ) : (
-                        summary.recentMeals.map((meal) => (
+                        (summary.recentMeals ?? []).map((meal) => (
                           <div key={meal.id} className="p-4 rounded-lg border flex justify-between items-center">
                              <div>
                                <div className="text-sm font-medium text-primary mb-1">
@@ -178,10 +178,10 @@ export default function HealthDetail() {
                     </TabsContent>
 
                     <TabsContent value="eliminations" className="m-0 space-y-3">
-                      {summary.recentEliminations.length === 0 ? (
+                      {(summary.recentEliminations ?? []).length === 0 ? (
                          <div className="text-center py-8 text-muted-foreground">記録はありません</div>
                       ) : (
-                        summary.recentEliminations.map((elim) => (
+                        (summary.recentEliminations ?? []).map((elim) => (
                           <div key={elim.id} className="p-4 rounded-lg border">
                              <div className="flex justify-between items-center mb-1">
                                <span className="text-sm font-medium text-primary">
@@ -196,10 +196,10 @@ export default function HealthDetail() {
                     </TabsContent>
 
                     <TabsContent value="weights" className="m-0 space-y-3">
-                       {summary.recentWeights.length === 0 ? (
+                       {(summary.recentWeights ?? []).length === 0 ? (
                          <div className="text-center py-8 text-muted-foreground">記録はありません</div>
                       ) : (
-                        summary.recentWeights.map((weight) => (
+                        (summary.recentWeights ?? []).map((weight) => (
                           <div key={weight.id} className="p-4 rounded-lg border flex justify-between items-center">
                              <span className="text-sm font-medium text-primary">
                                {format(new Date(weight.recordedAt), "yyyy/MM/dd", { locale: ja })}
