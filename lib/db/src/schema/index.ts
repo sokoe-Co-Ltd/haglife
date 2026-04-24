@@ -8,3 +8,4 @@ export * from "./eliminations";
 export * from "./dayServices";
 export * from "./bathReports";
 export * from "./insurances";
+export * from "./facilitySettings";

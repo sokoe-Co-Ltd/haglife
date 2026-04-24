@@ -11,6 +11,7 @@ import dayServicesRouter from "./dayServices";
 import bathReportsRouter from "./bathReports";
 import insurancesRouter from "./insurances";
 import dashboardRouter from "./dashboard";
+import settingsRouter from "./settings";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(eliminationsRouter);
 router.use(dayServicesRouter);
 router.use(bathReportsRouter);
 router.use(insurancesRouter);
+router.use(settingsRouter);
 
 export default router;

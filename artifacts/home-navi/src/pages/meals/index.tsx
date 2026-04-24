@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import {
   Utensils, CheckCircle2, AlertTriangle,
-  ChevronRight, ClipboardCheck, FileSearch, Edit3, Settings2, Lock,
+  ChevronRight, ClipboardCheck, FileSearch, Edit3, Settings2, Lock, Clock,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { format, isToday as dateFnsIsToday } from "date-fns";
@@ -18,6 +18,12 @@ import { DayNav } from "@/components/date-nav";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 type MealType = "朝食" | "昼食" | "夕食";
 type StatusFilter = "すべて" | "未記録" | "記録済み" | "要確認";
@@ -26,11 +32,24 @@ type MealStatus = "未記録" | "確認OK" | "要確認";
 const MEAL_TYPES: MealType[] = ["朝食", "昼食", "夕食"];
 const STATUS_FILTERS: StatusFilter[] = ["すべて", "未記録", "記録済み", "要確認"];
 
-const MEAL_WINDOW: Record<MealType, { label: string; start: number; end: number }> = {
-  "朝食": { label: "6:00〜10:59", start: 6, end: 10 },
-  "昼食": { label: "11:00〜16:59", start: 11, end: 16 },
-  "夕食": { label: "17:00〜23:59", start: 17, end: 23 },
+type MealTimeSettings = {
+  朝食: { start: number; end: number };
+  昼食: { start: number; end: number };
+  夕食: { start: number; end: number };
 };
+
+const DEFAULT_MEAL_TIMES: MealTimeSettings = {
+  朝食: { start: 6, end: 10 },
+  昼食: { start: 11, end: 16 },
+  夕食: { start: 17, end: 23 },
+};
+
+const MEAL_TIMES_QUERY_KEY = ["mealTimeSettings"];
+
+function getMealWindowLabel(mealType: MealType, settings: MealTimeSettings): string {
+  const { start, end } = settings[mealType];
+  return `${start}:00〜${end}:59`;
+}
 
 function getJSTHour(): number {
   const now = new Date();
@@ -38,20 +57,18 @@ function getJSTHour(): number {
   return jst.getHours();
 }
 
-function getCurrentMealType(): MealType {
+function getCurrentMealType(settings: MealTimeSettings = DEFAULT_MEAL_TIMES): MealType {
   const h = getJSTHour();
-  if (h >= 6 && h <= 10) return "朝食";
-  if (h >= 11 && h <= 16) return "昼食";
+  if (h >= settings.朝食.start && h <= settings.朝食.end) return "朝食";
+  if (h >= settings.昼食.start && h <= settings.昼食.end) return "昼食";
   return "夕食";
 }
 
-function isMealEditable(mealType: MealType, dateIsToday: boolean): boolean {
+function isMealEditable(mealType: MealType, dateIsToday: boolean, settings: MealTimeSettings = DEFAULT_MEAL_TIMES): boolean {
   if (!dateIsToday) return true;
-  if (mealType === "昼食") return true;
   const h = getJSTHour();
-  if (mealType === "朝食") return h >= 6 && h <= 10;
-  if (mealType === "夕食") return h >= 17;
-  return true;
+  const { start, end } = settings[mealType];
+  return h >= start && h <= end;
 }
 
 function deriveMealStatus(meal: Meal | undefined): MealStatus {
@@ -173,8 +190,10 @@ interface SidePanelProps {
   activeMealType: MealType;
   onOpenBulkEdit: () => void;
   dateIsToday: boolean;
+  mealTimeSettings: MealTimeSettings;
+  onOpenTimeSettings: () => void;
 }
-function SidePanel({ allResidents, mealMap, floorFilter, activeMealType, onOpenBulkEdit, dateIsToday }: SidePanelProps) {
+function SidePanel({ allResidents, mealMap, floorFilter, activeMealType, onOpenBulkEdit, dateIsToday, mealTimeSettings, onOpenTimeSettings }: SidePanelProps) {
   const [memo, setMemo] = useState("");
   const [, nav] = useLocation();
 
@@ -186,8 +205,8 @@ function SidePanel({ allResidents, mealMap, floorFilter, activeMealType, onOpenB
     MEAL_TYPES.some((t) => deriveMealStatus(getMeal(mealMap, r.id, t)) === "要確認")
   );
 
-  const win = MEAL_WINDOW[activeMealType];
-  const editable = isMealEditable(activeMealType, dateIsToday);
+  const winLabel = getMealWindowLabel(activeMealType, mealTimeSettings);
+  const editable = isMealEditable(activeMealType, dateIsToday, mealTimeSettings);
 
   return (
     <div className="w-64 shrink-0 flex flex-col gap-4">
@@ -196,7 +215,7 @@ function SidePanel({ allResidents, mealMap, floorFilter, activeMealType, onOpenB
         {dateIsToday && (
           <div className={`px-3 py-2 rounded-xl text-xs font-semibold mb-1 ${editable ? "bg-orange-50 text-orange-700" : "bg-gray-50 text-gray-500"}`}>
             {editable
-              ? `${activeMealType}の入力時間帯 (${win.label})`
+              ? `${activeMealType}の入力時間帯 (${winLabel})`
               : `${activeMealType}の時間外 — 編集不可`}
           </div>
         )}
@@ -213,6 +232,13 @@ function SidePanel({ allResidents, mealMap, floorFilter, activeMealType, onOpenB
           bg="bg-purple-50"
           iconBg="bg-purple-500"
           onClick={() => nav("/meals/food-forms")}
+        />
+        <QuickActionBtn
+          icon={Clock}
+          label="食事時間帯の設定"
+          bg="bg-blue-50"
+          iconBg="bg-blue-500"
+          onClick={onOpenTimeSettings}
         />
       </div>
 
@@ -263,8 +289,9 @@ interface MobileMealCardProps {
   activeMealType: MealType;
   onEdit: (mealType: MealType) => void;
   dateIsToday: boolean;
+  mealTimeSettings: MealTimeSettings;
 }
-function MobileMealCard({ resident, mealMap, activeMealType, onEdit, dateIsToday }: MobileMealCardProps) {
+function MobileMealCard({ resident, mealMap, activeMealType, onEdit, dateIsToday, mealTimeSettings }: MobileMealCardProps) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
@@ -279,7 +306,7 @@ function MobileMealCard({ resident, mealMap, activeMealType, onEdit, dateIsToday
           const meal = getMeal(mealMap, resident.id, t);
           const status = deriveMealStatus(meal);
           const isActive = t === activeMealType;
-          const locked = !isMealEditable(t, dateIsToday);
+          const locked = !isMealEditable(t, dateIsToday, mealTimeSettings);
           return (
             <button
               key={t}
@@ -341,7 +368,40 @@ export default function MealsList() {
   const [floorFilter, setFloorFilter] = useState("all");
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [timeSettingsOpen, setTimeSettingsOpen] = useState(false);
+  const [draftSettings, setDraftSettings] = useState<MealTimeSettings>(DEFAULT_MEAL_TIMES);
   const [, nav] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: mealTimeSettings = DEFAULT_MEAL_TIMES } = useQuery<MealTimeSettings>({
+    queryKey: MEAL_TIMES_QUERY_KEY,
+    queryFn: async () => {
+      const res = await fetch("/api/settings/meal-times");
+      if (!res.ok) return DEFAULT_MEAL_TIMES;
+      return res.json();
+    },
+  });
+
+  const saveSettingsMutation = useMutation({
+    mutationFn: async (settings: MealTimeSettings) => {
+      const res = await fetch("/api/settings/meal-times", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+      if (!res.ok) throw new Error("保存に失敗しました");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: MEAL_TIMES_QUERY_KEY });
+      setTimeSettingsOpen(false);
+      toast({ title: "食事時間帯を更新しました" });
+    },
+    onError: () => {
+      toast({ title: "保存に失敗しました", variant: "destructive" });
+    },
+  });
 
   const dateStr = format(date, "yyyy-MM-dd");
   const dateIsToday = dateFnsIsToday(date);
@@ -351,13 +411,22 @@ export default function MealsList() {
   }, [date]);
 
   useEffect(() => {
-    if (dateIsToday) setActiveMealType(getCurrentMealType());
-  }, [dateIsToday]);
+    if (dateIsToday) setActiveMealType(getCurrentMealType(mealTimeSettings));
+  }, [dateIsToday, mealTimeSettings]);
 
   const openEdit = (resident: Resident, mealType: MealType) => {
-    if (!isMealEditable(mealType, dateIsToday)) return;
+    if (!isMealEditable(mealType, dateIsToday, mealTimeSettings)) return;
     setEditTarget({ resident, mealType });
   };
+
+  function openTimeSettings() {
+    setDraftSettings(mealTimeSettings);
+    setTimeSettingsOpen(true);
+  }
+
+  function updateDraftHour(meal: MealType, field: "start" | "end", hour: number) {
+    setDraftSettings((prev) => ({ ...prev, [meal]: { ...prev[meal], [field]: hour } }));
+  }
 
   const { data: residents = [], isLoading: isResidentsLoading } = useListResidents();
   const { data: meals = [], isLoading: isMealsLoading } = useListMeals({ date: dateStr });
@@ -443,7 +512,7 @@ export default function MealsList() {
           <div className="flex items-center gap-1">
             <span className="text-xs font-semibold text-gray-500 mr-1 hidden sm:block">食事タイプ</span>
             {MEAL_TYPES.map((t) => {
-              const locked = !isMealEditable(t, dateIsToday);
+              const locked = !isMealEditable(t, dateIsToday, mealTimeSettings);
               return (
                 <button
                   key={t}
@@ -510,7 +579,7 @@ export default function MealsList() {
                     <TableHead className="w-12 text-xs font-bold text-gray-600 px-3">居室</TableHead>
                     <TableHead className="min-w-[100px] text-xs font-bold text-gray-600">氏名</TableHead>
                     {MEAL_TYPES.map((t) => {
-                      const locked = !isMealEditable(t, dateIsToday);
+                      const locked = !isMealEditable(t, dateIsToday, mealTimeSettings);
                       return (
                         <TableHead key={t} className={`text-center text-xs font-bold min-w-[90px] ${activeMealType === t ? "text-primary" : locked ? "text-gray-400" : "text-gray-600"}`}>
                           <span className="flex items-center justify-center gap-1">
@@ -552,7 +621,7 @@ export default function MealsList() {
                             {resident.lastName} {resident.firstName}
                           </TableCell>
                           {MEAL_TYPES.map((t) => {
-                            const locked = !isMealEditable(t, dateIsToday);
+                            const locked = !isMealEditable(t, dateIsToday, mealTimeSettings);
                             return (
                               <TableCell key={t} className={`py-1 ${activeMealType === t ? "bg-orange-50/30" : ""}`}>
                                 <MealStatusCell
@@ -585,6 +654,8 @@ export default function MealsList() {
             activeMealType={activeMealType}
             onOpenBulkEdit={() => setBulkEditOpen(true)}
             dateIsToday={dateIsToday}
+            mealTimeSettings={mealTimeSettings}
+            onOpenTimeSettings={openTimeSettings}
           />
         </div>
 
@@ -637,6 +708,7 @@ export default function MealsList() {
                 activeMealType={activeMealType}
                 onEdit={(t) => openEdit(resident, t)}
                 dateIsToday={dateIsToday}
+                mealTimeSettings={mealTimeSettings}
               />
             ))
           )}
@@ -653,6 +725,82 @@ export default function MealsList() {
           existingMeal={getMeal(mealMap, editTarget.resident.id, editTarget.mealType)}
         />
       )}
+
+      <Dialog open={timeSettingsOpen} onOpenChange={setTimeSettingsOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Clock className="h-4 w-4 text-primary" />
+              食事時間帯の設定
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-5 py-2">
+            <p className="text-xs text-gray-500">各食事の入力可能な時間帯を設定してください。この時間帯以外は当日の入力がロックされます。</p>
+            {(["朝食", "昼食", "夕食"] as MealType[]).map((meal) => (
+              <div key={meal} className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-gray-700 w-10">{meal}</span>
+                  <span className="text-xs text-gray-400">
+                    {draftSettings[meal].start}:00 〜 {draftSettings[meal].end}:59
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <label className="text-xs text-gray-500 block mb-1">開始時刻</label>
+                    <Select
+                      value={String(draftSettings[meal].start)}
+                      onValueChange={(v) => updateDraftHour(meal, "start", Number(v))}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-48">
+                        {Array.from({ length: 24 }, (_, i) => (
+                          <SelectItem key={i} value={String(i)} className="text-sm">
+                            {i}:00
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <span className="text-gray-400 mt-4">〜</span>
+                  <div className="flex-1">
+                    <label className="text-xs text-gray-500 block mb-1">終了時刻</label>
+                    <Select
+                      value={String(draftSettings[meal].end)}
+                      onValueChange={(v) => updateDraftHour(meal, "end", Number(v))}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-48">
+                        {Array.from({ length: 24 }, (_, i) => (
+                          <SelectItem key={i} value={String(i)} className="text-sm">
+                            {i}:59
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => setTimeSettingsOpen(false)}>
+              キャンセル
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => saveSettingsMutation.mutate(draftSettings)}
+              disabled={saveSettingsMutation.isPending}
+              className="bg-primary text-white hover:bg-primary/90"
+            >
+              {saveSettingsMutation.isPending ? "保存中…" : "保存する"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
