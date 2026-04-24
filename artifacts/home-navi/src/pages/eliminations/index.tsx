@@ -1,7 +1,7 @@
 import { Layout } from "@/components/layout";
 import { useGetEliminationRoundStatus, useCheckEliminationRound, useResetEliminationRound } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Baby, AlertCircle, RefreshCw, Check, ChevronRight, ClipboardList, MessageSquare, Download } from "lucide-react";
+import { Toilet, AlertCircle, RefreshCw, Check, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
@@ -35,7 +35,7 @@ function ResidentEliminationCard({ status, onCheck }: { status: any; onCheck: (i
           }`}
           onClick={(e) => onCheck(status.residentId, e)}
         >
-          {status.isCheckedInRound ? <Check className="h-4 w-4" /> : <Baby className="h-4 w-4" />}
+          {status.isCheckedInRound ? <Check className="h-4 w-4" /> : <Toilet className="h-4 w-4" />}
         </button>
         <ChevronRight className="h-4 w-4 text-gray-300" />
       </div>
@@ -69,9 +69,6 @@ export default function EliminationsList() {
   const ok = statuses?.filter((s) => s.daysSinceLastBm < 2) || [];
 
   const quickActions = [
-    { label: "一括記録", icon: ClipboardList },
-    { label: "コメント確認", icon: MessageSquare },
-    { label: "記録エクスポート", icon: Download },
     { label: "ラウンドリセット", icon: RefreshCw, onClick: handleReset },
   ];
 
@@ -79,7 +76,8 @@ export default function EliminationsList() {
     <Layout>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-800">
+          <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <Toilet className="h-5 w-5 text-primary" />
             排泄
             {statuses && <span className="ml-2 text-sm font-normal text-gray-500">（{statuses.length}名）</span>}
           </h1>
