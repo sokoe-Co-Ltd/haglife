@@ -16,18 +16,18 @@ function StatCard({
   iconBg: string; iconColor: string; action: string; href: string;
 }) {
   return (
-    <Link href={href} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-2 hover:shadow-md transition-shadow">
+    <Link href={href} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col gap-2.5 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between">
-        <p className="text-sm text-gray-500 font-medium leading-tight">{title}</p>
+        <p className="text-base text-gray-500 font-medium leading-tight">{title}</p>
         <div className={`${iconBg} p-2.5 rounded-xl shrink-0`}>
           <Icon className={`h-5 w-5 ${iconColor}`} />
         </div>
       </div>
       <p className="text-4xl font-bold text-gray-900">
         {value ?? <span className="text-gray-300 text-3xl">—</span>}
-        <span className="text-lg font-semibold text-gray-500 ml-1">{unit}</span>
+        <span className="text-xl font-semibold text-gray-500 ml-1">{unit}</span>
       </p>
-      <span className="flex items-center gap-0.5 text-sm text-primary font-semibold">
+      <span className="flex items-center gap-0.5 text-base text-primary font-semibold">
         {action} <ChevronRight className="h-4 w-4" />
       </span>
     </Link>
@@ -43,7 +43,7 @@ function ShortcutBtn({
   return (
     <Link href={href} className={`${bg} rounded-xl ${tall ? "py-8" : "py-5"} px-2 flex flex-col items-center gap-2.5 hover:opacity-90 active:scale-95 transition-all`}>
       <Icon className={`h-7 w-7 ${color}`} />
-      <span className={`text-xs font-bold ${color} text-center leading-tight`}>{label}</span>
+      <span className={`text-sm font-bold ${color} text-center leading-tight`}>{label}</span>
     </Link>
   );
 }
@@ -83,10 +83,10 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      <div className="space-y-4">
+      <div className="space-y-6 pt-2">
 
         {/* ---- Stats row ---- */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="本日の申し送り" value={today?.handoverCount} unit="件"
             icon={FileText} iconBg="bg-primary/10" iconColor="text-primary"
@@ -110,9 +110,9 @@ export default function Dashboard() {
         </div>
 
         {/* ---- Shortcuts (mobile only — shown before alerts/list) ---- */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 lg:hidden">
-          <h2 className="font-bold text-gray-800 text-base mb-3">今日の記録ショートカット</h2>
-          <div className="grid grid-cols-3 gap-2.5">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 lg:hidden">
+          <h2 className="font-bold text-gray-800 text-lg mb-4">今日の記録ショートカット</h2>
+          <div className="grid grid-cols-3 gap-3">
             <ShortcutBtn label="バイタル記録" icon={Activity} bg="bg-red-50" color="text-red-500" href="/vitals" />
             <ShortcutBtn label="食事記録（昼）" icon={Utensils} bg="bg-orange-50" color="text-orange-500" href="/meals" />
             <ShortcutBtn label="排泄確認" icon={Baby} bg="bg-blue-50" color="text-blue-500" href="/eliminations" />
@@ -124,38 +124,38 @@ export default function Dashboard() {
 
         {/* ---- Alert strip ---- */}
         {hasAlerts && (
-          <div className="bg-white rounded-2xl shadow-sm border border-red-100 p-4">
-            <div className="flex items-center justify-between mb-3 gap-2">
-              <div className="flex items-center gap-1.5 text-red-600 font-bold text-sm min-w-0">
-                <AlertTriangle className="h-4 w-4 shrink-0" />
+          <div className="bg-white rounded-2xl shadow-sm border border-red-100 p-5">
+            <div className="flex items-center justify-between mb-4 gap-2">
+              <div className="flex items-center gap-2 text-red-600 font-bold text-base min-w-0">
+                <AlertTriangle className="h-5 w-5 shrink-0" />
                 <span className="truncate">アラート（再測定・確認が必要な項目）</span>
               </div>
-              <Link href="/vitals" className="shrink-0 text-sm text-primary font-semibold flex items-center gap-0.5 hover:text-primary/80">
-                すべて見る <ChevronRight className="h-4 w-4" />
+              <Link href="/vitals" className="shrink-0 text-base text-primary font-semibold flex items-center gap-0.5 hover:text-primary/80">
+                すべて見る <ChevronRight className="h-5 w-5" />
               </Link>
             </div>
-            <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none">
+            <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
               {vitalAlerts.map((a: any) => (
-                <div key={a.residentId} className="shrink-0 bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex flex-col gap-1 min-w-[160px]">
-                  <div className="flex items-center gap-1.5">
-                    <span className="h-2.5 w-2.5 bg-red-500 rounded-full" />
-                    <span className="text-sm font-bold text-red-700">{a.residentName}</span>
+                <div key={a.residentId} className="shrink-0 bg-red-50 border border-red-200 rounded-xl px-4 py-3.5 flex flex-col gap-1.5 min-w-[190px]">
+                  <div className="flex items-center gap-2">
+                    <span className="h-3 w-3 bg-red-500 rounded-full shrink-0" />
+                    <span className="text-base font-bold text-red-700">{a.residentName}</span>
                   </div>
-                  <p className="text-sm text-red-600">
+                  <p className="text-base text-red-600">
                     {a.latestVital ? `体温 ${a.latestVital.temperature}℃` : "バイタル再測定"}
                   </p>
                   {a.latestVital?.recordedAt && (
-                    <p className="text-xs text-gray-400">{fmtTime(a.latestVital.recordedAt)}</p>
+                    <p className="text-sm text-gray-400">{fmtTime(a.latestVital.recordedAt)}</p>
                   )}
                 </div>
               ))}
               {elimAlerts.map((a: any) => (
-                <div key={`e-${a.residentId}`} className="shrink-0 bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex flex-col gap-1 min-w-[160px]">
-                  <div className="flex items-center gap-1.5">
-                    <span className="h-2.5 w-2.5 bg-red-500 rounded-full" />
-                    <span className="text-sm font-bold text-red-700">{a.residentName}</span>
+                <div key={`e-${a.residentId}`} className="shrink-0 bg-red-50 border border-red-200 rounded-xl px-4 py-3.5 flex flex-col gap-1.5 min-w-[190px]">
+                  <div className="flex items-center gap-2">
+                    <span className="h-3 w-3 bg-red-500 rounded-full shrink-0" />
+                    <span className="text-base font-bold text-red-700">{a.residentName}</span>
                   </div>
-                  <p className="text-sm text-red-600">
+                  <p className="text-base text-red-600">
                     {a.daysSinceLastBm !== null ? `排便 ${a.daysSinceLastBm}日経過` : "排便記録なし"}
                   </p>
                 </div>
@@ -165,13 +165,13 @@ export default function Dashboard() {
         )}
 
         {/* ---- Bottom grid (desktop: 3:2 split; mobile: single col) ---- */}
-        <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-5">
 
           {/* ---- 申し送り section ---- */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-            <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-gray-100">
-              <h2 className="font-bold text-gray-800 text-base">本日の申し送り</h2>
-              <Link href="/handover" className="text-sm text-primary font-semibold flex items-center gap-0.5 hover:text-primary/80">
+            <div className="flex items-center justify-between px-5 pt-5 pb-3.5 border-b border-gray-100">
+              <h2 className="font-bold text-gray-800 text-lg">本日の申し送り</h2>
+              <Link href="/handover" className="text-base text-primary font-semibold flex items-center gap-0.5 hover:text-primary/80">
                 すべて見る <ChevronRight className="h-4 w-4" />
               </Link>
             </div>
@@ -182,7 +182,7 @@ export default function Dashboard() {
                 <button
                   key={t}
                   onClick={() => setActiveTab(t)}
-                  className={`py-3 px-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap shrink-0 ${
+                  className={`py-3.5 px-3 text-base font-semibold border-b-2 transition-colors whitespace-nowrap shrink-0 ${
                     activeTab === t
                       ? "border-primary text-primary"
                       : "border-transparent text-gray-500 hover:text-gray-700"
@@ -190,7 +190,7 @@ export default function Dashboard() {
                 >
                   {t}
                   {tabCounts[t] > 0 && (
-                    <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-bold ${activeTab === t ? "bg-primary/10 text-primary" : "bg-gray-100 text-gray-500"}`}>
+                    <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-sm font-bold ${activeTab === t ? "bg-primary/10 text-primary" : "bg-gray-100 text-gray-500"}`}>
                       {tabCounts[t]}
                     </span>
                   )}
@@ -201,20 +201,20 @@ export default function Dashboard() {
             {/* Note list */}
             <div className="flex-1 divide-y divide-gray-50">
               {filteredNotes.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-8">データがありません</p>
+                <p className="text-base text-gray-400 text-center py-10">データがありません</p>
               ) : (
                 filteredNotes.slice(0, 6).map((note: any) => (
-                  <Link key={note.id} href={`/handover/${note.id}`} className="flex items-start gap-3 px-4 py-3.5 hover:bg-gray-50 active:bg-gray-100 transition-colors">
+                  <Link key={note.id} href={`/handover/${note.id}`} className="flex items-start gap-3 px-5 py-4 hover:bg-gray-50 active:bg-gray-100 transition-colors">
                     <div className="shrink-0 mt-0.5">
                       <StatusBadge status={note.status} isImportant={note.isImportant} />
                     </div>
                     <div className="flex-1 min-w-0">
                       {note.residentName && (
-                        <span className="text-sm font-bold text-gray-800 mr-1.5">{note.residentName}</span>
+                        <span className="text-base font-bold text-gray-800 mr-1.5">{note.residentName}</span>
                       )}
-                      <span className="text-sm text-gray-600 line-clamp-2">{note.content}</span>
+                      <span className="text-base text-gray-600 line-clamp-2">{note.content}</span>
                     </div>
-                    <span className="shrink-0 text-sm text-gray-400 tabular-nums">
+                    <span className="shrink-0 text-base text-gray-400 tabular-nums">
                       {fmtTime(note.recordedAt)}
                     </span>
                   </Link>
@@ -223,8 +223,8 @@ export default function Dashboard() {
             </div>
 
             {filteredNotes.length > 6 && (
-              <div className="border-t border-gray-100 px-4 py-3">
-                <Link href="/handover" className="flex items-center justify-center gap-1 text-sm text-primary font-semibold hover:text-primary/80">
+              <div className="border-t border-gray-100 px-5 py-3.5">
+                <Link href="/handover" className="flex items-center justify-center gap-1 text-base text-primary font-semibold hover:text-primary/80">
                   もっと見る <ChevronRight className="h-4 w-4" />
                 </Link>
               </div>
@@ -232,8 +232,8 @@ export default function Dashboard() {
           </div>
 
           {/* ---- Shortcuts (desktop only) ---- */}
-          <div className="hidden lg:flex bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex-col gap-4">
-            <h2 className="font-bold text-gray-800 text-base">今日の記録ショートカット</h2>
+          <div className="hidden lg:flex bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex-col gap-5">
+            <h2 className="font-bold text-gray-800 text-lg">今日の記録ショートカット</h2>
             <div className="grid grid-cols-2 gap-3">
               <ShortcutBtn tall label="バイタル記録" icon={Activity} bg="bg-red-50" color="text-red-500" href="/vitals" />
               <ShortcutBtn tall label="食事記録（昼）" icon={Utensils} bg="bg-orange-50" color="text-orange-500" href="/meals" />
