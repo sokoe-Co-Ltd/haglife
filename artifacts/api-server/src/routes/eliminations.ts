@@ -1,14 +1,24 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, and, gte } from "drizzle-orm";
-import { db, eliminationsTable, eliminationRoundChecksTable, eliminationRoundStateTable, residentsTable } from "@workspace/db";
+import { eq, desc, and, gte, lt } from "drizzle-orm";
+import { db, eliminationsTable, eliminationRoundChecksTable, eliminationRoundStateTable, eliminationBackChecksTable, residentsTable } from "@workspace/db";
 import {
   CreateEliminationBody,
   DeleteEliminationParams,
   ListEliminationsQueryParams,
   CheckEliminationRoundBody,
 } from "@workspace/api-zod";
-
 const router: IRouter = Router();
+
+function toJSTDateString(d: Date): string {
+  return d.toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
+}
+
+function jstDayStart(dateStr: string): Date {
+  return new Date(`${dateStr}T00:00:00+09:00`);
+}
+function jstDayEnd(dateStr: string): Date {
+  return new Date(`${dateStr}T23:59:59.999+09:00`);
+}
 
 router.get("/eliminations", async (req, res): Promise<void> => {
   const query = ListEliminationsQueryParams.safeParse(req.query);
@@ -54,23 +64,38 @@ router.delete("/eliminations/:id", async (req, res): Promise<void> => {
 });
 
 router.get("/eliminations/round-status", async (req, res): Promise<void> => {
+  const dateParam = typeof req.query.date === "string" ? req.query.date : null;
+  const todayJST = toJSTDateString(new Date());
+  const isToday = !dateParam || dateParam === todayJST;
+  const targetDate = dateParam || todayJST;
+
   const residents = await db
     .select()
     .from(residentsTable)
     .where(eq(residentsTable.isVisible, true))
     .orderBy(residentsTable.roomNumber);
 
-  // Get current round reset time
-  const [state] = await db.select().from(eliminationRoundStateTable).orderBy(desc(eliminationRoundStateTable.lastResetAt)).limit(1);
-  const resetAt = state?.lastResetAt ?? new Date(0);
+  let roundChecks: { residentId: number }[] = [];
 
-  // Get round checks after last reset
-  const roundChecks = await db
-    .select()
-    .from(eliminationRoundChecksTable)
-    .where(and(eq(eliminationRoundChecksTable.isActive, true), gte(eliminationRoundChecksTable.checkedAt, resetAt)));
+  if (isToday) {
+    const [state] = await db.select().from(eliminationRoundStateTable).orderBy(desc(eliminationRoundStateTable.lastResetAt)).limit(1);
+    const resetAt = state?.lastResetAt ?? new Date(0);
+    roundChecks = await db
+      .select({ residentId: eliminationRoundChecksTable.residentId })
+      .from(eliminationRoundChecksTable)
+      .where(and(eq(eliminationRoundChecksTable.isActive, true), gte(eliminationRoundChecksTable.checkedAt, resetAt)));
+  } else {
+    roundChecks = await db
+      .select({ residentId: eliminationRoundChecksTable.residentId })
+      .from(eliminationRoundChecksTable)
+      .where(
+        and(
+          gte(eliminationRoundChecksTable.checkedAt, jstDayStart(targetDate)),
+          lt(eliminationRoundChecksTable.checkedAt, jstDayEnd(targetDate)),
+        )
+      );
+  }
 
-  // Get last BM for each resident (type === '便')
   const allBm = await db
     .select()
     .from(eliminationsTable)
@@ -82,6 +107,16 @@ router.get("/eliminations/round-status", async (req, res): Promise<void> => {
     if (!lastBmMap.has(e.residentId)) lastBmMap.set(e.residentId, e.recordedAt);
   }
 
+  const allBackChecks = await db
+    .select()
+    .from(eliminationBackChecksTable)
+    .orderBy(desc(eliminationBackChecksTable.checkedAt));
+
+  const lastBackCheckMap = new Map<number, Date>();
+  for (const b of allBackChecks) {
+    if (!lastBackCheckMap.has(b.residentId)) lastBackCheckMap.set(b.residentId, b.checkedAt);
+  }
+
   const now = new Date();
   const result = residents.map(r => {
     const lastBm = lastBmMap.get(r.id);
@@ -90,6 +125,12 @@ router.get("/eliminations/round-status", async (req, res): Promise<void> => {
       : null;
     const checkedThisRound = roundChecks.some(c => c.residentId === r.id);
     const needsAttention = !r.stomaManagement && (daysSinceLastBm === null || daysSinceLastBm >= 3);
+
+    const lastBackCheck = lastBackCheckMap.get(r.id);
+    const daysSinceLastBackCheck = lastBackCheck
+      ? Math.floor((now.getTime() - lastBackCheck.getTime()) / (1000 * 60 * 60 * 24))
+      : null;
+
     return {
       residentId: r.id,
       residentName: `${r.lastName}${r.firstName}`,
@@ -100,6 +141,8 @@ router.get("/eliminations/round-status", async (req, res): Promise<void> => {
       daysSinceLastBm,
       checkedThisRound,
       needsAttention,
+      lastBackCheckAt: lastBackCheck ? lastBackCheck.toISOString() : null,
+      daysSinceLastBackCheck,
     };
   });
   res.json(result);
@@ -127,6 +170,33 @@ router.post("/eliminations/rounds/reset", async (_req, res): Promise<void> => {
   await db.update(eliminationRoundChecksTable).set({ isActive: false });
   await db.insert(eliminationRoundStateTable).values({ lastResetAt: new Date() });
   res.json({ success: true });
+});
+
+router.get("/eliminations/back-checks", async (req, res): Promise<void> => {
+  const residentIdParam = req.query.resident_id;
+  const rows = await db
+    .select()
+    .from(eliminationBackChecksTable)
+    .where(
+      residentIdParam
+        ? eq(eliminationBackChecksTable.residentId, parseInt(residentIdParam as string, 10))
+        : undefined
+    )
+    .orderBy(desc(eliminationBackChecksTable.checkedAt));
+  res.json(rows);
+});
+
+router.post("/eliminations/back-checks", async (req, res): Promise<void> => {
+  const { residentId, notes } = req.body;
+  if (!residentId || typeof residentId !== "number") {
+    res.status(400).json({ error: "residentId is required" });
+    return;
+  }
+  const [row] = await db
+    .insert(eliminationBackChecksTable)
+    .values({ residentId, notes: notes ?? null })
+    .returning();
+  res.status(201).json(row);
 });
 
 export default router;

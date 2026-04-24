@@ -49,6 +49,21 @@ export const eliminationRoundStateTable = pgTable(
   },
 );
 
+export const eliminationBackChecksTable = pgTable(
+  "elimination_back_checks",
+  {
+    id: serial("id").primaryKey(),
+    residentId: integer("resident_id").notNull(),
+    checkedAt: timestamp("checked_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+);
+
 export const insertEliminationSchema = createInsertSchema(
   eliminationsTable,
 ).omit({ id: true, createdAt: true });
