@@ -87,10 +87,10 @@ export function DayNav({ date, onChange, maxDate }: DayNavProps) {
               day: "group/day relative aspect-square h-full w-full select-none p-0 text-center",
             }}
           />
-          <div className="border-t border-gray-100 p-2">
+          <div className="border-t border-gray-100 p-3">
             <button
               onClick={() => { onChange(today); setOpen(false); }}
-              className="w-full py-1.5 text-xs font-semibold text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+              className="w-full py-3 text-base font-bold text-orange-600 hover:bg-orange-50 rounded-xl transition-colors"
             >
               今日に戻る
             </button>
@@ -166,21 +166,21 @@ export function MonthNav({ year, month, onChange }: MonthNavProps) {
 
       {open && (
         <Popup onClose={() => setOpen(false)}>
-          <div className="p-4 min-w-[240px]">
-            <div className="flex items-center justify-between mb-3">
-              <button onClick={() => setPickerYear(y => y - 1)} className="p-1 rounded hover:bg-gray-100 text-gray-500">
-                <ChevronLeft className="h-4 w-4" />
+          <div className="p-5 min-w-[320px]">
+            <div className="flex items-center justify-between mb-4">
+              <button onClick={() => setPickerYear(y => y - 1)} className="p-2.5 rounded-xl hover:bg-gray-100 text-gray-500">
+                <ChevronLeft className="h-6 w-6" />
               </button>
-              <span className="text-sm font-bold text-gray-800">{pickerYear}年</span>
+              <span className="text-xl font-bold text-gray-800">{pickerYear}年</span>
               <button
                 onClick={() => setPickerYear(y => y + 1)}
                 disabled={pickerYear >= today.getFullYear()}
-                className={`p-1 rounded transition-colors ${pickerYear >= today.getFullYear() ? "text-gray-200 cursor-not-allowed" : "hover:bg-gray-100 text-gray-500"}`}
+                className={`p-2.5 rounded-xl transition-colors ${pickerYear >= today.getFullYear() ? "text-gray-200 cursor-not-allowed" : "hover:bg-gray-100 text-gray-500"}`}
               >
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-6 w-6" />
               </button>
             </div>
-            <div className="grid grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-3 gap-2">
               {MONTHS.map((label, i) => {
                 const m = i + 1;
                 const isFuture = pickerYear > today.getFullYear() || (pickerYear === today.getFullYear() && m > today.getMonth() + 1);
@@ -190,7 +190,7 @@ export function MonthNav({ year, month, onChange }: MonthNavProps) {
                     key={m}
                     disabled={isFuture}
                     onClick={() => { onChange(pickerYear, m); setOpen(false); }}
-                    className={`py-2 rounded-lg text-xs font-semibold transition-colors ${isFuture ? "text-gray-200 cursor-not-allowed" : isSelected ? "bg-orange-500 text-white" : "hover:bg-orange-50 text-gray-700"}`}
+                    className={`py-4 rounded-xl text-base font-bold transition-colors ${isFuture ? "text-gray-200 cursor-not-allowed" : isSelected ? "bg-orange-500 text-white" : "hover:bg-orange-50 text-gray-700"}`}
                   >
                     {label}
                   </button>
