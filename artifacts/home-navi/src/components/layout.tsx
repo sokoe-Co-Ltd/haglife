@@ -55,13 +55,11 @@ function getGreeting() {
 
 function HagulifeLogo({ size = 36 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#FFF3EC" />
-      <path
-        d="M20 30C20 30 9 23.5 9 16.5C9 13.4 11.5 11 14.5 11C16.5 11 18.3 12.1 20 14C21.7 12.1 23.5 11 25.5 11C28.5 11 31 13.4 31 16.5C31 23.5 20 30 20 30Z"
-        fill="#F97316"
-      />
-    </svg>
+    <img
+      src="/logo.png"
+      alt="ハグライフ南摂津"
+      style={{ width: size, height: size, objectFit: "contain" }}
+    />
   );
 }
 
