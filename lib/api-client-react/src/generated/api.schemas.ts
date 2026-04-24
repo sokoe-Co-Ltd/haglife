@@ -378,6 +378,7 @@ export interface HandoverNote {
   category: HandoverNoteCategory;
   isImportant: boolean;
   isDoctorReport: boolean;
+  status: string;
   content: string;
   /** @nullable */
   authorId?: number | null;
@@ -500,6 +501,8 @@ export interface UpdateHandoverNoteBody {
   isImportant?: boolean | null;
   /** @nullable */
   isDoctorReport?: boolean | null;
+  /** @nullable */
+  status?: string | null;
   /** @nullable */
   content?: string | null;
   /** @nullable */
@@ -873,6 +876,8 @@ export type ListHandoverNotesParams = {
   today_only?: boolean;
   /** Filter by date (YYYY-MM-DD). @nullable */
   date?: string | null;
+  /** Filter by year-month (YYYY-MM). @nullable */
+  year_month?: string | null;
   limit?: number;
 };
 

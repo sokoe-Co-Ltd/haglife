@@ -46,6 +46,12 @@ router.get("/handover-notes", async (req, res): Promise<void> => {
     const { start, end } = dayRange();
     conditions.push(gte(handoverNotesTable.recordedAt, start));
     conditions.push(lte(handoverNotesTable.recordedAt, end));
+  } else if (query.success && query.data.year_month) {
+    const [y, m] = query.data.year_month.split("-").map(Number);
+    const start = new Date(y, m - 1, 1, 0, 0, 0, 0);
+    const end = new Date(y, m, 0, 23, 59, 59, 999);
+    conditions.push(gte(handoverNotesTable.recordedAt, start));
+    conditions.push(lte(handoverNotesTable.recordedAt, end));
   } else if (query.success && query.data.date) {
     const { start, end } = dayRange(query.data.date);
     conditions.push(gte(handoverNotesTable.recordedAt, start));

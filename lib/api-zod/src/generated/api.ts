@@ -605,6 +605,7 @@ export const ListHandoverNotesQueryParams = zod.object({
   is_doctor_report: zod.coerce.boolean().optional(),
   today_only: zod.coerce.boolean().optional(),
   date: zod.coerce.string().nullish(),
+  year_month: zod.coerce.string().nullish(),
   limit: zod.coerce.number().default(listHandoverNotesQueryLimitDefault),
 });
 
@@ -616,6 +617,7 @@ export const ListHandoverNotesResponseItem = zod.object({
   category: zod.enum(["利用者", "その他"]),
   isImportant: zod.boolean(),
   isDoctorReport: zod.boolean(),
+  status: zod.string(),
   content: zod.string(),
   authorId: zod.number().nullish(),
   authorName: zod.string().nullish(),
@@ -684,6 +686,7 @@ export const UpdateHandoverNoteParams = zod.object({
 export const UpdateHandoverNoteBody = zod.object({
   isImportant: zod.boolean().nullish(),
   isDoctorReport: zod.boolean().nullish(),
+  status: zod.string().nullish(),
   content: zod.string().nullish(),
   photo1Url: zod.string().nullish(),
   photo2Url: zod.string().nullish(),
