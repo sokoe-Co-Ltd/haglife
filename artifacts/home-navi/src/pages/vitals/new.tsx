@@ -170,6 +170,7 @@ export default function VitalsInput() {
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const autoFilledRef = React.useRef(false);
 
   const { data: resident } = useGetResident(residentId, { query: { enabled: !!residentId } });
 
@@ -187,7 +188,7 @@ export default function VitalsInput() {
     return format(parseISO(v.recordedAt), "yyyy-MM-dd") === dateProp;
   }) ?? [];
 
-  // Past 7 days (excluding dateProp)
+  // Past days (excluding dateProp)
   const past7 = vitals?.filter((v) => {
     const d = format(parseISO(v.recordedAt), "yyyy-MM-dd");
     return d !== dateProp;
@@ -197,7 +198,7 @@ export default function VitalsInput() {
   const hasToday = todayVitals.length > 0;
   const needsRecheck = latestToday?.needsRecheck ?? false;
 
-  // Show form if: no record today, or needsRecheck, or user explicitly toggles
+  // Show form always; hidden only when no record exists and user hasn't toggled
   const isFormVisible = !hasToday || needsRecheck || showForm || editingId != null;
 
   const form = useForm({
@@ -211,29 +212,40 @@ export default function VitalsInput() {
     },
   });
 
-  // Pre-fill form when editing
+  // When today's record loads for the first time: auto-enter edit mode with pre-filled values
+  useEffect(() => {
+    if (latestToday && !autoFilledRef.current) {
+      autoFilledRef.current = true;
+      setEditingId(latestToday.id);
+      setShowForm(true);
+      form.reset({
+        temperature: latestToday.temperature?.toString() ?? "",
+        bpSystolic:  latestToday.bpSystolic?.toString()  ?? "",
+        bpDiastolic: latestToday.bpDiastolic?.toString() ?? "",
+        pulse:        latestToday.pulse?.toString()       ?? "",
+        spo2:         latestToday.spo2?.toString()        ?? "",
+        notes:        latestToday.notes ?? "",
+      });
+    }
+  }, [latestToday]);
+
+  // Re-fill form when editingId changes (e.g. after save, or when switching entry)
   useEffect(() => {
     if (editingId != null && vitals) {
       const target = vitals.find((v) => v.id === editingId);
       if (target) {
         form.reset({
           temperature: target.temperature?.toString() ?? "",
-          bpSystolic: target.bpSystolic?.toString() ?? "",
+          bpSystolic:  target.bpSystolic?.toString()  ?? "",
           bpDiastolic: target.bpDiastolic?.toString() ?? "",
-          pulse: target.pulse?.toString() ?? "",
-          spo2: target.spo2?.toString() ?? "",
-          notes: target.notes ?? "",
+          pulse:        target.pulse?.toString()       ?? "",
+          spo2:         target.spo2?.toString()        ?? "",
+          notes:        target.notes ?? "",
         });
       }
-    } else if (!editingId) {
-      form.reset({
-        temperature: "",
-        bpSystolic: "",
-        bpDiastolic: "",
-        pulse: "",
-        spo2: "",
-        notes: "",
-      });
+    } else if (editingId === null && autoFilledRef.current) {
+      // User explicitly switched to "new record" mode (再測定)
+      form.reset({ temperature: "", bpSystolic: "", bpDiastolic: "", pulse: "", spo2: "", notes: "" });
     }
   }, [editingId]);
 
@@ -343,28 +355,20 @@ export default function VitalsInput() {
                   ) : (
                     <>
                       <CheckCircle2 className="h-5 w-5 text-green-500" />
-                      <span className="font-bold text-green-700">記録済み・異常なし</span>
+                      <span className="font-bold text-green-700">記録済み</span>
                     </>
                   )}
+                  <span className="text-xs text-gray-400">（下のフォームで変更できます）</span>
                 </div>
-                <div className="flex gap-2">
+                {needsRecheck && (
                   <button
-                    onClick={() => { setEditingId(latestToday!.id); setShowForm(true); }}
-                    className="flex items-center gap-1.5 text-xs font-medium text-gray-600 px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                    onClick={() => { autoFilledRef.current = true; setEditingId(null); setShowForm(true); }}
+                    className="flex items-center gap-1.5 text-xs font-bold text-white bg-red-500 px-2.5 py-1.5 rounded-lg hover:bg-red-600 transition-colors"
                   >
-                    <Pencil className="h-3.5 w-3.5" />
-                    変更
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    再測定（新規追加）
                   </button>
-                  {needsRecheck && (
-                    <button
-                      onClick={() => { setEditingId(null); setShowForm(true); }}
-                      className="flex items-center gap-1.5 text-xs font-bold text-white bg-red-500 px-2.5 py-1.5 rounded-lg hover:bg-red-600 transition-colors"
-                    >
-                      <RefreshCw className="h-3.5 w-3.5" />
-                      再測定
-                    </button>
-                  )}
-                </div>
+                )}
               </div>
 
               {/* Today's vitals grid */}
@@ -404,18 +408,15 @@ export default function VitalsInput() {
           <Card>
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-bold text-gray-700">
-                  {editingId != null ? "記録を変更" : needsRecheck ? "再測定記録" : hasToday ? "新たに記録" : "バイタル記録"}
+                <h2 className="font-bold text-gray-700 flex items-center gap-2">
+                  {editingId != null ? (
+                    <><Pencil className="h-4 w-4 text-primary" />記録を変更</>
+                  ) : needsRecheck ? (
+                    <><RefreshCw className="h-4 w-4 text-red-500" />再測定記録（新規追加）</>
+                  ) : (
+                    "バイタル記録"
+                  )}
                 </h2>
-                {hasToday && !needsRecheck && (
-                  <button
-                    type="button"
-                    onClick={() => { setShowForm(false); setEditingId(null); }}
-                    className="text-xs text-gray-400 hover:text-gray-600"
-                  >
-                    キャンセル
-                  </button>
-                )}
               </div>
 
               {autoRecheckFlag && (
@@ -491,13 +492,14 @@ export default function VitalsInput() {
           </Card>
         )}
 
-        {/* Show "新たに記録" button if today is recorded and form is hidden */}
-        {hasToday && !needsRecheck && !isFormVisible && (
+        {/* 再測定ボタン: 記録済みで異常なしの場合のみ表示 */}
+        {hasToday && !needsRecheck && (
           <button
-            onClick={() => setShowForm(true)}
-            className="w-full py-3 rounded-xl border-2 border-dashed border-primary/30 text-primary text-sm font-medium hover:bg-primary/5 transition-colors"
+            onClick={() => { autoFilledRef.current = true; setEditingId(null); setShowForm(true); }}
+            className="w-full py-3 rounded-xl border-2 border-dashed border-gray-200 text-gray-500 text-sm font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
           >
-            + 新たに記録する
+            <RefreshCw className="h-4 w-4" />
+            再測定（新しい記録として追加）
           </button>
         )}
 
