@@ -36,12 +36,12 @@ function StatCard({
 
 // ---- Shortcut button ----
 function ShortcutBtn({
-  label, icon: Icon, bg, color, href,
+  label, icon: Icon, bg, color, href, tall = false,
 }: {
-  label: string; icon: React.ElementType; bg: string; color: string; href: string;
+  label: string; icon: React.ElementType; bg: string; color: string; href: string; tall?: boolean;
 }) {
   return (
-    <Link href={href} className={`${bg} rounded-xl py-5 px-2 flex flex-col items-center gap-2.5 hover:opacity-90 active:scale-95 transition-all`}>
+    <Link href={href} className={`${bg} rounded-xl ${tall ? "py-8" : "py-5"} px-2 flex flex-col items-center gap-2.5 hover:opacity-90 active:scale-95 transition-all`}>
       <Icon className={`h-7 w-7 ${color}`} />
       <span className={`text-xs font-bold ${color} text-center leading-tight`}>{label}</span>
     </Link>
@@ -164,8 +164,8 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ---- Bottom grid (desktop: 2-col; mobile: single col) ---- */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* ---- Bottom grid (desktop: 3:2 split; mobile: single col) ---- */}
+        <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-4">
 
           {/* ---- 申し送り section ---- */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col">
@@ -235,12 +235,12 @@ export default function Dashboard() {
           <div className="hidden lg:flex bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex-col gap-4">
             <h2 className="font-bold text-gray-800 text-base">今日の記録ショートカット</h2>
             <div className="grid grid-cols-2 gap-3">
-              <ShortcutBtn label="バイタル記録" icon={Activity} bg="bg-red-50" color="text-red-500" href="/vitals" />
-              <ShortcutBtn label="食事記録（昼）" icon={Utensils} bg="bg-orange-50" color="text-orange-500" href="/meals" />
-              <ShortcutBtn label="排泄確認" icon={Baby} bg="bg-blue-50" color="text-blue-500" href="/eliminations" />
-              <ShortcutBtn label="入浴報告" icon={Bath} bg="bg-cyan-50" color="text-cyan-600" href="/bath-reports" />
-              <ShortcutBtn label="体重記録" icon={Weight} bg="bg-green-50" color="text-green-600" href="/weights" />
-              <ShortcutBtn label="デイ準備物" icon={Briefcase} bg="bg-purple-50" color="text-purple-600" href="/day-services" />
+              <ShortcutBtn tall label="バイタル記録" icon={Activity} bg="bg-red-50" color="text-red-500" href="/vitals" />
+              <ShortcutBtn tall label="食事記録（昼）" icon={Utensils} bg="bg-orange-50" color="text-orange-500" href="/meals" />
+              <ShortcutBtn tall label="排泄確認" icon={Baby} bg="bg-blue-50" color="text-blue-500" href="/eliminations" />
+              <ShortcutBtn tall label="入浴報告" icon={Bath} bg="bg-cyan-50" color="text-cyan-600" href="/bath-reports" />
+              <ShortcutBtn tall label="体重記録" icon={Weight} bg="bg-green-50" color="text-green-600" href="/weights" />
+              <ShortcutBtn tall label="デイ準備物" icon={Briefcase} bg="bg-purple-50" color="text-purple-600" href="/day-services" />
             </div>
           </div>
 
