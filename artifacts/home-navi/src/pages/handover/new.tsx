@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  ChevronLeft, Search, X, Camera, Image as ImageIcon,
-  AlertCircle, Stethoscope, UserCircle, Check, ChevronDown,
+  ChevronLeft, Search, X, Camera,
+  AlertCircle, Stethoscope, Check, ChevronDown,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
@@ -69,13 +69,16 @@ function ResidentPickerDialog({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="w-full flex items-center justify-between gap-2 h-11 px-3 rounded-lg border border-input bg-background text-sm hover:bg-gray-50 transition-colors"
+        className="w-full flex items-center justify-between gap-2 h-12 px-3 rounded-lg border border-input bg-background hover:bg-gray-50 transition-colors"
       >
-        <span className={selected ? "text-gray-900" : "text-muted-foreground"}>
-          {selected
-            ? `${selected.roomNumber} ${selected.lastName} ${selected.firstName}`
-            : "利用者を選択"}
-        </span>
+        {selected ? (
+          <span className="text-base font-semibold text-gray-900">
+            <span className="text-sm font-normal text-gray-400 mr-1.5">{selected.roomNumber}</span>
+            {selected.lastName} {selected.firstName}
+          </span>
+        ) : (
+          <span className="text-base text-muted-foreground">利用者を選択</span>
+        )}
         <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
       </button>
 
@@ -122,14 +125,14 @@ function ResidentPickerDialog({
                     key={r.id}
                     type="button"
                     onClick={() => select(r.id.toString())}
-                    className={`w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 transition-colors ${isSelected ? "bg-primary/5" : ""}`}
+                    className={`w-full flex items-center justify-between px-4 py-3.5 text-left hover:bg-gray-50 transition-colors ${isSelected ? "bg-primary/5" : ""}`}
                   >
-                    <span className="text-sm">
+                    <div>
                       <span className="text-xs text-gray-400 mr-2">{r.roomNumber}</span>
-                      <span className={`font-medium ${isSelected ? "text-primary" : "text-gray-800"}`}>
+                      <span className={`text-base font-semibold ${isSelected ? "text-primary" : "text-gray-800"}`}>
                         {r.lastName} {r.firstName}
                       </span>
-                    </span>
+                    </div>
                     {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
                   </button>
                 );
@@ -273,39 +276,18 @@ function StaffPickerSection({
   return (
     <div className="space-y-2">
       <Label className="text-sm font-medium text-gray-700">記入者</Label>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {staff.map((s) => {
-          const isSelected = s.id.toString() === value;
-          const initial = s.lastName?.charAt(0) ?? "?";
-          return (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => onChange(s.id.toString())}
-              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 text-left transition-all ${
-                isSelected
-                  ? "border-primary bg-primary/5"
-                  : "border-gray-100 bg-gray-50 hover:border-gray-200"
-              }`}
-            >
-              <div className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-                isSelected ? "bg-primary text-white" : "bg-primary/10 text-primary"
-              }`}>
-                {initial}
-              </div>
-              <div className="min-w-0">
-                <p className={`text-sm font-bold truncate ${isSelected ? "text-primary" : "text-gray-800"}`}>
-                  {s.lastName} {s.firstName}
-                </p>
-                <p className="text-xs text-gray-400 truncate">{s.role}</p>
-              </div>
-              {isSelected && (
-                <Check className="h-4 w-4 text-primary shrink-0 ml-auto" />
-              )}
-            </button>
-          );
-        })}
-      </div>
+      <Select onValueChange={onChange} value={value}>
+        <SelectTrigger className="h-12 text-base">
+          <SelectValue placeholder="記入者を選択" />
+        </SelectTrigger>
+        <SelectContent>
+          {staff.map((s) => (
+            <SelectItem key={s.id} value={s.id.toString()} className="py-3 text-base">
+              {s.lastName} {s.firstName}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
