@@ -201,21 +201,6 @@ function SidePanel({ allResidents, mealMap, floorFilter, activeMealType, onOpenB
           </div>
         )}
         <QuickActionBtn
-          icon={Edit3}
-          label={`${activeMealType}を一括入力`}
-          bg="bg-orange-50"
-          iconBg="bg-orange-500"
-          onClick={onOpenBulkEdit}
-          disabled={!editable && dateIsToday}
-        />
-        <QuickActionBtn
-          icon={Edit3}
-          label="全食事を編集（管理者）"
-          bg="bg-blue-50"
-          iconBg="bg-blue-500"
-          onClick={onOpenBulkEdit}
-        />
-        <QuickActionBtn
           icon={ClipboardCheck}
           label="記録チェック"
           bg="bg-green-50"
@@ -224,9 +209,10 @@ function SidePanel({ allResidents, mealMap, floorFilter, activeMealType, onOpenB
         />
         <QuickActionBtn
           icon={FileSearch}
-          label="食事形態の確認"
+          label="食事形態の確認・設定"
           bg="bg-purple-50"
           iconBg="bg-purple-500"
+          onClick={() => nav("/meals/food-forms")}
         />
       </div>
 
@@ -534,7 +520,6 @@ export default function MealsList() {
                       );
                     })}
                     <TableHead className="text-xs font-bold text-gray-600 min-w-[110px]">備考・アラート</TableHead>
-                    <TableHead className="text-xs font-bold text-gray-600 w-20">個人入力</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -547,12 +532,11 @@ export default function MealsList() {
                         <TableCell><Skeleton className="h-10 w-full" /></TableCell>
                         <TableCell><Skeleton className="h-10 w-full" /></TableCell>
                         <TableCell><Skeleton className="h-6 w-20" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-16" /></TableCell>
                       </TableRow>
                     ))
                   ) : sortedAndFiltered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-12 text-gray-400 text-sm">
+                      <TableCell colSpan={6} className="text-center py-12 text-gray-400 text-sm">
                         該当する利用者がいません
                       </TableCell>
                     </TableRow>
@@ -581,15 +565,6 @@ export default function MealsList() {
                           })}
                           <TableCell className="py-2">
                             <AlertColumn resident={resident} />
-                          </TableCell>
-                          <TableCell className="py-1">
-                            <button
-                              onClick={() => nav(`/meals/records/${resident.id}`)}
-                              className="w-full flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold text-primary border border-primary/30 hover:bg-orange-50 transition-colors"
-                            >
-                              <ClipboardCheck className="h-3.5 w-3.5" />
-                              記録
-                            </button>
                           </TableCell>
                         </TableRow>
                       );

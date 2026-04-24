@@ -87,6 +87,12 @@ export interface Resident {
   careManagerCompany?: string | null;
   /** @nullable */
   careManagerName?: string | null;
+  /** @nullable */
+  mealTextureBreakfast?: string | null;
+  /** @nullable */
+  mealTextureLunch?: string | null;
+  /** @nullable */
+  mealTextureDinner?: string | null;
   isVisible: boolean;
   createdAt: string;
   updatedAt: string;
@@ -229,6 +235,12 @@ export interface UpdateResidentBody {
   careManagerCompany?: string | null;
   /** @nullable */
   careManagerName?: string | null;
+  /** @nullable */
+  mealTextureBreakfast?: string | null;
+  /** @nullable */
+  mealTextureLunch?: string | null;
+  /** @nullable */
+  mealTextureDinner?: string | null;
   /** @nullable */
   isVisible?: boolean | null;
 }

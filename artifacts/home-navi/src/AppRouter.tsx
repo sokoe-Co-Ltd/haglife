@@ -8,6 +8,7 @@ import VitalsNew from "./pages/vitals/new";
 import MealsList from "./pages/meals";
 import MealsRecordsIndex from "./pages/meals/records/index";
 import ResidentMealHistory from "./pages/meals/records/[residentId]";
+import MealFoodForms from "./pages/meals/food-forms";
 import WeightsList from "./pages/weights";
 import WeightsNew from "./pages/weights/new";
 import EliminationsList from "./pages/eliminations";
@@ -46,6 +47,7 @@ export default function AppRouter() {
       <Route path="/meals" component={MealsList} />
       <Route path="/meals/records" component={MealsRecordsIndex} />
       <Route path="/meals/records/:residentId" component={ResidentMealHistory} />
+      <Route path="/meals/food-forms" component={MealFoodForms} />
       <Route path="/weights" component={WeightsList} />
       <Route path="/weights/:residentId" component={WeightsNew} />
       <Route path="/eliminations" component={EliminationsList} />

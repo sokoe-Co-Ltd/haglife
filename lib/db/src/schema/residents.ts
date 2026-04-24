@@ -39,6 +39,9 @@ export const residentsTable = pgTable("residents", {
   keyPersonTel1: text("key_person_tel1"),
   careManagerCompany: text("care_manager_company"),
   careManagerName: text("care_manager_name"),
+  mealTextureBreakfast: text("meal_texture_breakfast"),
+  mealTextureLunch: text("meal_texture_lunch"),
+  mealTextureDinner: text("meal_texture_dinner"),
   isVisible: boolean("is_visible").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
