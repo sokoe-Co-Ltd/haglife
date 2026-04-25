@@ -11,6 +11,8 @@ import ResidentMealHistory from "./pages/meals/records/[residentId]";
 import MealFoodForms from "./pages/meals/food-forms";
 import WeightsList from "./pages/weights";
 import WeightsNew from "./pages/weights/new";
+import WeightGraphList from "./pages/weights/graph/index";
+import WeightGraphDetail from "./pages/weights/graph/[id]";
 import EliminationsList from "./pages/eliminations";
 import EliminationsNew from "./pages/eliminations/new";
 import DayServicesList from "./pages/day-services";
@@ -49,6 +51,8 @@ export default function AppRouter() {
       <Route path="/meals/records/:residentId" component={ResidentMealHistory} />
       <Route path="/meals/food-forms" component={MealFoodForms} />
       <Route path="/weights" component={WeightsList} />
+      <Route path="/weights/graph" component={WeightGraphList} />
+      <Route path="/weights/graph/:id" component={WeightGraphDetail} />
       <Route path="/weights/:residentId" component={WeightsNew} />
       <Route path="/eliminations" component={EliminationsList} />
       <Route path="/eliminations/:residentId" component={EliminationsNew} />
