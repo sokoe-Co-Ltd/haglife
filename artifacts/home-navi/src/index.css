@@ -68,6 +68,8 @@
 
 /* LIGHT MODE - Calming Teal / Medical Blue */
 :root {
+  font-size: 18px;
+
   --background: 210 40% 98%;
   --foreground: 222 47% 11%;
   
