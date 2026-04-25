@@ -79,12 +79,20 @@ function ResidentEliminationCard({
     <Link href={`/eliminations/${status.residentId}`} className={`flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors ${isBirthday ? "bg-red-50 hover:bg-red-50" : ""}`}>
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs text-gray-400">{status.roomNumber}</span>
-            {isBirthday && <span>🎂</span>}
-            <span className={`text-sm font-semibold ${isBirthday ? "text-red-600" : "text-gray-800"}`}>{status.residentName}</span>
-            {isBirthday && <span className="text-xs font-bold text-red-500">本日お誕生日</span>}
-          </div>
+          {isBirthday ? (
+            <div className="flex flex-col gap-0.5">
+              <div>
+                <span className="text-xs text-gray-400 mr-2">{status.roomNumber}</span>
+                <span className="text-sm font-semibold text-red-600">{status.residentName}</span>
+              </div>
+              <span className="text-xs font-bold text-red-500">🎂 本日お誕生日</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-gray-400">{status.roomNumber}</span>
+              <span className="text-sm font-semibold text-gray-800">{status.residentName}</span>
+            </div>
+          )}
           <div className="mt-1">
             <BmBadge days={status.daysSinceLastBm} stomaManagement={status.stomaManagement} />
           </div>

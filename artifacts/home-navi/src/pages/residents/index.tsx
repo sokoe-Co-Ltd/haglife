@@ -129,7 +129,7 @@ export default function ResidentsList() {
                         {isBirthday && !isHospitalized ? "🎂" : resident.lastName.charAt(0)}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-400">{resident.roomNumber}</span>
                           <span className={`text-sm font-bold ${
                             isHospitalized ? "text-blue-700" : isBirthday ? "text-red-600" : "text-gray-800"
@@ -142,10 +142,10 @@ export default function ResidentsList() {
                               <Hospital className="h-3 w-3" />入院中
                             </span>
                           )}
-                          {isBirthday && !isHospitalized && (
-                            <span className="text-xs font-bold text-red-500">🎉 本日お誕生日</span>
-                          )}
                         </div>
+                        {isBirthday && !isHospitalized && (
+                          <span className="text-xs font-bold text-red-500 mt-0.5 block">🎉 本日お誕生日</span>
+                        )}
                       </div>
                       <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
                     </Link>

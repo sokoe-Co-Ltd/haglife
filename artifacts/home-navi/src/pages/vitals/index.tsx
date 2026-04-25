@@ -51,10 +51,20 @@ function ResidentVitalCard({ status, dateStr }: { status: any; dateStr: string }
           </span>
         )}
         <div className="min-w-0">
-          <span className="text-xs text-gray-400 mr-2">{status.roomNumber}</span>
-          {isBirthday && <span className="mr-1">🎂</span>}
-          <span className={`text-sm font-semibold ${isBirthday ? "text-red-600" : "text-gray-800"}`}>{status.residentName}</span>
-          {isBirthday && <span className="ml-1.5 text-xs font-bold text-red-500">本日お誕生日</span>}
+          {isBirthday ? (
+            <div className="flex flex-col gap-0.5">
+              <div>
+                <span className="text-xs text-gray-400 mr-2">{status.roomNumber}</span>
+                <span className="text-sm font-semibold text-red-600">{status.residentName}</span>
+              </div>
+              <span className="text-xs font-bold text-red-500">🎂 本日お誕生日</span>
+            </div>
+          ) : (
+            <>
+              <span className="text-xs text-gray-400 mr-2">{status.roomNumber}</span>
+              <span className="text-sm font-semibold text-gray-800">{status.residentName}</span>
+            </>
+          )}
         </div>
       </div>
       <div className="flex items-center gap-4 shrink-0">
