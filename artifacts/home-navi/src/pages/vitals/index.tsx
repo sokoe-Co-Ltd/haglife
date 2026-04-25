@@ -2,13 +2,14 @@ import { useState } from "react";
 import { Layout } from "@/components/layout";
 import { useGetVitalsTodayStatus } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Activity, AlertCircle, CheckCircle2, ChevronRight, Plus, Settings } from "lucide-react";
+import { Activity, AlertCircle, CheckCircle2, ChevronRight, Plus, Settings, FileDown } from "lucide-react";
 import { Link } from "wouter";
 import { DayNav } from "@/components/date-nav";
 import { format } from "date-fns";
 import { QuickActionsCard, StaffMemoCard, InfoCard } from "@/components/PageRightPanel";
 import { Button } from "@/components/ui/button";
 import { isTodayBirthday } from "@/lib/birthday";
+import { printVitalsPdf } from "@/lib/printVitalsPdf";
 
 const SESSION_KEY = "vitals-selected-date";
 
@@ -97,6 +98,11 @@ export default function VitalsList() {
   const quickActions = [
     { label: "新規記録", icon: Plus, href: "/vitals/new", color: "bg-primary" },
     { label: "基準値設定", icon: Settings, href: "/vitals/thresholds" },
+    {
+      label: "PDF出力",
+      icon: FileDown,
+      onClick: () => printVitalsPdf(statuses ?? [], dateStr),
+    },
   ];
 
   return (
@@ -111,6 +117,16 @@ export default function VitalsList() {
           </h1>
           <div className="flex items-center gap-2">
             <DayNav date={date} onChange={handleDateChange} />
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              onClick={() => printVitalsPdf(statuses ?? [], dateStr)}
+              title="バイタル一覧をPDF出力"
+            >
+              <FileDown className="h-4 w-4" />
+              <span className="hidden sm:inline">PDF出力</span>
+            </Button>
             <Link href="/vitals/new">
               <Button size="sm" className="gap-1.5">
                 <Plus className="h-4 w-4" />
