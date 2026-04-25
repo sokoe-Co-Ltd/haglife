@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, ne } from "drizzle-orm";
 import { db, residentsTable, vitalsTable, mealsTable, weightsTable, eliminationsTable, handoverNotesTable } from "@workspace/db";
 import {
   CreateResidentBody,
@@ -32,6 +32,23 @@ router.post("/residents", async (req, res): Promise<void> => {
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
+  }
+  // Check if room number is already used by a visible resident
+  if (parsed.data.roomNumber) {
+    const [existing] = await db
+      .select({ id: residentsTable.id })
+      .from(residentsTable)
+      .where(
+        and(
+          eq(residentsTable.roomNumber, parsed.data.roomNumber),
+          eq(residentsTable.isVisible, true)
+        )
+      )
+      .limit(1);
+    if (existing) {
+      res.status(409).json({ error: `部屋番号 ${parsed.data.roomNumber} はすでに入居中の利用者が使用しています。` });
+      return;
+    }
   }
   const [resident] = await db
     .insert(residentsTable)
@@ -69,6 +86,24 @@ router.patch("/residents/:id", async (req, res): Promise<void> => {
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
+  }
+  // If changing room number, check it's not already used by another visible resident
+  if (parsed.data.roomNumber) {
+    const [existing] = await db
+      .select({ id: residentsTable.id })
+      .from(residentsTable)
+      .where(
+        and(
+          eq(residentsTable.roomNumber, parsed.data.roomNumber),
+          eq(residentsTable.isVisible, true),
+          ne(residentsTable.id, params.data.id)
+        )
+      )
+      .limit(1);
+    if (existing) {
+      res.status(409).json({ error: `部屋番号 ${parsed.data.roomNumber} はすでに入居中の利用者が使用しています。` });
+      return;
+    }
   }
   const updateData: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(parsed.data)) {

@@ -60,9 +60,14 @@ export default function ResidentsNew() {
         toast({ title: "保存しました" });
         setLocation("/residents");
       },
-      onError: () => {
-        toast({ title: "エラーが発生しました", variant: "destructive" });
-      }
+      onError: async (err: any) => {
+        let msg = "エラーが発生しました";
+        try {
+          const json = await err?.response?.json?.();
+          if (json?.error) msg = json.error;
+        } catch {}
+        toast({ title: msg, variant: "destructive" });
+      },
     });
   };
 
