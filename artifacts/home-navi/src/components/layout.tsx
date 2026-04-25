@@ -12,7 +12,6 @@ import {
   Users,
   UserCircle,
   Bell,
-  ClipboardList,
   ChevronRight,
   LogOut,
   DoorOpen,
@@ -34,9 +33,9 @@ const NAV_ITEMS = [
 
 const BOTTOM_NAV = [
   { href: "/", label: "ホーム", icon: Home },
-  { href: "/handover", label: "申し送り", icon: FileText },
-  { href: "/vitals", label: "記録", icon: ClipboardList },
-  { href: "/residents", label: "利用者", icon: Users },
+  { href: "/vitals", label: "バイタル", icon: Activity },
+  { href: "/meals", label: "食事", icon: Utensils },
+  { href: "/weights", label: "体重", icon: Weight },
 ];
 
 function formatDate() {
@@ -176,6 +175,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {/* Mobile bottom navigation */}
         <nav className="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t border-gray-100 shadow-[0_-2px_12px_rgba(0,0,0,0.06)] z-20">
           <div className="grid grid-cols-5 h-[60px] pb-safe">
+            {/* Menu button — leftmost */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="flex flex-col items-center justify-center gap-1 text-gray-400"
+            >
+              <svg className="h-[24px] w-[24px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+              <span className="text-xs font-medium">メニュー</span>
+            </button>
             {BOTTOM_NAV.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);
@@ -195,16 +204,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </Link>
               );
             })}
-            {/* Menu button */}
-            <button
-              onClick={() => setMobileMenuOpen(true)}
-              className="flex flex-col items-center justify-center gap-1 text-gray-400"
-            >
-              <svg className="h-[24px] w-[24px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-              <span className="text-xs font-medium">メニュー</span>
-            </button>
           </div>
         </nav>
 
