@@ -60,7 +60,7 @@ export default function StaffList() {
               </div>
             ) : (
               <div className="divide-y divide-gray-50">
-                {staff?.map((person) => (
+                {staff?.slice().sort((a, b) => Number(b.isVisible) - Number(a.isVisible)).map((person) => (
                   <div
                     key={person.id}
                     className={`flex items-center justify-between px-4 py-3.5 transition-colors ${
