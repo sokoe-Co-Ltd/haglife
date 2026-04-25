@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Layout } from "@/components/layout";
 import { useCreateBathReport, useListResidents, useListStaff } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,11 +11,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm, Controller } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 
+function useIsTouchDevice() {
+  const [isTouch, setIsTouch] = useState(false);
+  useEffect(() => { setIsTouch(navigator.maxTouchPoints > 0); }, []);
+  return isTouch;
+}
+
 export default function BathReportsNew() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [showPicker, setShowPicker] = useState(false);
+  const isTouch = useIsTouchDevice();
 
   const { data: residents } = useListResidents();
   const { data: staff } = useListStaff({ visible_only: true });
@@ -32,8 +41,16 @@ export default function BathReportsNew() {
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setPhotoPreview(url);
+    setPhotoPreview(URL.createObjectURL(file));
+    setShowPicker(false);
+  };
+
+  const handleIconClick = () => {
+    if (isTouch) {
+      setShowPicker(true);
+    } else {
+      galleryRef.current?.click();
+    }
   };
 
   const onSubmit = (values: any) => {
@@ -149,14 +166,10 @@ export default function BathReportsNew() {
               {/* Photo section */}
               <div className="space-y-2">
                 <Label className="text-sm">写真</Label>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                  onChange={handlePhotoChange}
-                />
+                {/* Hidden inputs */}
+                <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoChange} />
+                <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+
                 {photoPreview ? (
                   <div className="relative">
                     <img
@@ -168,7 +181,8 @@ export default function BathReportsNew() {
                       type="button"
                       onClick={() => {
                         setPhotoPreview(null);
-                        if (fileInputRef.current) fileInputRef.current.value = "";
+                        if (cameraRef.current) cameraRef.current.value = "";
+                        if (galleryRef.current) galleryRef.current.value = "";
                       }}
                       className="absolute top-2 right-2 h-7 w-7 bg-white rounded-full shadow flex items-center justify-center text-gray-500 hover:text-red-500 transition-colors"
                     >
@@ -176,34 +190,18 @@ export default function BathReportsNew() {
                     </button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (fileInputRef.current) {
-                          fileInputRef.current.setAttribute("capture", "environment");
-                          fileInputRef.current.click();
-                        }
-                      }}
-                      className="flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 border-dashed border-gray-200 text-gray-400 hover:border-primary hover:text-primary transition-colors text-xs font-medium"
-                    >
+                  <button
+                    type="button"
+                    onClick={handleIconClick}
+                    className="w-full flex flex-col items-center justify-center gap-2 py-6 rounded-xl border-2 border-dashed border-gray-200 text-gray-400 hover:border-primary hover:text-primary transition-colors"
+                  >
+                    <div className="flex items-center gap-1.5">
                       <Camera className="h-5 w-5" />
-                      カメラで撮影
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (fileInputRef.current) {
-                          fileInputRef.current.removeAttribute("capture");
-                          fileInputRef.current.click();
-                        }
-                      }}
-                      className="flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 border-dashed border-gray-200 text-gray-400 hover:border-primary hover:text-primary transition-colors text-xs font-medium"
-                    >
+                      <span className="text-gray-300 text-lg font-light">/</span>
                       <Image className="h-5 w-5" />
-                      ライブラリから選択
-                    </button>
-                  </div>
+                    </div>
+                    <span className="text-xs font-medium">写真を追加</span>
+                  </button>
                 )}
               </div>
             </CardContent>
@@ -214,6 +212,60 @@ export default function BathReportsNew() {
           </Button>
         </form>
       </div>
+
+      {/* Action sheet for photo picker (touch devices only) */}
+      {showPicker && (
+        <div
+          className="fixed inset-0 z-50 flex items-end"
+          onClick={() => setShowPicker(false)}
+        >
+          <div className="absolute inset-0 bg-black/40" />
+          <div
+            className="relative w-full bg-white rounded-t-2xl pb-8 pt-2 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4" />
+            <p className="text-center text-sm font-semibold text-gray-500 mb-3">写真を追加</p>
+            <button
+              type="button"
+              className="w-full flex items-center gap-4 px-6 py-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              onClick={() => {
+                setShowPicker(false);
+                setTimeout(() => cameraRef.current?.click(), 50);
+              }}
+            >
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Camera className="h-5 w-5 text-primary" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold text-gray-800">カメラで撮影</p>
+              </div>
+            </button>
+            <button
+              type="button"
+              className="w-full flex items-center gap-4 px-6 py-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              onClick={() => {
+                setShowPicker(false);
+                setTimeout(() => galleryRef.current?.click(), 50);
+              }}
+            >
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Image className="h-5 w-5 text-primary" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold text-gray-800">ライブラリから選択</p>
+              </div>
+            </button>
+            <button
+              type="button"
+              className="w-full mt-2 mx-auto block text-center text-sm text-gray-400 py-3"
+              onClick={() => setShowPicker(false)}
+            >
+              キャンセル
+            </button>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }
