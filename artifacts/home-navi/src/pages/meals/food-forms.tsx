@@ -9,7 +9,7 @@ import {
 import type { Resident } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Utensils, ChevronLeft, Check, Search, Loader2,
+  Utensils, ChevronLeft, Check, Search, Loader2, ToggleLeft, ToggleRight,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -58,6 +58,12 @@ function getTextureForMeal(resident: Resident, mealType: MealType): string {
   return resident.mealTextureDinner ?? "";
 }
 
+export function isMealEnabledForResident(resident: Resident, mealType: MealType): boolean {
+  if (mealType === "朝食") return resident.mealsBreakfastEnabled ?? true;
+  if (mealType === "昼食") return resident.mealsLunchEnabled ?? true;
+  return resident.mealsDinnerEnabled ?? true;
+}
+
 function TextureBadge({ value }: { value: string }) {
   if (!value) return <span className="text-xs text-gray-300">未設定</span>;
   const color = TEXTURE_COLORS[value] ?? "bg-gray-100 text-gray-600";
@@ -73,10 +79,19 @@ interface TextureCellProps {
   mealType: MealType;
   onSave: (residentId: number, mealType: MealType, value: string) => void;
   saving: boolean;
+  enabled: boolean;
 }
-function TextureCell({ resident, mealType, onSave, saving }: TextureCellProps) {
+function TextureCell({ resident, mealType, onSave, saving, enabled }: TextureCellProps) {
   const current = getTextureForMeal(resident, mealType);
   const [open, setOpen] = useState(false);
+
+  if (!enabled) {
+    return (
+      <div className="flex items-center justify-center">
+        <span className="text-xs text-gray-300 italic">提供なし</span>
+      </div>
+    );
+  }
 
   const selectValue = current || UNSET_VALUE;
 
@@ -112,6 +127,35 @@ function TextureCell({ resident, mealType, onSave, saving }: TextureCellProps) {
   );
 }
 
+interface MealToggleProps {
+  enabled: boolean;
+  saving: boolean;
+  onToggle: () => void;
+}
+function MealToggle({ enabled, saving, onToggle }: MealToggleProps) {
+  return (
+    <button
+      onClick={onToggle}
+      disabled={saving}
+      className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold transition-colors ${
+        enabled
+          ? "bg-green-50 text-green-700 hover:bg-green-100"
+          : "bg-gray-50 text-gray-400 hover:bg-gray-100"
+      }`}
+      title={enabled ? "提供中（クリックで停止）" : "提供なし（クリックで有効化）"}
+    >
+      {saving ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : enabled ? (
+        <ToggleRight className="h-3.5 w-3.5" />
+      ) : (
+        <ToggleLeft className="h-3.5 w-3.5" />
+      )}
+      {enabled ? "提供中" : "提供なし"}
+    </button>
+  );
+}
+
 export default function MealFoodForms() {
   const [, nav] = useLocation();
   const [search, setSearch] = useState("");
@@ -130,8 +174,8 @@ export default function MealFoodForms() {
     return name.includes(q) || kana.includes(q) || r.roomNumber.includes(q);
   });
 
-  function handleSave(residentId: number, mealType: MealType, value: string) {
-    const key = `${residentId}-${mealType}`;
+  function handleSaveTexture(residentId: number, mealType: MealType, value: string) {
+    const key = `${residentId}-${mealType}-texture`;
     setSavingKey(key);
 
     const fieldMap: Record<MealType, string> = {
@@ -141,10 +185,7 @@ export default function MealFoodForms() {
     };
 
     updateResident.mutate(
-      {
-        id: residentId,
-        data: { [fieldMap[mealType]]: value || null },
-      },
+      { id: residentId, data: { [fieldMap[mealType]]: value || null } },
       {
         onSuccess: () => {
           setSavingKey(null);
@@ -159,7 +200,33 @@ export default function MealFoodForms() {
     );
   }
 
-  // Summary: count distinct textures
+  function handleToggleMeal(resident: Resident, mealType: MealType) {
+    const key = `${resident.id}-${mealType}-toggle`;
+    setSavingKey(key);
+
+    const fieldMap: Record<MealType, string> = {
+      "朝食": "mealsBreakfastEnabled",
+      "昼食": "mealsLunchEnabled",
+      "夕食": "mealsDinnerEnabled",
+    };
+    const currentEnabled = isMealEnabledForResident(resident, mealType);
+
+    updateResident.mutate(
+      { id: resident.id, data: { [fieldMap[mealType]]: !currentEnabled } },
+      {
+        onSuccess: () => {
+          setSavingKey(null);
+          queryClient.invalidateQueries({ queryKey: getListResidentsQueryKey() });
+          toast({ title: `${mealType}を${!currentEnabled ? "有効" : "無効"}にしました` });
+        },
+        onError: () => {
+          setSavingKey(null);
+          toast({ title: "更新に失敗しました", variant: "destructive" });
+        },
+      }
+    );
+  }
+
   const textureSummary = TEXTURE_OPTIONS.filter((o) => o.value !== UNSET_VALUE).map((opt) => {
     const count = residents.filter((r) =>
       [r.mealTextureBreakfast, r.mealTextureLunch, r.mealTextureDinner].includes(opt.value)
@@ -170,7 +237,6 @@ export default function MealFoodForms() {
   return (
     <Layout>
       <div className="space-y-4">
-        {/* Header */}
         <div className="flex items-center gap-3">
           <button
             onClick={() => nav("/meals")}
@@ -181,16 +247,15 @@ export default function MealFoodForms() {
           <div>
             <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
               <Utensils className="h-5 w-5 text-primary" />
-              食事形態の確認・設定
+              食事の設定
             </h1>
-            <p className="text-xs text-gray-400">利用者ごとの朝・昼・夕食の食事形態を確認・変更できます</p>
+            <p className="text-xs text-gray-400">利用者ごとの食事提供・食事形態を確認・変更できます</p>
           </div>
         </div>
 
-        {/* Summary */}
         {textureSummary.length > 0 && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-            <h3 className="text-xs font-bold text-gray-600 mb-3">食事形態 人数サマリー（朝昼夕いずれかで使用）</h3>
+            <h3 className="text-xs font-bold text-gray-600 mb-3">食事形態 人数サマリー</h3>
             <div className="flex flex-wrap gap-2">
               {textureSummary.map((o) => (
                 <div key={o.value} className="flex items-center gap-1.5">
@@ -202,7 +267,6 @@ export default function MealFoodForms() {
           </div>
         )}
 
-        {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
@@ -214,7 +278,6 @@ export default function MealFoodForms() {
           />
         </div>
 
-        {/* Table */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -223,8 +286,8 @@ export default function MealFoodForms() {
                   <th className="text-left text-xs font-bold text-gray-600 px-4 py-3 w-14">居室</th>
                   <th className="text-left text-xs font-bold text-gray-600 px-3 py-3 min-w-[110px]">氏名</th>
                   {MEAL_TYPES.map((t) => (
-                    <th key={t} className="text-center text-xs font-bold text-gray-600 px-3 py-3 min-w-[130px]">
-                      {t}の食事形態
+                    <th key={t} className="text-center text-xs font-bold text-gray-600 px-3 py-3 min-w-[150px]">
+                      {t}
                     </th>
                   ))}
                 </tr>
@@ -236,7 +299,7 @@ export default function MealFoodForms() {
                       <td className="px-4 py-3"><Skeleton className="h-4 w-8" /></td>
                       <td className="px-3 py-3"><Skeleton className="h-4 w-24" /></td>
                       {[0, 1, 2].map((j) => (
-                        <td key={j} className="px-3 py-3"><Skeleton className="h-7 w-28" /></td>
+                        <td key={j} className="px-3 py-3"><Skeleton className="h-10 w-32" /></td>
                       ))}
                     </tr>
                   ))
@@ -247,41 +310,48 @@ export default function MealFoodForms() {
                     </td>
                   </tr>
                 ) : (
-                  filtered.map((r) => {
-                    const hasAnyTexture = r.mealTextureBreakfast || r.mealTextureLunch || r.mealTextureDinner;
-                    return (
-                      <tr key={r.id} className={`hover:bg-gray-50 transition-colors ${!hasAnyTexture ? "bg-orange-50/20" : ""}`}>
-                        <td className="px-4 py-2.5 text-xs text-gray-400">{r.roomNumber}</td>
-                        <td className="px-3 py-2.5">
-                          <span className="text-sm font-semibold text-gray-800 whitespace-nowrap">
-                            {r.lastName} {r.firstName}
-                          </span>
-                          {!hasAnyTexture && (
-                            <span className="ml-1.5 text-xs text-orange-500 font-medium">未設定</span>
-                          )}
-                        </td>
-                        {MEAL_TYPES.map((t) => {
-                          const key = `${r.id}-${t}`;
-                          return (
-                            <td key={t} className="px-3 py-2 text-center">
+                  filtered.map((r) => (
+                    <tr key={r.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-2.5 text-xs text-gray-400">{r.roomNumber}</td>
+                      <td className="px-3 py-2.5">
+                        <button
+                          onClick={() => nav(`/residents/${r.id}`)}
+                          className="text-sm font-semibold text-gray-800 hover:text-primary transition-colors whitespace-nowrap"
+                        >
+                          {r.lastName} {r.firstName}
+                        </button>
+                      </td>
+                      {MEAL_TYPES.map((t) => {
+                        const textureKey = `${r.id}-${t}-texture`;
+                        const toggleKey = `${r.id}-${t}-toggle`;
+                        const enabled = isMealEnabledForResident(r, t);
+                        return (
+                          <td key={t} className={`px-3 py-2 text-center ${!enabled ? "bg-gray-50/60" : ""}`}>
+                            <div className="flex flex-col items-center gap-1.5">
+                              <MealToggle
+                                enabled={enabled}
+                                saving={savingKey === toggleKey}
+                                onToggle={() => handleToggleMeal(r, t)}
+                              />
                               <TextureCell
                                 resident={r}
                                 mealType={t}
-                                onSave={handleSave}
-                                saving={savingKey === key}
+                                onSave={handleSaveTexture}
+                                saving={savingKey === textureKey}
+                                enabled={enabled}
                               />
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    );
-                  })
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
           </div>
           <div className="px-4 py-2 border-t border-gray-50 text-xs text-gray-400">
-            {filtered.length}名 表示中 · クリックで食事形態を変更できます
+            {filtered.length}名 表示中 · 食事提供のON/OFFと食事形態を変更できます
           </div>
         </div>
       </div>

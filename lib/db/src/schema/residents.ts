@@ -42,6 +42,9 @@ export const residentsTable = pgTable("residents", {
   mealTextureBreakfast: text("meal_texture_breakfast"),
   mealTextureLunch: text("meal_texture_lunch"),
   mealTextureDinner: text("meal_texture_dinner"),
+  mealsBreakfastEnabled: boolean("meals_breakfast_enabled").notNull().default(true),
+  mealsLunchEnabled: boolean("meals_lunch_enabled").notNull().default(true),
+  mealsDinnerEnabled: boolean("meals_dinner_enabled").notNull().default(true),
   isVisible: boolean("is_visible").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

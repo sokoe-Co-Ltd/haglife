@@ -11,6 +11,7 @@ import {
 import {
   Utensils, CheckCircle2, AlertTriangle,
   ChevronRight, ClipboardCheck, FileSearch, Edit3, Settings2, Lock, Clock,
+  List, ListChecks,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { format, isToday as dateFnsIsToday } from "date-fns";
@@ -24,6 +25,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { isMealEnabledForResident } from "./food-forms";
 
 type MealType = "朝食" | "昼食" | "夕食";
 type StatusFilter = "すべて" | "未記録" | "記録済み" | "要確認";
@@ -86,11 +88,21 @@ function getMeal(map: Record<string, Meal>, residentId: number, type: MealType):
 const STATUS_SORT: Record<MealStatus, number> = { "未記録": 0, "要確認": 1, "確認OK": 2 };
 
 function MealStatusCell({
-  meal, onClick, locked,
-}: { meal: Meal | undefined; onClick?: () => void; locked?: boolean }) {
+  meal, onClick, locked, disabled,
+}: { meal: Meal | undefined; onClick?: () => void; locked?: boolean; disabled?: boolean }) {
   const status = deriveMealStatus(meal);
   const base =
     "w-full rounded-lg py-2 px-1 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40";
+
+  if (disabled) {
+    return (
+      <div className={`${base} flex justify-center opacity-30 cursor-not-allowed`}>
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs text-gray-400 bg-gray-100">
+          対象外
+        </span>
+      </div>
+    );
+  }
 
   if (locked) {
     return (
@@ -192,8 +204,10 @@ interface SidePanelProps {
   dateIsToday: boolean;
   mealTimeSettings: MealTimeSettings;
   onOpenTimeSettings: () => void;
+  showAllRecords: boolean;
+  onToggleShowAllRecords: () => void;
 }
-function SidePanel({ allResidents, mealMap, floorFilter, activeMealType, onOpenBulkEdit, dateIsToday, mealTimeSettings, onOpenTimeSettings }: SidePanelProps) {
+function SidePanel({ allResidents, mealMap, floorFilter, activeMealType, onOpenBulkEdit, dateIsToday, mealTimeSettings, onOpenTimeSettings, showAllRecords, onToggleShowAllRecords }: SidePanelProps) {
   const [memo, setMemo] = useState("");
   const [, nav] = useLocation();
 
@@ -212,13 +226,25 @@ function SidePanel({ allResidents, mealMap, floorFilter, activeMealType, onOpenB
     <div className="w-64 shrink-0 flex flex-col gap-4">
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-2">
         <h3 className="text-xs font-bold text-gray-700 mb-1">クイック操作</h3>
-        {dateIsToday && (
+        {dateIsToday && !showAllRecords && (
           <div className={`px-3 py-2 rounded-xl text-xs font-semibold mb-1 ${editable ? "bg-orange-50 text-orange-700" : "bg-gray-50 text-gray-500"}`}>
             {editable
               ? `${activeMealType}の入力時間帯 (${winLabel})`
               : `${activeMealType}の時間外 — 編集不可`}
           </div>
         )}
+        {showAllRecords && (
+          <div className="px-3 py-2 rounded-xl text-xs font-semibold bg-blue-50 text-blue-700 mb-1">
+            全記録表示モード — 全食事を編集可能
+          </div>
+        )}
+        <QuickActionBtn
+          icon={showAllRecords ? List : ListChecks}
+          label={showAllRecords ? "通常表示に戻す" : "すべての記録を表示"}
+          bg={showAllRecords ? "bg-gray-50" : "bg-blue-50"}
+          iconBg={showAllRecords ? "bg-gray-400" : "bg-blue-500"}
+          onClick={onToggleShowAllRecords}
+        />
         <QuickActionBtn
           icon={ClipboardCheck}
           label="記録チェック"
@@ -228,7 +254,7 @@ function SidePanel({ allResidents, mealMap, floorFilter, activeMealType, onOpenB
         />
         <QuickActionBtn
           icon={FileSearch}
-          label="食事形態の確認・設定"
+          label="一覧を変更する"
           bg="bg-purple-50"
           iconBg="bg-purple-500"
           onClick={() => nav("/meals/food-forms")}
@@ -236,8 +262,8 @@ function SidePanel({ allResidents, mealMap, floorFilter, activeMealType, onOpenB
         <QuickActionBtn
           icon={Clock}
           label="食事時間帯の設定"
-          bg="bg-blue-50"
-          iconBg="bg-blue-500"
+          bg="bg-orange-50"
+          iconBg="bg-orange-500"
           onClick={onOpenTimeSettings}
         />
       </div>
@@ -290,8 +316,9 @@ interface MobileMealCardProps {
   onEdit: (mealType: MealType) => void;
   dateIsToday: boolean;
   mealTimeSettings: MealTimeSettings;
+  showAllRecords: boolean;
 }
-function MobileMealCard({ resident, mealMap, activeMealType, onEdit, dateIsToday, mealTimeSettings }: MobileMealCardProps) {
+function MobileMealCard({ resident, mealMap, activeMealType, onEdit, dateIsToday, mealTimeSettings, showAllRecords }: MobileMealCardProps) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
@@ -306,7 +333,18 @@ function MobileMealCard({ resident, mealMap, activeMealType, onEdit, dateIsToday
           const meal = getMeal(mealMap, resident.id, t);
           const status = deriveMealStatus(meal);
           const isActive = t === activeMealType;
-          const locked = !isMealEditable(t, dateIsToday, mealTimeSettings);
+          const mealEnabled = isMealEnabledForResident(resident, t);
+          const locked = !showAllRecords && !isMealEditable(t, dateIsToday, mealTimeSettings);
+
+          if (!mealEnabled) {
+            return (
+              <div key={t} className="rounded-xl p-2 text-center bg-gray-50 opacity-30 cursor-not-allowed">
+                <div className="text-xs font-bold mb-1 text-gray-400">{t[0]}</div>
+                <span className="inline-flex px-1.5 py-0.5 rounded text-xs text-gray-300 bg-gray-100">対象外</span>
+              </div>
+            );
+          }
+
           return (
             <button
               key={t}
@@ -370,6 +408,7 @@ export default function MealsList() {
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [timeSettingsOpen, setTimeSettingsOpen] = useState(false);
   const [draftSettings, setDraftSettings] = useState<MealTimeSettings>(DEFAULT_MEAL_TIMES);
+  const [showAllRecords, setShowAllRecords] = useState(false);
   const [, nav] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -415,7 +454,8 @@ export default function MealsList() {
   }, [dateIsToday, mealTimeSettings]);
 
   const openEdit = (resident: Resident, mealType: MealType) => {
-    if (!isMealEditable(mealType, dateIsToday, mealTimeSettings)) return;
+    if (!showAllRecords && !isMealEditable(mealType, dateIsToday, mealTimeSettings)) return;
+    if (!isMealEnabledForResident(resident, mealType)) return;
     setEditTarget({ resident, mealType });
   };
 
@@ -621,13 +661,15 @@ export default function MealsList() {
                             {resident.lastName} {resident.firstName}
                           </TableCell>
                           {MEAL_TYPES.map((t) => {
-                            const locked = !isMealEditable(t, dateIsToday, mealTimeSettings);
+                            const locked = !showAllRecords && !isMealEditable(t, dateIsToday, mealTimeSettings);
+                            const mealEnabled = isMealEnabledForResident(resident, t);
                             return (
-                              <TableCell key={t} className={`py-1 ${activeMealType === t ? "bg-orange-50/30" : ""}`}>
+                              <TableCell key={t} className={`py-1 ${activeMealType === t && !showAllRecords ? "bg-orange-50/30" : ""}`}>
                                 <MealStatusCell
                                   meal={getMeal(mealMap, resident.id, t)}
-                                  onClick={locked ? undefined : () => openEdit(resident, t)}
-                                  locked={locked}
+                                  onClick={mealEnabled && !locked ? () => openEdit(resident, t) : undefined}
+                                  locked={locked && mealEnabled}
+                                  disabled={!mealEnabled}
                                 />
                               </TableCell>
                             );
@@ -656,6 +698,8 @@ export default function MealsList() {
             dateIsToday={dateIsToday}
             mealTimeSettings={mealTimeSettings}
             onOpenTimeSettings={openTimeSettings}
+            showAllRecords={showAllRecords}
+            onToggleShowAllRecords={() => setShowAllRecords((p) => !p)}
           />
         </div>
 
@@ -709,6 +753,7 @@ export default function MealsList() {
                 onEdit={(t) => openEdit(resident, t)}
                 dateIsToday={dateIsToday}
                 mealTimeSettings={mealTimeSettings}
+                showAllRecords={showAllRecords}
               />
             ))
           )}
