@@ -4,6 +4,7 @@ import { Layout } from "@/components/layout";
 import { useListResidents, useListMeals } from "@workspace/api-client-react";
 import type { Resident, Meal } from "@workspace/api-client-react";
 import { MealEntryModal } from "@/components/MealEntryModal";
+import { BulkMealEntryModal } from "@/components/BulkMealEntryModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -244,6 +245,13 @@ function SidePanel({ allResidents, mealMap, floorFilter, activeMealType, onOpenB
           bg={showAllRecords ? "bg-gray-50" : "bg-blue-50"}
           iconBg={showAllRecords ? "bg-gray-400" : "bg-blue-500"}
           onClick={onToggleShowAllRecords}
+        />
+        <QuickActionBtn
+          icon={Edit3}
+          label="一括入力"
+          bg="bg-orange-50"
+          iconBg="bg-orange-500"
+          onClick={onOpenBulkEdit}
         />
         <QuickActionBtn
           icon={ClipboardCheck}
@@ -770,6 +778,15 @@ export default function MealsList() {
           existingMeal={getMeal(mealMap, editTarget.resident.id, editTarget.mealType)}
         />
       )}
+
+      <BulkMealEntryModal
+        open={bulkEditOpen}
+        onClose={() => setBulkEditOpen(false)}
+        residents={residents}
+        mealMap={mealMap}
+        date={dateStr}
+        floorFilter={floorFilter}
+      />
 
       <Dialog open={timeSettingsOpen} onOpenChange={setTimeSettingsOpen}>
         <DialogContent className="max-w-sm">
