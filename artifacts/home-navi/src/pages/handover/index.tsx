@@ -8,7 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
-import { Stethoscope, Plus, ChevronRight, CheckCircle2, Circle } from "lucide-react";
+import { Stethoscope, Plus, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { DayNav, MonthNav } from "@/components/date-nav";
@@ -17,7 +17,7 @@ import { StaffMemoCard, InfoCard } from "@/components/PageRightPanel";
 type Tab = "未対応" | "完了" | "すべて";
 type ViewMode = "day" | "month";
 
-function StatusToggleBtn({
+function StatusSelect({
   noteId,
   status,
   onDone,
@@ -29,31 +29,35 @@ function StatusToggleBtn({
   const mutation = useUpdateHandoverNote();
   const isDone = status === "完了";
 
-  function toggle(e: React.MouseEvent) {
+  function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
     e.preventDefault();
     e.stopPropagation();
-    const next = isDone ? "未対応" : "完了";
-    mutation.mutate({ id: noteId, data: { status: next } }, { onSuccess: onDone });
+    const next = e.target.value;
+    if (next !== status) {
+      mutation.mutate({ id: noteId, data: { status: next } }, { onSuccess: onDone });
+    }
   }
 
   return (
-    <button
-      onClick={toggle}
-      disabled={mutation.isPending}
-      className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border transition-all ${
+    <div
+      className={`relative shrink-0 flex items-center rounded-full border text-xs font-bold transition-all ${
         isDone
-          ? "bg-green-50 border-green-300 text-green-700 hover:bg-green-100"
-          : "bg-orange-50 border-orange-300 text-orange-700 hover:bg-orange-100"
+          ? "bg-green-50 border-green-300 text-green-700"
+          : "bg-orange-50 border-orange-300 text-orange-700"
       } ${mutation.isPending ? "opacity-50" : ""}`}
-      title="ステータスを切り替える"
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
     >
-      {isDone ? (
-        <CheckCircle2 className="h-3.5 w-3.5" />
-      ) : (
-        <Circle className="h-3.5 w-3.5" />
-      )}
-      {isDone ? "完了" : "未対応"}
-    </button>
+      <select
+        value={status}
+        onChange={handleChange}
+        disabled={mutation.isPending}
+        className="appearance-none bg-transparent pl-2.5 pr-6 py-1 cursor-pointer focus:outline-none text-xs font-bold"
+      >
+        <option value="未対応">未対応</option>
+        <option value="完了">完了</option>
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-1.5 h-3 w-3 opacity-60" />
+    </div>
   );
 }
 
@@ -92,7 +96,7 @@ function NoteRow({ note, onStatusChange }: { note: any; onStatusChange: () => vo
         </Link>
       </div>
       <div className="shrink-0 mt-0.5">
-        <StatusToggleBtn noteId={note.id} status={note.status} onDone={onStatusChange} />
+        <StatusSelect noteId={note.id} status={note.status} onDone={onStatusChange} />
       </div>
     </div>
   );
