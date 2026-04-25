@@ -120,6 +120,17 @@ router.get("/weights/monthly-status", async (req, res): Promise<void> => {
     .select()
     .from(weightsTable)
     .where(and(gte(weightsTable.recordedAt, start), lte(weightsTable.recordedAt, end)));
+  // All weights for latest-ever lookup
+  const allWeights = await db
+    .select()
+    .from(weightsTable)
+    .orderBy(desc(weightsTable.recordedAt));
+  const latestEverMap = new Map<number, number>();
+  for (const w of allWeights) {
+    if (!latestEverMap.has(w.residentId)) {
+      latestEverMap.set(w.residentId, parseFloat(String(w.weightKg)));
+    }
+  }
   const result = residents.map(r => {
     const resWeights = monthWeights.filter(w => w.residentId === r.id);
     const latest = resWeights.sort((a, b) => b.recordedAt.getTime() - a.recordedAt.getTime())[0];
@@ -131,6 +142,7 @@ router.get("/weights/monthly-status", async (req, res): Promise<void> => {
       birthMonth: r.birthMonth,
       birthDay: r.birthDay,
       latestWeight: latest ? parseFloat(String(latest.weightKg)) : null,
+      latestWeightEver: latestEverMap.get(r.id) ?? null,
       recordedThisMonth: resWeights.length > 0,
       lastRecordedAt: latest ? latest.recordedAt.toISOString() : null,
     };

@@ -10,10 +10,12 @@ import { isTodayBirthday } from "@/lib/birthday";
 
 function ResidentWeightCard({ status }: { status: any }) {
   const isBirthday = isTodayBirthday(status.birthMonth, status.birthDay);
+  const thisMonthWeight = status.latestWeight;
+  const everWeight = status.latestWeightEver;
   return (
     <Link href={`/weights/${status.residentId}`} className={`flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors ${isBirthday ? "bg-red-50 hover:bg-red-50" : ""}`}>
       <div className="flex items-center gap-3 min-w-0">
-        {status.isRecordedThisMonth ? (
+        {status.recordedThisMonth ? (
           <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-600">測定済</span>
         ) : (
           <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border border-primary text-primary">未測定</span>
@@ -25,10 +27,12 @@ function ResidentWeightCard({ status }: { status: any }) {
           {isBirthday && <span className="ml-1.5 text-xs font-bold text-red-500">本日お誕生日</span>}
         </div>
       </div>
-      <div className="flex items-center gap-3">
-        {status.isRecordedThisMonth && (
-          <span className="text-sm font-bold text-gray-700">{status.latestWeightKg} kg</span>
-        )}
+      <div className="flex items-center gap-2 shrink-0">
+        {thisMonthWeight != null ? (
+          <span className="text-sm font-bold text-gray-800">{thisMonthWeight.toFixed(1)} kg</span>
+        ) : everWeight != null ? (
+          <span className="text-sm text-gray-400">直近 {everWeight.toFixed(1)} kg</span>
+        ) : null}
         <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
       </div>
     </Link>
@@ -42,8 +46,8 @@ export default function WeightsList() {
 
   const { data: statuses, isLoading } = useGetWeightsMonthlyStatus({ year, month });
 
-  const unrecorded = statuses?.filter((s) => !s.isRecordedThisMonth) || [];
-  const recorded = statuses?.filter((s) => s.isRecordedThisMonth) || [];
+  const unrecorded = statuses?.filter((s) => !s.recordedThisMonth) || [];
+  const recorded = statuses?.filter((s) => s.recordedThisMonth) || [];
 
   const quickActions = [
     { label: "一括記録", icon: ClipboardList, color: "bg-primary" },
