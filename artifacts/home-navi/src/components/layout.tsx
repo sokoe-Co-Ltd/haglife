@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { OfflineBannerSpacer } from "@/components/OfflineBanner";
+import { useListHandoverNotes } from "@workspace/api-client-react";
+import { format } from "date-fns";
 import {
   Home,
   FileText,
@@ -16,6 +18,7 @@ import {
   ChevronRight,
   LogOut,
   DoorOpen,
+  Circle,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -66,9 +69,90 @@ function HagulifeLogo({ size = 36 }: { size?: number }) {
   );
 }
 
+function NotificationPanel({ onClose }: { onClose: () => void }) {
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const { data: notes } = useListHandoverNotes({ date: todayStr, limit: 100 });
+  const panelRef = useRef<HTMLDivElement>(null);
+  const pending = (notes ?? []).filter((n: any) => n.status !== "完了");
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [onClose]);
+
+  return (
+    <div
+      ref={panelRef}
+      className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden"
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+        <div className="flex items-center gap-2">
+          <Bell className="h-4 w-4 text-primary" />
+          <span className="text-sm font-bold text-gray-800">未対応の申し送り</span>
+        </div>
+        {pending.length > 0 && (
+          <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+            {pending.length}件
+          </span>
+        )}
+      </div>
+
+      {/* List */}
+      <div className="max-h-72 overflow-y-auto divide-y divide-gray-50">
+        {pending.length === 0 ? (
+          <div className="py-8 text-center text-sm text-gray-400">
+            未対応の申し送りはありません
+          </div>
+        ) : (
+          pending.slice(0, 6).map((note: any) => (
+            <Link
+              key={note.id}
+              href={`/handover/${note.id}`}
+              onClick={onClose}
+              className="flex items-start gap-2.5 px-4 py-3 hover:bg-gray-50 transition-colors block"
+            >
+              <Circle className="h-2 w-2 text-orange-400 shrink-0 mt-1.5 fill-orange-400" />
+              <div className="flex-1 min-w-0">
+                {note.residentName && (
+                  <span className="text-xs font-bold text-primary mr-1.5">{note.residentName}</span>
+                )}
+                <span className="text-xs text-gray-500">{note.category}</span>
+                {note.isImportant && (
+                  <span className="ml-1.5 text-xs font-bold text-red-600">重要</span>
+                )}
+                <p className="text-sm text-gray-700 line-clamp-1 mt-0.5">{note.content}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{note.authorName}</p>
+              </div>
+            </Link>
+          ))
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="border-t border-gray-100 px-4 py-2.5">
+        <Link
+          href="/handover"
+          onClick={onClose}
+          className="flex items-center justify-center gap-1 text-sm font-semibold text-primary hover:text-primary/80 transition-colors"
+        >
+          申し送り一覧を見る
+          <ChevronRight className="h-4 w-4" />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
 
   function isActive(href: string) {
     return location === href || (href !== "/" && location.startsWith(href));
@@ -153,10 +237,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </span>
 
                 {/* Notification bell */}
-                <button className="relative p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-primary transition-colors">
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full" />
-                </button>
+                <div className="relative">
+                  <button
+                    onClick={() => setNotifOpen((o) => !o)}
+                    className={`relative p-2 rounded-lg transition-colors ${notifOpen ? "bg-primary/10 text-primary" : "hover:bg-gray-100 text-gray-500 hover:text-primary"}`}
+                  >
+                    <Bell className="h-5 w-5" />
+                    <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full" />
+                  </button>
+                  {notifOpen && <NotificationPanel onClose={() => setNotifOpen(false)} />}
+                </div>
 
                 {/* Logout button (desktop only) */}
                 <button className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-800 transition-colors">
