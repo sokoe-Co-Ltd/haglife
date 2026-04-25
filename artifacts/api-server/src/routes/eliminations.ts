@@ -52,6 +52,22 @@ router.post("/eliminations", async (req, res): Promise<void> => {
   res.status(201).json({ ...elimination, residentName: resident ? `${resident.lastName}${resident.firstName}` : null });
 });
 
+router.patch("/eliminations/:id", async (req, res): Promise<void> => {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(rawId, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "invalid id" }); return; }
+  const { type, amount, notes, recordedAt } = req.body;
+  const updateData: Record<string, unknown> = {};
+  if (type !== undefined) updateData.type = type;
+  if (amount !== undefined) updateData.amount = amount;
+  if (notes !== undefined) updateData.notes = notes;
+  if (recordedAt !== undefined) updateData.recordedAt = new Date(recordedAt);
+  if (Object.keys(updateData).length === 0) { res.status(400).json({ error: "no fields" }); return; }
+  const [row] = await db.update(eliminationsTable).set(updateData).where(eq(eliminationsTable.id, id)).returning();
+  if (!row) { res.status(404).json({ error: "not found" }); return; }
+  res.json(row);
+});
+
 router.delete("/eliminations/:id", async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const params = DeleteEliminationParams.safeParse({ id: parseInt(rawId, 10) });

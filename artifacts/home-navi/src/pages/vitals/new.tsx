@@ -121,7 +121,7 @@ function VitalInputRow({
 }
 
 // ── Past vitals history row ───────────────────────────────────────────────
-function HistoryRow({ vital }: { vital: any }) {
+function HistoryRow({ vital, onEdit }: { vital: any; onEdit?: (id: number) => void }) {
   const dateLabel = format(parseISO(vital.recordedAt), "M/d（E）HH:mm", { locale: ja });
   const fields: { key: ThresholdKey; label: string; value: number | null; suffix?: string }[] = [
     { key: "temperature", label: "KT",    value: vital.temperature,  suffix: "°C" },
@@ -132,7 +132,7 @@ function HistoryRow({ vital }: { vital: any }) {
   const hasRecheck = vital.needsRecheck;
   return (
     <div className={`px-4 py-3 flex items-start justify-between gap-3 ${hasRecheck ? "bg-red-50/50" : ""}`}>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-xs text-gray-400">{dateLabel}</span>
           {hasRecheck && (
@@ -152,6 +152,15 @@ function HistoryRow({ vital }: { vital: any }) {
         </div>
         {vital.notes && <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{vital.notes}</p>}
       </div>
+      {onEdit && (
+        <button
+          onClick={() => onEdit(vital.id)}
+          className="shrink-0 h-7 w-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-primary hover:bg-primary/10 transition-colors"
+          title="編集"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </button>
+      )}
     </div>
   );
 }
@@ -171,6 +180,16 @@ export default function VitalsInput() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const autoFilledRef = React.useRef(false);
+  const formCardRef = React.useRef<HTMLDivElement>(null);
+
+  function handleHistoryEdit(id: number) {
+    autoFilledRef.current = true;
+    setEditingId(id);
+    setShowForm(true);
+    setTimeout(() => {
+      formCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  }
 
   const { data: resident } = useGetResident(residentId, { query: { enabled: !!residentId } });
 
@@ -405,7 +424,7 @@ export default function VitalsInput() {
 
         {/* ── Re-input form ──────────────────────────────────────────────── */}
         {isFormVisible && (
-          <Card>
+          <div ref={formCardRef}><Card>
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-bold text-gray-700 flex items-center gap-2">
@@ -489,7 +508,7 @@ export default function VitalsInput() {
                 </Button>
               </form>
             </CardContent>
-          </Card>
+          </Card></div>
         )}
 
         {/* 再測定ボタン: 記録済みで異常なしの場合のみ表示 */}
@@ -532,7 +551,7 @@ export default function VitalsInput() {
                     </div>
                     {todayVitals.slice(1).map((v) => (
                       <div key={v.id} className="divide-y divide-gray-50">
-                        <HistoryRow vital={v} />
+                        <HistoryRow vital={v} onEdit={handleHistoryEdit} />
                       </div>
                     ))}
                   </>
@@ -545,7 +564,7 @@ export default function VitalsInput() {
                 ) : (
                   <div className="divide-y divide-gray-50">
                     {past7.map((v) => (
-                      <HistoryRow key={v.id} vital={v} />
+                      <HistoryRow key={v.id} vital={v} onEdit={handleHistoryEdit} />
                     ))}
                   </div>
                 )}
