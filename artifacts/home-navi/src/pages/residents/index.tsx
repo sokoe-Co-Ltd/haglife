@@ -100,13 +100,6 @@ export default function ResidentsList() {
                           <span className="text-xs text-gray-500">{resident.gender}</span>
                           {isBirthday && <span className="text-xs font-bold text-red-500">🎉 本日お誕生日</span>}
                         </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          {resident.careLevel && (
-                            <span className={`text-xs px-2 py-0.5 rounded font-semibold ${CARE_COLORS[resident.careLevel] ?? "bg-gray-100 text-gray-600"}`}>
-                              {resident.careLevel}
-                            </span>
-                          )}
-                        </div>
                       </div>
                       <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
                     </Link>
