@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Layout } from "@/components/layout";
 import { useCreateHandoverNote, useListResidents, useListStaff } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  ChevronLeft, Search, X, Camera,
+  ChevronLeft, Search, X, Camera, ImageIcon, FolderOpen,
   AlertCircle, Stethoscope, Check, ChevronDown,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
@@ -157,6 +157,14 @@ function ResidentPickerDialog({
   );
 }
 
+function useIsTouchDevice() {
+  const [isTouch, setIsTouch] = useState(false);
+  useEffect(() => {
+    setIsTouch(navigator.maxTouchPoints > 0);
+  }, []);
+  return isTouch;
+}
+
 function PhotoUploadSection({
   photos,
   onChange,
@@ -164,7 +172,17 @@ function PhotoUploadSection({
   photos: (File | null)[];
   onChange: (photos: (File | null)[]) => void;
 }) {
-  const inputRefs = [
+  const isTouch = useIsTouchDevice();
+  const [pickerIndex, setPickerIndex] = useState<number | null>(null);
+
+  const cameraRefs = [
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+  ];
+  const galleryRefs = [
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
@@ -176,11 +194,21 @@ function PhotoUploadSection({
     const next = [...photos];
     next[index] = file;
     onChange(next);
+    setPickerIndex(null);
   }
 
   function removePhoto(index: number) {
     handleFile(index, null);
-    if (inputRefs[index].current) inputRefs[index].current!.value = "";
+    if (cameraRefs[index].current) cameraRefs[index].current!.value = "";
+    if (galleryRefs[index].current) galleryRefs[index].current!.value = "";
+  }
+
+  function handleSlotClick(i: number) {
+    if (isTouch) {
+      setPickerIndex(i);
+    } else {
+      galleryRefs[i].current?.click();
+    }
   }
 
   return (
@@ -205,18 +233,30 @@ function PhotoUploadSection({
               ) : (
                 <button
                   type="button"
-                  onClick={() => inputRefs[i].current?.click()}
+                  onClick={() => handleSlotClick(i)}
                   className="h-20 w-20 rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-1 hover:border-primary/50 hover:bg-primary/5 transition-colors"
                 >
                   <Camera className="h-5 w-5 text-gray-300" />
                   <span className="text-xs text-gray-300">追加</span>
                 </button>
               )}
+              {/* Camera input (mobile only) */}
               <input
-                ref={inputRefs[i]}
+                ref={cameraRefs[i]}
                 type="file"
                 accept="image/*"
                 capture="environment"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0] ?? null;
+                  handleFile(i, f);
+                }}
+              />
+              {/* Gallery / Drive input */}
+              <input
+                ref={galleryRefs[i]}
+                type="file"
+                accept="image/*"
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0] ?? null;
@@ -227,9 +267,68 @@ function PhotoUploadSection({
           );
         })}
         {photos.filter(Boolean).length === 0 && (
-          <p className="text-xs text-gray-400 self-center">カメラアイコンをタップして写真を追加</p>
+          <p className="text-xs text-gray-400 self-center">
+            {isTouch ? "アイコンをタップして写真を追加" : "アイコンをクリックして写真を追加"}
+          </p>
         )}
       </div>
+
+      {/* Mobile action sheet */}
+      {pickerIndex !== null && (
+        <div className="fixed inset-0 z-50 flex items-end" onClick={() => setPickerIndex(null)}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div
+            className="relative w-full bg-white rounded-t-2xl shadow-xl pb-safe"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mt-3 mb-4" />
+            <p className="text-center text-sm font-semibold text-gray-700 mb-3">写真を追加</p>
+            <div className="divide-y divide-gray-100 border-t border-gray-100">
+              <button
+                type="button"
+                className="w-full flex items-center gap-4 px-6 py-4 text-left hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                onClick={() => {
+                  setPickerIndex(null);
+                  setTimeout(() => cameraRefs[pickerIndex!].current?.click(), 50);
+                }}
+              >
+                <div className="h-10 w-10 rounded-full bg-orange-50 flex items-center justify-center shrink-0">
+                  <Camera className="h-5 w-5 text-orange-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">カメラで撮影</p>
+                  <p className="text-xs text-gray-400 mt-0.5">今すぐ写真を撮る</p>
+                </div>
+              </button>
+              <button
+                type="button"
+                className="w-full flex items-center gap-4 px-6 py-4 text-left hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                onClick={() => {
+                  setPickerIndex(null);
+                  setTimeout(() => galleryRefs[pickerIndex!].current?.click(), 50);
+                }}
+              >
+                <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+                  <ImageIcon className="h-5 w-5 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">写真・ドライブから選択</p>
+                  <p className="text-xs text-gray-400 mt-0.5">カメラロール・Googleドライブなど</p>
+                </div>
+              </button>
+            </div>
+            <div className="px-4 py-3">
+              <button
+                type="button"
+                onClick={() => setPickerIndex(null)}
+                className="w-full py-3 rounded-xl bg-gray-100 text-sm font-semibold text-gray-600 hover:bg-gray-200 transition-colors"
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
