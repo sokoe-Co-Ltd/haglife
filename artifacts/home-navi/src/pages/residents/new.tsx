@@ -142,7 +142,7 @@ export default function ResidentsNew() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-[2fr_2fr_1fr_1fr] gap-2">
                   <div className="space-y-2">
                     <Label>元号</Label>
                     <Controller

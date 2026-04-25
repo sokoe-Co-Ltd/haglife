@@ -84,13 +84,13 @@ function ResidentPickerDialog({
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md p-0">
-          <DialogHeader className="px-4 pt-4 pb-2">
+        <DialogContent className="sm:max-w-md p-0 flex flex-col max-h-[85vh]">
+          <DialogHeader className="px-4 pt-4 pb-2 shrink-0">
             <DialogTitle className="text-base">利用者を選択</DialogTitle>
           </DialogHeader>
 
           {/* Search */}
-          <div className="px-4 pb-2">
+          <div className="px-4 pb-2 shrink-0">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
@@ -113,7 +113,7 @@ function ResidentPickerDialog({
           </div>
 
           {/* Scrollable list */}
-          <div className="overflow-y-auto max-h-72 divide-y divide-gray-50 border-t border-gray-100">
+          <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-gray-50 border-t border-gray-100">
             {filtered.length === 0 ? (
               <div className="py-8 text-center text-sm text-gray-400">
                 該当する利用者が見つかりません
@@ -141,7 +141,7 @@ function ResidentPickerDialog({
             )}
           </div>
 
-          <div className="px-4 pb-4 pt-2 border-t border-gray-100">
+          <div className="px-4 pb-4 pt-2 border-t border-gray-100 shrink-0">
             <Button
               type="button"
               variant="ghost"
