@@ -2,15 +2,25 @@ import { Layout } from "@/components/layout";
 import { useGetResidentHealthSummary, useGetResident, useUpdateResident } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronLeft, Users, Phone, MapPin, Briefcase, UserCheck, DoorOpen, Hospital } from "lucide-react";
+import { ChevronLeft, Users, Phone, MapPin, Briefcase, UserCheck, DoorOpen, Hospital, ChevronRight as ChevronRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useParams, useLocation } from "wouter";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+
+const SECTIONS = [
+  { id: "dr-report", label: "Dr.報告" },
+  { id: "vitals",    label: "バイタル" },
+  { id: "meals",     label: "食事" },
+  { id: "eliminations", label: "排泄" },
+  { id: "weights",   label: "体重" },
+] as const;
+
+type SectionId = typeof SECTIONS[number]["id"];
 
 export default function HealthDetail() {
   const params = useParams();
@@ -35,17 +45,24 @@ export default function HealthDetail() {
   const [hospitalReason, setHospitalReason] = useState("");
   const [hospitalLoading, setHospitalLoading] = useState(false);
 
+  const [activeSection, setActiveSection] = useState<SectionId>("dr-report");
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  function scrollToSection(sectionId: SectionId) {
+    setActiveSection(sectionId);
+    const el = sectionRefs.current[sectionId];
+    if (el) {
+      const offset = 56; // sticky nav height
+      const top = el.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top, behavior: "smooth" });
+    }
+  }
+
   function handleMoveOut() {
     if (!moveOutDate) return;
     setMoveOutLoading(true);
     updateMutation.mutate(
-      {
-        id,
-        data: {
-          movedOutAt: moveOutDate,
-          movedOutReason: moveOutReason || null,
-        },
-      },
+      { id, data: { movedOutAt: moveOutDate, movedOutReason: moveOutReason || null } },
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: ["/residents"] });
@@ -53,9 +70,7 @@ export default function HealthDetail() {
           setShowMoveOutDialog(false);
           navigate("/residents");
         },
-        onError: () => {
-          toast({ title: "退去処理に失敗しました", variant: "destructive" });
-        },
+        onError: () => toast({ title: "退去処理に失敗しました", variant: "destructive" }),
         onSettled: () => setMoveOutLoading(false),
       }
     );
@@ -65,22 +80,14 @@ export default function HealthDetail() {
     if (!hospitalDate) return;
     setHospitalLoading(true);
     updateMutation.mutate(
-      {
-        id,
-        data: {
-          hospitalizedAt: hospitalDate,
-          hospitalizedReason: hospitalReason || null,
-        },
-      },
+      { id, data: { hospitalizedAt: hospitalDate, hospitalizedReason: hospitalReason || null } },
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: ["/residents"] });
           toast({ title: "入院として記録しました" });
           setShowHospitalDialog(false);
         },
-        onError: () => {
-          toast({ title: "入院記録に失敗しました", variant: "destructive" });
-        },
+        onError: () => toast({ title: "入院記録に失敗しました", variant: "destructive" }),
         onSettled: () => setHospitalLoading(false),
       }
     );
@@ -95,13 +102,145 @@ export default function HealthDetail() {
           queryClient.invalidateQueries({ queryKey: ["/residents"] });
           toast({ title: "退院として記録しました" });
         },
-        onError: () => {
-          toast({ title: "退院記録に失敗しました", variant: "destructive" });
-        },
+        onError: () => toast({ title: "退院記録に失敗しました", variant: "destructive" }),
         onSettled: () => setHospitalLoading(false),
       }
     );
   }
+
+  // ---- Shared section content renderers ----
+  function DrReportContent() {
+    return (
+      <div className="space-y-3">
+        {(summary!.doctorReports ?? []).length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">Dr.報告はありません</div>
+        ) : (
+          (summary!.doctorReports ?? []).map((report) => (
+            <div key={report.id} className="p-4 rounded-lg border bg-card">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-primary">
+                  {format(new Date(report.recordedAt), "yyyy/MM/dd HH:mm", { locale: ja })}
+                </span>
+                <span className="text-xs text-muted-foreground">{report.authorName}</span>
+              </div>
+              <p className="text-sm whitespace-pre-wrap">{report.content}</p>
+            </div>
+          ))
+        )}
+      </div>
+    );
+  }
+
+  function VitalsContent() {
+    return (
+      <div className="space-y-3">
+        {(summary!.recentVitals ?? []).length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">記録はありません</div>
+        ) : (
+          (summary!.recentVitals ?? []).map((vital) => (
+            <div key={vital.id} className="p-4 rounded-lg border flex flex-col gap-2">
+              <div className="text-sm font-medium text-primary">
+                {format(new Date(vital.recordedAt), "yyyy/MM/dd HH:mm", { locale: ja })}
+              </div>
+              <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium">
+                <span>KT: {vital.temperature || "-"}</span>
+                <span>BP: {vital.bpSystolic || "-"}/{vital.bpDiastolic || "-"}</span>
+                <span>P: {vital.pulse || "-"}</span>
+                <span>S: {vital.spo2 || "-"}</span>
+              </div>
+              {vital.isBath && (
+                <div className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded w-fit mt-1">
+                  入浴: {vital.bathType}
+                </div>
+              )}
+              {vital.notes && <p className="text-sm text-muted-foreground mt-1">{vital.notes}</p>}
+            </div>
+          ))
+        )}
+      </div>
+    );
+  }
+
+  function MealsContent() {
+    return (
+      <div className="space-y-3">
+        {(summary!.recentMeals ?? []).length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">記録はありません</div>
+        ) : (
+          (summary!.recentMeals ?? []).map((meal) => (
+            <div key={meal.id} className="p-4 rounded-lg border flex justify-between items-center">
+              <div>
+                <div className="text-sm font-medium text-primary mb-1">
+                  {format(new Date(meal.recordedAt), "yyyy/MM/dd", { locale: ja })} {meal.mealType}
+                </div>
+                <div className="text-sm">
+                  {meal.waterOnly ? (
+                    <span className="text-blue-600">水分のみ</span>
+                  ) : (
+                    <span>主菜: {meal.mainDishPercent}割 / 副菜: {meal.sideDishPercent}割</span>
+                  )}
+                </div>
+              </div>
+              {meal.medicationOk && (
+                <div className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded font-bold border border-green-200">
+                  服薬済
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    );
+  }
+
+  function EliminationsContent() {
+    return (
+      <div className="space-y-3">
+        {(summary!.recentEliminations ?? []).length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">記録はありません</div>
+        ) : (
+          (summary!.recentEliminations ?? []).map((elim) => (
+            <div key={elim.id} className="p-4 rounded-lg border">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-sm font-medium text-primary">
+                  {format(new Date(elim.recordedAt), "yyyy/MM/dd HH:mm", { locale: ja })}
+                </span>
+                <span className="text-sm font-bold bg-muted px-2 py-0.5 rounded">{elim.type} - {elim.amount}</span>
+              </div>
+              {elim.notes && <p className="text-sm text-muted-foreground mt-2">{elim.notes}</p>}
+            </div>
+          ))
+        )}
+      </div>
+    );
+  }
+
+  function WeightsContent() {
+    return (
+      <div className="space-y-3">
+        {(summary!.recentWeights ?? []).length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">記録はありません</div>
+        ) : (
+          (summary!.recentWeights ?? []).map((weight) => (
+            <div key={weight.id} className="p-4 rounded-lg border flex justify-between items-center">
+              <span className="text-sm font-medium text-primary">
+                {format(new Date(weight.recordedAt), "yyyy/MM/dd", { locale: ja })}
+              </span>
+              <span className="font-bold text-lg">{weight.weightKg} kg</span>
+            </div>
+          ))
+        )}
+      </div>
+    );
+  }
+
+  const sectionContent: Record<SectionId, React.ReactNode> = summary ? {
+    "dr-report": <DrReportContent />,
+    "vitals": <VitalsContent />,
+    "meals": <MealsContent />,
+    "eliminations": <EliminationsContent />,
+    "weights": <WeightsContent />,
+  } : {} as Record<SectionId, React.ReactNode>;
 
   return (
     <Layout>
@@ -124,7 +263,7 @@ export default function HealthDetail() {
                   type="date"
                   value={moveOutDate}
                   onChange={(e) => setMoveOutDate(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
               </div>
               <div>
@@ -134,25 +273,13 @@ export default function HealthDetail() {
                   value={moveOutReason}
                   onChange={(e) => setMoveOutReason(e.target.value)}
                   placeholder="例：入院、他施設への転居など"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
               </div>
             </div>
             <div className="flex gap-2 pt-1">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setShowMoveOutDialog(false)}
-                disabled={moveOutLoading}
-              >
-                キャンセル
-              </Button>
-              <Button
-                variant="destructive"
-                className="flex-1"
-                onClick={handleMoveOut}
-                disabled={!moveOutDate || moveOutLoading}
-              >
+              <Button variant="outline" className="flex-1" onClick={() => setShowMoveOutDialog(false)} disabled={moveOutLoading}>キャンセル</Button>
+              <Button variant="destructive" className="flex-1" onClick={handleMoveOut} disabled={!moveOutDate || moveOutLoading}>
                 {moveOutLoading ? "処理中..." : "退去を記録する"}
               </Button>
             </div>
@@ -178,7 +305,7 @@ export default function HealthDetail() {
                   type="date"
                   value={hospitalDate}
                   onChange={(e) => setHospitalDate(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-300"
                 />
               </div>
               <div>
@@ -188,24 +315,13 @@ export default function HealthDetail() {
                   value={hospitalReason}
                   onChange={(e) => setHospitalReason(e.target.value)}
                   placeholder="例：骨折、肺炎、定期検査など"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-300"
                 />
               </div>
             </div>
             <div className="flex gap-2 pt-1">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setShowHospitalDialog(false)}
-                disabled={hospitalLoading}
-              >
-                キャンセル
-              </Button>
-              <Button
-                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
-                onClick={handleHospitalize}
-                disabled={!hospitalDate || hospitalLoading}
-              >
+              <Button variant="outline" className="flex-1" onClick={() => setShowHospitalDialog(false)} disabled={hospitalLoading}>キャンセル</Button>
+              <Button className="flex-1 bg-blue-500 hover:bg-blue-600 text-white" onClick={handleHospitalize} disabled={!hospitalDate || hospitalLoading}>
                 {hospitalLoading ? "処理中..." : "入院を記録する"}
               </Button>
             </div>
@@ -213,7 +329,8 @@ export default function HealthDetail() {
         </div>
       )}
 
-      <div className="space-y-6 max-w-6xl mx-auto h-[calc(100vh-6rem)] flex flex-col">
+      <div className="space-y-6 max-w-6xl mx-auto">
+        {/* Header */}
         <div className="flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
             <Link href="/residents">
@@ -230,19 +347,16 @@ export default function HealthDetail() {
             <div className="flex items-center gap-2">
               {resident.hospitalizedAt ? (
                 <Button
-                  variant="outline"
-                  size="sm"
+                  variant="outline" size="sm"
                   className="gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50"
-                  onClick={handleDischarge}
-                  disabled={hospitalLoading}
+                  onClick={handleDischarge} disabled={hospitalLoading}
                 >
                   <Hospital className="h-4 w-4" />
                   {hospitalLoading ? "処理中..." : "退院"}
                 </Button>
               ) : (
                 <Button
-                  variant="outline"
-                  size="sm"
+                  variant="outline" size="sm"
                   className="gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50"
                   onClick={() => setShowHospitalDialog(true)}
                 >
@@ -251,8 +365,7 @@ export default function HealthDetail() {
                 </Button>
               )}
               <Button
-                variant="outline"
-                size="sm"
+                variant="outline" size="sm"
                 className="gap-1.5 text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
                 onClick={() => setShowMoveOutDialog(true)}
               >
@@ -264,16 +377,17 @@ export default function HealthDetail() {
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-[5fr_6fr] gap-6 flex-1 min-h-0">
-            <Skeleton className="h-full w-full rounded-xl" />
-            <Skeleton className="h-full w-full rounded-xl" />
+          <div className="grid grid-cols-1 md:grid-cols-[5fr_6fr] gap-6">
+            <Skeleton className="h-64 w-full rounded-xl" />
+            <Skeleton className="h-64 w-full rounded-xl" />
           </div>
         ) : !resident || !summary ? (
           <div className="text-center py-12">見つかりませんでした</div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-[5fr_6fr] gap-6 flex-1 min-h-0">
+          <div className="grid grid-cols-1 md:grid-cols-[5fr_6fr] gap-6 md:h-[calc(100vh-9rem)] md:items-start">
+
             {/* Left Pane: Resident Info */}
-            <div className="flex flex-col gap-4 overflow-y-auto pr-2">
+            <div className="flex flex-col gap-4 md:overflow-y-auto md:h-full md:pr-2">
               {/* Basic Info Card */}
               <Card className="shrink-0 bg-primary/5 border-primary/20">
                 <CardContent className="p-5">
@@ -300,7 +414,7 @@ export default function HealthDetail() {
                 </CardContent>
               </Card>
 
-              {/* Keyperson & Care Manager Card */}
+              {/* Keyperson & Care Manager */}
               <Card className="shrink-0">
                 <CardHeader className="py-4 pb-2">
                   <CardTitle className="text-base flex items-center gap-2">
@@ -309,7 +423,6 @@ export default function HealthDetail() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 pb-5">
-                  {/* Keyperson */}
                   <div className="space-y-1.5">
                     <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">キーパーソン</p>
                     <p className="text-sm font-semibold">
@@ -331,7 +444,6 @@ export default function HealthDetail() {
                       </div>
                     )}
                   </div>
-
                   <div className="border-t pt-3 space-y-1.5">
                     <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">ケアマネ</p>
                     <div className="flex items-start gap-1.5 text-sm text-muted-foreground">
@@ -343,8 +455,8 @@ export default function HealthDetail() {
                 </CardContent>
               </Card>
 
-              {/* Medical Info Card */}
-              <Card className="flex-1">
+              {/* Medical Info */}
+              <Card className="shrink-0">
                 <CardHeader className="py-4 pb-2">
                   <CardTitle className="text-base">医療情報</CardTitle>
                 </CardHeader>
@@ -363,9 +475,64 @@ export default function HealthDetail() {
               </Card>
             </div>
 
-            {/* Right Pane: Health Records Tabs */}
-            <div className="flex flex-col h-full overflow-hidden">
-              <Card className="flex-1 flex flex-col overflow-hidden">
+            {/* Right Pane: Health Records */}
+            <div className="flex flex-col md:h-full md:overflow-hidden">
+
+              {/* ====== MOBILE: sticky nav + all sections stacked ====== */}
+              <div className="md:hidden">
+                {/* Sticky section navigation */}
+                <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm -mx-4 px-4 py-2 mb-4 flex gap-1.5 overflow-x-auto">
+                  {SECTIONS.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => scrollToSection(s.id)}
+                      className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                        activeSection === s.id
+                          ? "bg-primary text-white border-primary"
+                          : "text-gray-600 border-gray-200 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600"
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* All sections stacked */}
+                <div className="space-y-4">
+                  {SECTIONS.map((s, idx) => {
+                    const nextSection = SECTIONS[idx + 1];
+                    return (
+                      <div
+                        key={s.id}
+                        ref={(el) => { sectionRefs.current[s.id] = el; }}
+                      >
+                      <Card className="overflow-hidden">
+                        <CardHeader className="py-3 px-4 border-b border-gray-100 bg-gray-50/60">
+                          <CardTitle className="text-sm font-bold text-gray-700">{s.label}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                          {sectionContent[s.id]}
+                        </CardContent>
+                        {nextSection && (
+                          <div className="border-t border-gray-100 px-4 py-2.5">
+                            <button
+                              onClick={() => scrollToSection(nextSection.id)}
+                              className="w-full flex items-center justify-end gap-1 text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
+                            >
+                              次: {nextSection.label}
+                              <ChevronRightIcon className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </Card>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ====== DESKTOP: Tabs (unchanged) ====== */}
+              <Card className="hidden md:flex flex-col flex-1 overflow-hidden">
                 <Tabs defaultValue="dr-report" className="flex-1 flex flex-col overflow-hidden p-4">
                   <TabsList className="grid w-full grid-cols-5 shrink-0">
                     <TabsTrigger value="dr-report" className="text-xs">Dr.報告</TabsTrigger>
@@ -374,116 +541,17 @@ export default function HealthDetail() {
                     <TabsTrigger value="eliminations" className="text-xs">排泄</TabsTrigger>
                     <TabsTrigger value="weights" className="text-xs">体重</TabsTrigger>
                   </TabsList>
-
                   <div className="flex-1 overflow-y-auto mt-4 pr-1">
-                    <TabsContent value="dr-report" className="m-0 space-y-3">
-                      {(summary.doctorReports ?? []).length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">Dr.報告はありません</div>
-                      ) : (
-                        (summary.doctorReports ?? []).map((report) => (
-                          <div key={report.id} className="p-4 rounded-lg border bg-card">
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="text-sm font-medium text-primary">
-                                {format(new Date(report.recordedAt), "yyyy/MM/dd HH:mm", { locale: ja })}
-                              </span>
-                              <span className="text-xs text-muted-foreground">{report.authorName}</span>
-                            </div>
-                            <p className="text-sm whitespace-pre-wrap">{report.content}</p>
-                          </div>
-                        ))
-                      )}
-                    </TabsContent>
-
-                    <TabsContent value="vitals" className="m-0 space-y-3">
-                      {(summary.recentVitals ?? []).length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">記録はありません</div>
-                      ) : (
-                        (summary.recentVitals ?? []).map((vital) => (
-                          <div key={vital.id} className="p-4 rounded-lg border flex flex-col gap-2">
-                            <div className="text-sm font-medium text-primary">
-                              {format(new Date(vital.recordedAt), "yyyy/MM/dd HH:mm", { locale: ja })}
-                            </div>
-                            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium">
-                              <span>KT: {vital.temperature || "-"}</span>
-                              <span>BP: {vital.bpSystolic || "-"}/{vital.bpDiastolic || "-"}</span>
-                              <span>P: {vital.pulse || "-"}</span>
-                              <span>S: {vital.spo2 || "-"}</span>
-                            </div>
-                            {vital.isBath && (
-                              <div className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded w-fit mt-1">
-                                入浴: {vital.bathType}
-                              </div>
-                            )}
-                            {vital.notes && <p className="text-sm text-muted-foreground mt-1">{vital.notes}</p>}
-                          </div>
-                        ))
-                      )}
-                    </TabsContent>
-
-                    <TabsContent value="meals" className="m-0 space-y-3">
-                      {(summary.recentMeals ?? []).length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">記録はありません</div>
-                      ) : (
-                        (summary.recentMeals ?? []).map((meal) => (
-                          <div key={meal.id} className="p-4 rounded-lg border flex justify-between items-center">
-                            <div>
-                              <div className="text-sm font-medium text-primary mb-1">
-                                {format(new Date(meal.recordedAt), "yyyy/MM/dd", { locale: ja })} {meal.mealType}
-                              </div>
-                              <div className="text-sm">
-                                {meal.waterOnly ? (
-                                  <span className="text-blue-600">水分のみ</span>
-                                ) : (
-                                  <span>主菜: {meal.mainDishPercent}割 / 副菜: {meal.sideDishPercent}割</span>
-                                )}
-                              </div>
-                            </div>
-                            {meal.medicationOk && (
-                              <div className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded font-bold border border-green-200">
-                                服薬済
-                              </div>
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </TabsContent>
-
-                    <TabsContent value="eliminations" className="m-0 space-y-3">
-                      {(summary.recentEliminations ?? []).length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">記録はありません</div>
-                      ) : (
-                        (summary.recentEliminations ?? []).map((elim) => (
-                          <div key={elim.id} className="p-4 rounded-lg border">
-                            <div className="flex justify-between items-center mb-1">
-                              <span className="text-sm font-medium text-primary">
-                                {format(new Date(elim.recordedAt), "yyyy/MM/dd HH:mm", { locale: ja })}
-                              </span>
-                              <span className="text-sm font-bold bg-muted px-2 py-0.5 rounded">{elim.type} - {elim.amount}</span>
-                            </div>
-                            {elim.notes && <p className="text-sm text-muted-foreground mt-2">{elim.notes}</p>}
-                          </div>
-                        ))
-                      )}
-                    </TabsContent>
-
-                    <TabsContent value="weights" className="m-0 space-y-3">
-                      {(summary.recentWeights ?? []).length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">記録はありません</div>
-                      ) : (
-                        (summary.recentWeights ?? []).map((weight) => (
-                          <div key={weight.id} className="p-4 rounded-lg border flex justify-between items-center">
-                            <span className="text-sm font-medium text-primary">
-                              {format(new Date(weight.recordedAt), "yyyy/MM/dd", { locale: ja })}
-                            </span>
-                            <span className="font-bold text-lg">{weight.weightKg} kg</span>
-                          </div>
-                        ))
-                      )}
-                    </TabsContent>
+                    <TabsContent value="dr-report" className="m-0"><DrReportContent /></TabsContent>
+                    <TabsContent value="vitals" className="m-0"><VitalsContent /></TabsContent>
+                    <TabsContent value="meals" className="m-0"><MealsContent /></TabsContent>
+                    <TabsContent value="eliminations" className="m-0"><EliminationsContent /></TabsContent>
+                    <TabsContent value="weights" className="m-0"><WeightsContent /></TabsContent>
                   </div>
                 </Tabs>
               </Card>
             </div>
+
           </div>
         )}
       </div>
