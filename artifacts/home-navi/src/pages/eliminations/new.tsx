@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ChevronLeft, Toilet, History, Pencil, X, Check } from "lucide-react";
 import { Link, useParams, useLocation } from "wouter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useForm, Controller, useWatch } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { getListEliminationsQueryKey } from "@workspace/api-client-react";
@@ -221,28 +221,51 @@ export default function EliminationsNew() {
     onError: () => toast({ title: "エラーが発生しました", variant: "destructive" }),
   });
 
+  const [combinedMode, setCombinedMode] = useState(false);
+
   const form = useForm({
-    defaultValues: { type: "便", amount: "中", notes: "" }
+    defaultValues: { type: "便", amount: "中量", urineAmount: "中量", notes: "" }
   });
 
-  const onSubmit = (values: any) => {
-    createMutation.mutate({
-      data: {
-        residentId,
-        recordedAt: new Date().toISOString(),
-        type: values.type,
-        amount: values.amount,
-        notes: values.notes,
-      }
-    }, {
-      onSuccess: () => {
-        toast({ title: "保存しました" });
+  const watchedType = form.watch("type");
+
+  const onSubmit = async (values: any) => {
+    const now = new Date().toISOString();
+
+    if (combinedMode) {
+      // Create two records: 便 + 尿
+      try {
+        await Promise.all([
+          new Promise<void>((resolve, reject) =>
+            createMutation.mutate(
+              { data: { residentId, recordedAt: now, type: "便", amount: values.amount, notes: values.notes || null } },
+              { onSuccess: () => resolve(), onError: reject }
+            )
+          ),
+          new Promise<void>((resolve, reject) =>
+            createMutation.mutate(
+              { data: { residentId, recordedAt: now, type: "尿", amount: values.urineAmount, notes: null } },
+              { onSuccess: () => resolve(), onError: reject }
+            )
+          ),
+        ]);
+        toast({ title: "便・尿の両方を記録しました" });
         setLocation("/eliminations");
-      },
-      onError: () => {
+      } catch {
         toast({ title: "エラーが発生しました", variant: "destructive" });
       }
-    });
+    } else {
+      createMutation.mutate(
+        { data: { residentId, recordedAt: now, type: values.type, amount: values.amount, notes: values.notes || null } },
+        {
+          onSuccess: () => {
+            toast({ title: "保存しました" });
+            setLocation("/eliminations");
+          },
+          onError: () => toast({ title: "エラーが発生しました", variant: "destructive" }),
+        }
+      );
+    }
   };
 
   return (
@@ -275,57 +298,137 @@ export default function EliminationsNew() {
         {/* New elimination entry */}
         <Card>
           <CardContent className="p-5">
+            {/* Mode toggle */}
+            <div className="flex gap-2 mb-5">
+              <button
+                type="button"
+                onClick={() => setCombinedMode(false)}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all border ${
+                  !combinedMode
+                    ? "bg-primary text-white border-primary shadow-sm"
+                    : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                単独で記録
+              </button>
+              <button
+                type="button"
+                onClick={() => setCombinedMode(true)}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all border ${
+                  combinedMode
+                    ? "bg-primary text-white border-primary shadow-sm"
+                    : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                💩🚿 便と尿（両方）
+              </button>
+            </div>
+
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>種類</Label>
-                  <Controller
-                    name="type"
-                    control={form.control}
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="種類を選択" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="尿">🚿 尿</SelectItem>
-                          <SelectItem value="便">💩 便</SelectItem>
-                          <SelectItem value="入浴時">🛁 入浴時</SelectItem>
-                          <SelectItem value="その他">その他</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
+              {combinedMode ? (
+                /* Combined mode: 便 + 尿 simultaneously */
+                <div className="space-y-4">
+                  {/* 便 section */}
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">💩</span>
+                      <span className="text-sm font-bold text-amber-800">便</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-amber-700">量</Label>
+                      <Controller
+                        name="amount"
+                        control={form.control}
+                        render={({ field }) => (
+                          <AmountSelect
+                            value={field.value}
+                            onChange={field.onChange}
+                            type="便"
+                          />
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  {/* 尿 section */}
+                  <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🚿</span>
+                      <span className="text-sm font-bold text-blue-800">尿</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-blue-700">量</Label>
+                      <Controller
+                        name="urineAmount"
+                        control={form.control}
+                        render={({ field }) => (
+                          <AmountSelect
+                            value={field.value}
+                            onChange={field.onChange}
+                            type="尿"
+                          />
+                        )}
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>量</Label>
-                  <Controller
-                    name="amount"
-                    control={form.control}
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="量を選択" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="多">多</SelectItem>
-                          <SelectItem value="中">中</SelectItem>
-                          <SelectItem value="少">少</SelectItem>
-                          <SelectItem value="無">無</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
+              ) : (
+                /* Single mode */
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>種類</Label>
+                    <Controller
+                      name="type"
+                      control={form.control}
+                      render={({ field }) => (
+                        <Select
+                          onValueChange={(v) => {
+                            field.onChange(v);
+                            form.setValue("amount", getAmountOptions(v)[2]?.value ?? "");
+                          }}
+                          value={field.value}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="種類を選択" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="尿">🚿 尿</SelectItem>
+                            <SelectItem value="便">💩 便</SelectItem>
+                            <SelectItem value="入浴時">🛁 入浴時</SelectItem>
+                            <SelectItem value="その他">その他</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>量</Label>
+                    <Controller
+                      name="amount"
+                      control={form.control}
+                      render={({ field }) => (
+                        <AmountSelect
+                          value={field.value}
+                          onChange={field.onChange}
+                          type={watchedType}
+                        />
+                      )}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="space-y-2">
                 <Label>備考（聞き取り内容など）</Label>
-                <Textarea {...form.register("notes")} placeholder="特記事項" className="h-28 resize-none" />
+                <Textarea {...form.register("notes")} placeholder="特記事項" className="h-24 resize-none" />
               </div>
 
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>
-                {createMutation.isPending ? "保存中..." : "排泄を記録する"}
+                {createMutation.isPending
+                  ? "保存中..."
+                  : combinedMode
+                  ? "💩🚿 便と尿を記録する"
+                  : "排泄を記録する"}
               </Button>
             </form>
           </CardContent>
