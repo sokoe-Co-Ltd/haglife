@@ -51,6 +51,8 @@ All routes under `/api/` prefix:
 
 Tables: `residents`, `staff`, `handover_notes`, `vitals`, `meals`, `weights`, `eliminations`, `elimination_round_checks`, `elimination_round_state`, `day_services`, `bath_reports`, `insurances`
 
+`residents` table has `moved_out_at` (text, nullable) and `moved_out_reason` (text, nullable) fields for tracking move-out history (5-year retention).
+
 ## Key Commands
 
 - `pnpm run typecheck` — full typecheck across all packages

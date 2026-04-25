@@ -15,6 +15,7 @@ import {
   ClipboardList,
   ChevronRight,
   LogOut,
+  DoorOpen,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -28,6 +29,7 @@ const NAV_ITEMS = [
   { href: "/bath-reports", label: "入浴報告", icon: Bath },
   { href: "/residents", label: "利用者一覧", icon: Users },
   { href: "/staff", label: "職員一覧", icon: UserCircle },
+  { href: "/residents/moved-out", label: "退去者情報", icon: DoorOpen },
 ];
 
 const BOTTOM_NAV = [

@@ -27,6 +27,8 @@ export const residentsTable = pgTable("residents", {
   stomaManagement: boolean("stoma_management").notNull().default(false),
   photoUrl: text("photo_url"),
   moveInDate: text("move_in_date"),
+  movedOutAt: text("moved_out_at"),
+  movedOutReason: text("moved_out_reason"),
   characterNotes: text("character_notes"),
   clinic1: text("clinic1"),
   clinic2: text("clinic2"),

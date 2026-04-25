@@ -22,6 +22,8 @@ import BathReportDetail from "./pages/bath-reports/detail";
 import ResidentsList from "./pages/residents";
 import ResidentsNew from "./pages/residents/new";
 import ResidentDetail from "./pages/residents/detail";
+import MovedOutList from "./pages/residents/moved-out";
+import MovedOutDetail from "./pages/residents/moved-out-detail";
 import StaffList from "./pages/staff";
 import StaffNew from "./pages/staff/new";
 import StaffDetail from "./pages/staff/detail";
@@ -62,6 +64,8 @@ export default function AppRouter() {
       <Route path="/bath-reports/:id" component={BathReportDetail} />
       <Route path="/residents" component={ResidentsList} />
       <Route path="/residents/new" component={ResidentsNew} />
+      <Route path="/residents/moved-out" component={MovedOutList} />
+      <Route path="/residents/moved-out/:id" component={MovedOutDetail} />
       <Route path="/residents/:id" component={ResidentDetail} />
       <Route path="/staff" component={StaffList} />
       <Route path="/staff/new" component={StaffNew} />

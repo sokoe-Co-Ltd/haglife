@@ -1,25 +1,118 @@
 import { Layout } from "@/components/layout";
-import { useGetResidentHealthSummary, useGetResident } from "@workspace/api-client-react";
+import { useGetResidentHealthSummary, useGetResident, useUpdateResident } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronLeft, Users, Phone, MapPin, Briefcase, UserCheck } from "lucide-react";
+import { ChevronLeft, Users, Phone, MapPin, Briefcase, UserCheck, DoorOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link, useParams } from "wouter";
+import { Link, useParams, useLocation } from "wouter";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function HealthDetail() {
   const params = useParams();
   const id = parseInt(params.id || "0");
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: resident, isLoading: isResidentLoading } = useGetResident(id, { query: { enabled: !!id } });
   const { data: summary, isLoading: isSummaryLoading } = useGetResidentHealthSummary(id, { query: { enabled: !!id } });
+  const updateMutation = useUpdateResident();
 
   const isLoading = isResidentLoading || isSummaryLoading;
 
+  const [showMoveOutDialog, setShowMoveOutDialog] = useState(false);
+  const [moveOutDate, setMoveOutDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [moveOutReason, setMoveOutReason] = useState("");
+  const [moveOutLoading, setMoveOutLoading] = useState(false);
+
+  function handleMoveOut() {
+    if (!moveOutDate) return;
+    setMoveOutLoading(true);
+    updateMutation.mutate(
+      {
+        id,
+        data: {
+          movedOutAt: moveOutDate,
+          movedOutReason: moveOutReason || null,
+        },
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["/residents"] });
+          toast({ title: "退去処理が完了しました" });
+          setShowMoveOutDialog(false);
+          navigate("/residents");
+        },
+        onError: () => {
+          toast({ title: "退去処理に失敗しました", variant: "destructive" });
+        },
+        onSettled: () => setMoveOutLoading(false),
+      }
+    );
+  }
+
   return (
     <Layout>
+      {/* 退去確認ダイアログ */}
+      {showMoveOutDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-center gap-2 text-gray-700">
+              <DoorOpen className="h-5 w-5 text-red-500" />
+              <h2 className="text-lg font-bold">退去処理</h2>
+            </div>
+            <p className="text-sm text-gray-500">
+              {resident?.lastName} {resident?.firstName} さんを退去済みとして記録します。
+              情報は5年間保管されます。
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-bold text-gray-600 mb-1 block">退去日 <span className="text-red-500">*</span></label>
+                <input
+                  type="date"
+                  value={moveOutDate}
+                  onChange={(e) => setMoveOutDate(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-600 mb-1 block">退去理由（任意）</label>
+                <input
+                  type="text"
+                  value={moveOutReason}
+                  onChange={(e) => setMoveOutReason(e.target.value)}
+                  placeholder="例：入院、他施設への転居など"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowMoveOutDialog(false)}
+                disabled={moveOutLoading}
+              >
+                キャンセル
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={handleMoveOut}
+                disabled={!moveOutDate || moveOutLoading}
+              >
+                {moveOutLoading ? "処理中..." : "退去を記録する"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-6 max-w-6xl mx-auto h-[calc(100vh-6rem)] flex flex-col">
         <div className="flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
@@ -33,6 +126,17 @@ export default function HealthDetail() {
               利用者情報
             </h1>
           </div>
+          {!isLoading && resident && !resident.movedOutAt && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
+              onClick={() => setShowMoveOutDialog(true)}
+            >
+              <DoorOpen className="h-4 w-4" />
+              退去
+            </Button>
+          )}
         </div>
 
         {isLoading ? (
