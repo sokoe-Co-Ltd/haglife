@@ -7,9 +7,7 @@ import {
   CheckCircle2,
   Weight,
   ChevronRight,
-  ClipboardList,
   BarChart2,
-  Calendar,
   MessageSquare,
 } from "lucide-react";
 import { Link } from "wouter";
@@ -127,9 +125,7 @@ export default function WeightsList() {
   const recorded = statuses?.filter((s) => s.recordedThisMonth) || [];
 
   const quickActions = [
-    { label: "一括記録", icon: ClipboardList, color: "bg-primary" },
     { label: "推移グラフ", icon: BarChart2, href: "/weights/graph" },
-    { label: "月別カレンダー", icon: Calendar },
   ];
 
   return (
