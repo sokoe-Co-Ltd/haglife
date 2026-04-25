@@ -2,7 +2,7 @@ import { Layout } from "@/components/layout";
 import { useGetResidentHealthSummary, useGetResident, useUpdateResident } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronLeft, Users, Phone, MapPin, Briefcase, UserCheck, DoorOpen } from "lucide-react";
+import { ChevronLeft, Users, Phone, MapPin, Briefcase, UserCheck, DoorOpen, Hospital } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useParams, useLocation } from "wouter";
 import { format } from "date-fns";
@@ -30,6 +30,11 @@ export default function HealthDetail() {
   const [moveOutReason, setMoveOutReason] = useState("");
   const [moveOutLoading, setMoveOutLoading] = useState(false);
 
+  const [showHospitalDialog, setShowHospitalDialog] = useState(false);
+  const [hospitalDate, setHospitalDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [hospitalReason, setHospitalReason] = useState("");
+  const [hospitalLoading, setHospitalLoading] = useState(false);
+
   function handleMoveOut() {
     if (!moveOutDate) return;
     setMoveOutLoading(true);
@@ -52,6 +57,48 @@ export default function HealthDetail() {
           toast({ title: "退去処理に失敗しました", variant: "destructive" });
         },
         onSettled: () => setMoveOutLoading(false),
+      }
+    );
+  }
+
+  function handleHospitalize() {
+    if (!hospitalDate) return;
+    setHospitalLoading(true);
+    updateMutation.mutate(
+      {
+        id,
+        data: {
+          hospitalizedAt: hospitalDate,
+          hospitalizedReason: hospitalReason || null,
+        },
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["/residents"] });
+          toast({ title: "入院として記録しました" });
+          setShowHospitalDialog(false);
+        },
+        onError: () => {
+          toast({ title: "入院記録に失敗しました", variant: "destructive" });
+        },
+        onSettled: () => setHospitalLoading(false),
+      }
+    );
+  }
+
+  function handleDischarge() {
+    setHospitalLoading(true);
+    updateMutation.mutate(
+      { id, data: { hospitalizedAt: null, hospitalizedReason: null } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["/residents"] });
+          toast({ title: "退院として記録しました" });
+        },
+        onError: () => {
+          toast({ title: "退院記録に失敗しました", variant: "destructive" });
+        },
+        onSettled: () => setHospitalLoading(false),
       }
     );
   }
@@ -113,6 +160,59 @@ export default function HealthDetail() {
         </div>
       )}
 
+      {/* 入院確認ダイアログ */}
+      {showHospitalDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-center gap-2 text-gray-700">
+              <Hospital className="h-5 w-5 text-blue-500" />
+              <h2 className="text-lg font-bold">入院記録</h2>
+            </div>
+            <p className="text-sm text-gray-500">
+              {resident?.lastName} {resident?.firstName} さんの入院を記録します。
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-bold text-gray-600 mb-1 block">入院日 <span className="text-red-500">*</span></label>
+                <input
+                  type="date"
+                  value={hospitalDate}
+                  onChange={(e) => setHospitalDate(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-600 mb-1 block">入院理由・入院先（任意）</label>
+                <input
+                  type="text"
+                  value={hospitalReason}
+                  onChange={(e) => setHospitalReason(e.target.value)}
+                  placeholder="例：骨折、肺炎、定期検査など"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowHospitalDialog(false)}
+                disabled={hospitalLoading}
+              >
+                キャンセル
+              </Button>
+              <Button
+                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
+                onClick={handleHospitalize}
+                disabled={!hospitalDate || hospitalLoading}
+              >
+                {hospitalLoading ? "処理中..." : "入院を記録する"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-6 max-w-6xl mx-auto h-[calc(100vh-6rem)] flex flex-col">
         <div className="flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
@@ -127,15 +227,39 @@ export default function HealthDetail() {
             </h1>
           </div>
           {!isLoading && resident && !resident.movedOutAt && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
-              onClick={() => setShowMoveOutDialog(true)}
-            >
-              <DoorOpen className="h-4 w-4" />
-              退去
-            </Button>
+            <div className="flex items-center gap-2">
+              {resident.hospitalizedAt ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50"
+                  onClick={handleDischarge}
+                  disabled={hospitalLoading}
+                >
+                  <Hospital className="h-4 w-4" />
+                  {hospitalLoading ? "処理中..." : "退院"}
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50"
+                  onClick={() => setShowHospitalDialog(true)}
+                >
+                  <Hospital className="h-4 w-4" />
+                  入院
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
+                onClick={() => setShowMoveOutDialog(true)}
+              >
+                <DoorOpen className="h-4 w-4" />
+                退去
+              </Button>
+            </div>
           )}
         </div>
 
