@@ -283,11 +283,11 @@ export function BulkMealEntryModal({ open, onClose, residents, mealMap, date, fl
                         onClick={() => setDraft(r.id, activeMealTab, { skip: !draft.skip })}
                         className={`text-xs font-bold px-2 py-1 rounded-lg border transition-colors ${
                           draft.skip
-                            ? "border-gray-200 text-gray-400 bg-gray-50"
-                            : "border-primary/30 text-primary bg-primary/5"
+                            ? "border-primary/40 text-primary bg-primary/5 hover:bg-primary/10"
+                            : "border-gray-200 text-gray-400 bg-gray-50 hover:border-gray-300"
                         }`}
                       >
-                        {draft.skip ? "スキップ" : "記録する"}
+                        {draft.skip ? "入力する" : "スキップ"}
                       </button>
                     </div>
                   </div>
