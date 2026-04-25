@@ -118,31 +118,35 @@ export default function VitalsList() {
   return (
     <Layout>
       <div className="space-y-4">
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <h1 className="text-xl font-bold text-gray-800">
-            バイタル
-            {statuses && (
-              <span className="ml-2 text-sm font-normal text-gray-500">（{statuses.length}名）</span>
-            )}
-          </h1>
+        <div className="space-y-2">
+          {/* Row 1: title + new button */}
+          <div className="flex items-center justify-between gap-2">
+            <h1 className="text-xl font-bold text-gray-800">
+              バイタル
+              {statuses && (
+                <span className="ml-2 text-sm font-normal text-gray-500">（{statuses.length}名）</span>
+              )}
+            </h1>
+            <Link href="/vitals/new">
+              <Button size="sm" className="gap-1.5 shrink-0">
+                <Plus className="h-4 w-4" />
+                新規記録
+              </Button>
+            </Link>
+          </div>
+          {/* Row 2: date nav + PDF */}
           <div className="flex items-center gap-2">
             <DayNav date={date} onChange={handleDateChange} />
             <Button
               size="sm"
               variant="outline"
-              className="gap-1.5"
+              className="gap-1.5 shrink-0"
               onClick={() => printVitalsPdf(statuses ?? [], dateStr)}
               title="バイタル一覧をPDF出力"
             >
               <FileDown className="h-4 w-4" />
               <span className="hidden sm:inline">PDF出力</span>
             </Button>
-            <Link href="/vitals/new">
-              <Button size="sm" className="gap-1.5">
-                <Plus className="h-4 w-4" />
-                新規記録
-              </Button>
-            </Link>
           </div>
         </div>
 
