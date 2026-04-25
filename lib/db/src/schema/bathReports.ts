@@ -22,6 +22,8 @@ export const bathReportsTable = pgTable("bath_reports", {
   pulse: integer("pulse"),
   spo2: integer("spo2"),
   bathMemo: text("bath_memo"),
+  handoverNotes: text("handover_notes"),
+  photoUrl: text("photo_url"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

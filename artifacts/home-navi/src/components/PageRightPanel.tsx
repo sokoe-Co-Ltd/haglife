@@ -52,14 +52,16 @@ export function QuickActionsCard({ actions }: QuickActionsCardProps) {
 
 interface StaffMemoCardProps {
   memo?: string;
+  title?: string;
+  showEdit?: boolean;
 }
 
-export function StaffMemoCard({ memo }: StaffMemoCardProps) {
+export function StaffMemoCard({ memo, title = "スタッフメモ", showEdit = true }: StaffMemoCardProps) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-        <h3 className="text-sm font-bold text-gray-700">スタッフメモ</h3>
-        <button className="text-xs text-primary hover:underline">編集</button>
+        <h3 className="text-sm font-bold text-gray-700">{title}</h3>
+        {showEdit && <button className="text-xs text-primary hover:underline">編集</button>}
       </div>
       <div className="px-4 py-3">
         <p className="text-xs text-gray-500 leading-relaxed">

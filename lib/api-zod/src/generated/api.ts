@@ -1247,6 +1247,8 @@ export const ListBathReportsResponseItem = zod.object({
   pulse: zod.number().nullish(),
   spo2: zod.number().nullish(),
   bathMemo: zod.string().nullish(),
+  handoverNotes: zod.string().nullish(),
+  photoUrl: zod.string().nullish(),
   createdAt: zod.string(),
 });
 export const ListBathReportsResponse = zod.array(ListBathReportsResponseItem);
@@ -1264,6 +1266,8 @@ export const CreateBathReportBody = zod.object({
   pulse: zod.number().nullish(),
   spo2: zod.number().nullish(),
   bathMemo: zod.string().nullish(),
+  handoverNotes: zod.string().nullish(),
+  photoUrl: zod.string().nullish(),
 });
 
 /**
@@ -1281,6 +1285,8 @@ export const UpdateBathReportBody = zod.object({
   pulse: zod.number().nullish(),
   spo2: zod.number().nullish(),
   bathMemo: zod.string().nullish(),
+  handoverNotes: zod.string().nullish(),
+  photoUrl: zod.string().nullish(),
 });
 
 export const UpdateBathReportResponse = zod.object({
@@ -1296,6 +1302,8 @@ export const UpdateBathReportResponse = zod.object({
   pulse: zod.number().nullish(),
   spo2: zod.number().nullish(),
   bathMemo: zod.string().nullish(),
+  handoverNotes: zod.string().nullish(),
+  photoUrl: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
