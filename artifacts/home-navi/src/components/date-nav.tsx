@@ -51,10 +51,10 @@ export function DayNav({ date, onChange, maxDate }: DayNavProps) {
 
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 px-3 h-8 rounded-lg border border-gray-200 hover:bg-orange-50 hover:border-orange-300 transition-colors text-sm font-medium text-gray-700"
+        className="flex items-center gap-1.5 px-2.5 h-8 rounded-lg border border-gray-200 hover:bg-orange-50 hover:border-orange-300 transition-colors text-sm font-medium text-gray-700 whitespace-nowrap min-w-0 max-w-[52vw] sm:max-w-none overflow-hidden"
       >
-        <CalendarDays className="h-4 w-4 text-orange-500" />
-        {dayLabel}
+        <CalendarDays className="h-4 w-4 text-orange-500 shrink-0" />
+        <span className="truncate">{dayLabel}</span>
       </button>
 
       <button
@@ -139,11 +139,12 @@ export function MonthNav({ year, month, onChange }: MonthNavProps) {
 
       <button
         onClick={() => { setPickerYear(year); setOpen(!open); }}
-        className="flex items-center gap-2 px-3 h-8 rounded-lg border border-gray-200 hover:bg-orange-50 hover:border-orange-300 transition-colors text-sm font-medium text-gray-700"
+        className="flex items-center gap-1.5 px-2.5 h-8 rounded-lg border border-gray-200 hover:bg-orange-50 hover:border-orange-300 transition-colors text-sm font-medium text-gray-700 whitespace-nowrap min-w-0 max-w-[52vw] sm:max-w-none overflow-hidden"
       >
-        <Calendar className="h-4 w-4 text-orange-500" />
-        {year}年{month}月
-        {isCurrentMonth && <span className="text-xs text-orange-500">（今月）</span>}
+        <Calendar className="h-4 w-4 text-orange-500 shrink-0" />
+        <span className="truncate">
+          {year}年{month}月{isCurrentMonth && <span className="text-xs text-orange-500">（今月）</span>}
+        </span>
       </button>
 
       <button
