@@ -72,7 +72,7 @@ function EliminationEditRow({
             control={form.control}
             render={({ field }) => (
               <Select onValueChange={field.onChange} value={field.value}>
-                <SelectTrigger className="h-9 text-sm">
+                <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -92,7 +92,7 @@ function EliminationEditRow({
             control={form.control}
             render={({ field }) => (
               <Select onValueChange={field.onChange} value={field.value}>
-                <SelectTrigger className="h-9 text-sm">
+                <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -108,7 +108,7 @@ function EliminationEditRow({
       </div>
       <div className="space-y-1">
         <Label className="text-xs">備考</Label>
-        <Textarea {...form.register("notes")} placeholder="特記事項" className="h-16 text-sm resize-none" />
+        <Textarea {...form.register("notes")} placeholder="特記事項" className="h-16 resize-none" />
       </div>
       <Button
         size="sm"

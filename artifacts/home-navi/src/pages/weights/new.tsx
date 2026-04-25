@@ -97,11 +97,11 @@ function WeightEditRow({
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1">
           <Label className="text-xs">体重 (kg)</Label>
-          <Input type="number" step="0.1" className="h-9 text-sm" {...form.register("weightKg")} />
+          <Input type="number" step="0.1" className="h-9" {...form.register("weightKg")} />
         </div>
         <div className="space-y-1">
           <Label className="text-xs">備考</Label>
-          <Input className="h-9 text-sm" {...form.register("notes")} placeholder="特記事項" />
+          <Input className="h-9" {...form.register("notes")} placeholder="特記事項" />
         </div>
       </div>
       <Button

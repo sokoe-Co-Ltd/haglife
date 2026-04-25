@@ -796,7 +796,7 @@ export default function MealsList() {
                       value={String(draftSettings[meal].start)}
                       onValueChange={(v) => updateDraftHour(meal, "start", Number(v))}
                     >
-                      <SelectTrigger className="h-8 text-sm">
+                      <SelectTrigger className="h-8">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="max-h-48">
@@ -815,7 +815,7 @@ export default function MealsList() {
                       value={String(draftSettings[meal].end)}
                       onValueChange={(v) => updateDraftHour(meal, "end", Number(v))}
                     >
-                      <SelectTrigger className="h-8 text-sm">
+                      <SelectTrigger className="h-8">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="max-h-48">

@@ -142,7 +142,7 @@ export default function BathReportsNew() {
                 <Textarea
                   {...form.register("handoverNotes")}
                   placeholder="入浴中の様子、特記事項、次の担当者への申し送りなど"
-                  className="h-28 resize-none text-sm"
+                  className="h-28 resize-none"
                 />
               </div>
 
