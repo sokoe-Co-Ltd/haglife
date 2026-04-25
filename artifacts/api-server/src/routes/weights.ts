@@ -128,6 +128,8 @@ router.get("/weights/monthly-status", async (req, res): Promise<void> => {
       residentName: `${r.lastName}${r.firstName}`,
       roomNumber: r.roomNumber,
       photoUrl: r.photoUrl ?? null,
+      birthMonth: r.birthMonth,
+      birthDay: r.birthDay,
       latestWeight: latest ? parseFloat(String(latest.weightKg)) : null,
       recordedThisMonth: resWeights.length > 0,
       lastRecordedAt: latest ? latest.recordedAt.toISOString() : null,

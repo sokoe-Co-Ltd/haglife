@@ -6,10 +6,12 @@ import { AlertCircle, CheckCircle2, Weight, ChevronRight, ClipboardList, LineCha
 import { Link } from "wouter";
 import { MonthNav } from "@/components/date-nav";
 import { QuickActionsCard, StaffMemoCard, InfoCard } from "@/components/PageRightPanel";
+import { isTodayBirthday } from "@/lib/birthday";
 
 function ResidentWeightCard({ status }: { status: any }) {
+  const isBirthday = isTodayBirthday(status.birthMonth, status.birthDay);
   return (
-    <Link href={`/weights/${status.residentId}`} className="flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors">
+    <Link href={`/weights/${status.residentId}`} className={`flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors ${isBirthday ? "bg-red-50 hover:bg-red-50" : ""}`}>
       <div className="flex items-center gap-3 min-w-0">
         {status.isRecordedThisMonth ? (
           <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-600">測定済</span>
@@ -18,7 +20,9 @@ function ResidentWeightCard({ status }: { status: any }) {
         )}
         <div className="min-w-0">
           <span className="text-xs text-gray-400 mr-2">{status.roomNumber}</span>
-          <span className="text-sm font-semibold text-gray-800">{status.residentName}</span>
+          {isBirthday && <span className="mr-1">🎂</span>}
+          <span className={`text-sm font-semibold ${isBirthday ? "text-red-600" : "text-gray-800"}`}>{status.residentName}</span>
+          {isBirthday && <span className="ml-1.5 text-xs font-bold text-red-500">本日お誕生日</span>}
         </div>
       </div>
       <div className="flex items-center gap-3">

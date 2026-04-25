@@ -8,6 +8,7 @@ import { DayNav } from "@/components/date-nav";
 import { format } from "date-fns";
 import { QuickActionsCard, StaffMemoCard, InfoCard } from "@/components/PageRightPanel";
 import { Button } from "@/components/ui/button";
+import { isTodayBirthday } from "@/lib/birthday";
 
 const SESSION_KEY = "vitals-selected-date";
 
@@ -27,11 +28,12 @@ function loadDate(): Date {
 function ResidentVitalCard({ status, dateStr }: { status: any; dateStr: string }) {
   const needsRecheck = status.needsRecheck;
   const isRecorded = status.recordedToday;
+  const isBirthday = isTodayBirthday(status.birthMonth, status.birthDay);
 
   return (
     <Link
       href={`/vitals/${status.residentId}?date=${dateStr}`}
-      className="flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors"
+      className={`flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors ${isBirthday ? "bg-red-50 hover:bg-red-50" : ""}`}
     >
       <div className="flex items-center gap-3 min-w-0">
         {needsRecheck ? (
@@ -49,7 +51,9 @@ function ResidentVitalCard({ status, dateStr }: { status: any; dateStr: string }
         )}
         <div className="min-w-0">
           <span className="text-xs text-gray-400 mr-2">{status.roomNumber}</span>
-          <span className="text-sm font-semibold text-gray-800">{status.residentName}</span>
+          {isBirthday && <span className="mr-1">🎂</span>}
+          <span className={`text-sm font-semibold ${isBirthday ? "text-red-600" : "text-gray-800"}`}>{status.residentName}</span>
+          {isBirthday && <span className="ml-1.5 text-xs font-bold text-red-500">本日お誕生日</span>}
         </div>
       </div>
       <div className="flex items-center gap-4 shrink-0">

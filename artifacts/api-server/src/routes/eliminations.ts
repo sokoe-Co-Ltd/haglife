@@ -152,6 +152,8 @@ router.get("/eliminations/round-status", async (req, res): Promise<void> => {
       residentName: `${r.lastName}${r.firstName}`,
       roomNumber: r.roomNumber,
       photoUrl: r.photoUrl ?? null,
+      birthMonth: r.birthMonth,
+      birthDay: r.birthDay,
       stomaManagement: r.stomaManagement,
       lastBmRecordedAt: lastBm ? lastBm.toISOString() : null,
       daysSinceLastBm,

@@ -135,6 +135,8 @@ router.get("/vitals/today-status", async (req, res): Promise<void> => {
       residentName: `${r.lastName}${r.firstName}`,
       roomNumber: r.roomNumber,
       photoUrl: r.photoUrl ?? null,
+      birthMonth: r.birthMonth,
+      birthDay: r.birthDay,
       latestVital: latest ? { ...latest, temperature: latest.temperature ? parseFloat(String(latest.temperature)) : null } : null,
       needsRecheck: latest?.needsRecheck ?? false,
       recordedToday: resVitals.length > 0,

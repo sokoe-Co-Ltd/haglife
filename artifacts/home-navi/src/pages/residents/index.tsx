@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { QuickActionsCard, StaffMemoCard } from "@/components/PageRightPanel";
 import { useState } from "react";
+import { isTodayBirthday } from "@/lib/birthday";
 
 const CARE_COLORS: Record<string, string> = {
   "要介護1": "bg-green-100 text-green-700",
@@ -85,28 +86,32 @@ export default function ResidentsList() {
               <div className="py-16 text-center text-gray-400">該当する利用者がいません</div>
             ) : (
               <div className="divide-y divide-gray-50">
-                {filtered.map((resident) => (
-                  <Link key={resident.id} href={`/health/${resident.id}`} className="flex items-center gap-4 px-4 py-3.5 hover:bg-gray-50 transition-colors">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
-                      {resident.lastName.charAt(0)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-400">{resident.roomNumber}</span>
-                        <span className="text-sm font-bold text-gray-800">{resident.lastName} {resident.firstName}</span>
-                        <span className="text-xs text-gray-500">{resident.gender}</span>
+                {filtered.map((resident) => {
+                  const isBirthday = isTodayBirthday(resident.birthMonth, resident.birthDay);
+                  return (
+                    <Link key={resident.id} href={`/health/${resident.id}`} className={`flex items-center gap-4 px-4 py-3.5 hover:bg-gray-50 transition-colors ${isBirthday ? "bg-red-50 hover:bg-red-50" : ""}`}>
+                      <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${isBirthday ? "bg-red-100 text-red-600" : "bg-primary/10 text-primary"}`}>
+                        {isBirthday ? "🎂" : resident.lastName.charAt(0)}
                       </div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        {resident.careLevel && (
-                          <span className={`text-xs px-2 py-0.5 rounded font-semibold ${CARE_COLORS[resident.careLevel] ?? "bg-gray-100 text-gray-600"}`}>
-                            {resident.careLevel}
-                          </span>
-                        )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-400">{resident.roomNumber}</span>
+                          <span className={`text-sm font-bold ${isBirthday ? "text-red-600" : "text-gray-800"}`}>{resident.lastName} {resident.firstName}</span>
+                          <span className="text-xs text-gray-500">{resident.gender}</span>
+                          {isBirthday && <span className="text-xs font-bold text-red-500">🎉 本日お誕生日</span>}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {resident.careLevel && (
+                            <span className={`text-xs px-2 py-0.5 rounded font-semibold ${CARE_COLORS[resident.careLevel] ?? "bg-gray-100 text-gray-600"}`}>
+                              {resident.careLevel}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
-                  </Link>
-                ))}
+                      <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </div>
