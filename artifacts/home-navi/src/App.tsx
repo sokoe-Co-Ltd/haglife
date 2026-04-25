@@ -3,18 +3,23 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Router as WouterRouter } from "wouter";
 import AppRouter from "./AppRouter";
+import { OfflineProvider } from "@/contexts/OfflineContext";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 const queryClient = new QueryClient();
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <AppRouter />
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
+      <OfflineProvider>
+        <TooltipProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <OfflineBanner />
+            <AppRouter />
+          </WouterRouter>
+          <Toaster />
+        </TooltipProvider>
+      </OfflineProvider>
     </QueryClientProvider>
   );
 }
