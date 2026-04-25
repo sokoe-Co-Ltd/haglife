@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ChevronLeft, Toilet, History, Pencil, X, Check } from "lucide-react";
 import { Link, useParams, useLocation } from "wouter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { getListEliminationsQueryKey } from "@workspace/api-client-react";
@@ -20,11 +20,80 @@ function formatDateTime(iso: string) {
 }
 
 const AMOUNT_COLORS: Record<string, string> = {
+  多量: "bg-blue-100 text-blue-700",
+  大量: "bg-blue-200 text-blue-800",
   多: "bg-blue-100 text-blue-700",
+  中量: "bg-green-100 text-green-700",
   中: "bg-green-100 text-green-700",
+  少量: "bg-yellow-100 text-yellow-700",
   少: "bg-yellow-100 text-yellow-700",
+  微量: "bg-orange-100 text-orange-700",
+  失禁: "bg-red-100 text-red-700",
+  なし: "bg-gray-100 text-gray-500",
   無: "bg-gray-100 text-gray-500",
 };
+
+const AMOUNT_OPTIONS: Record<string, { value: string; label: string }[]> = {
+  便: [
+    { value: "大量", label: "大量" },
+    { value: "多量", label: "多量" },
+    { value: "中量", label: "中量" },
+    { value: "少量", label: "少量" },
+    { value: "微量", label: "微量" },
+    { value: "なし", label: "なし" },
+  ],
+  尿: [
+    { value: "多量", label: "多量" },
+    { value: "中量", label: "中量" },
+    { value: "少量", label: "少量" },
+    { value: "微量", label: "微量" },
+    { value: "失禁", label: "失禁" },
+    { value: "なし", label: "なし" },
+  ],
+  default: [
+    { value: "多", label: "多" },
+    { value: "中", label: "中" },
+    { value: "少", label: "少" },
+    { value: "なし", label: "なし" },
+  ],
+};
+
+function getAmountOptions(type: string) {
+  return AMOUNT_OPTIONS[type] ?? AMOUNT_OPTIONS.default;
+}
+
+function AmountSelect({
+  value,
+  onChange,
+  type,
+  triggerClass,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  type: string;
+  triggerClass?: string;
+}) {
+  const options = getAmountOptions(type);
+  const validValues = options.map((o) => o.value);
+  const safeValue = validValues.includes(value) ? value : options[2]?.value ?? "";
+  return (
+    <Select
+      onValueChange={onChange}
+      value={safeValue}
+    >
+      <SelectTrigger className={triggerClass}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((o) => (
+          <SelectItem key={o.value} value={o.value}>
+            {o.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 type EditableElimination = {
   id: number;
@@ -71,7 +140,7 @@ function EliminationEditRow({
             name="type"
             control={form.control}
             render={({ field }) => (
-              <Select onValueChange={field.onChange} value={field.value}>
+              <Select onValueChange={(v) => { field.onChange(v); form.setValue("amount", getAmountOptions(v)[2]?.value ?? ""); }} value={field.value}>
                 <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
@@ -91,17 +160,12 @@ function EliminationEditRow({
             name="amount"
             control={form.control}
             render={({ field }) => (
-              <Select onValueChange={field.onChange} value={field.value}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="多">多</SelectItem>
-                  <SelectItem value="中">中</SelectItem>
-                  <SelectItem value="少">少</SelectItem>
-                  <SelectItem value="無">無</SelectItem>
-                </SelectContent>
-              </Select>
+              <AmountSelect
+                value={field.value}
+                onChange={field.onChange}
+                type={form.watch("type")}
+                triggerClass="h-9"
+              />
             )}
           />
         </div>
