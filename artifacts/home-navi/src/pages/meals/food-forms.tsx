@@ -167,6 +167,7 @@ export default function MealFoodForms() {
   const updateResident = useUpdateResident();
 
   const filtered = residents.filter((r) => {
+    if (r.movedOutAt) return false;
     if (!search.trim()) return true;
     const q = search.trim().replace(/\s+/g, "");
     const name = `${r.lastName}${r.firstName}`;

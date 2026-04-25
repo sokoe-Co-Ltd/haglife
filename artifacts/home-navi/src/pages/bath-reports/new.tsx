@@ -18,7 +18,7 @@ export default function BathReportsNew() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   const { data: residents } = useListResidents();
-  const { data: staff } = useListStaff();
+  const { data: staff } = useListStaff({ visible_only: true });
   const createMutation = useCreateBathReport();
 
   const form = useForm({
@@ -62,7 +62,7 @@ export default function BathReportsNew() {
     );
   };
 
-  const visibleResidents = residents?.filter((r) => r.isVisible !== false) ?? [];
+  const visibleResidents = residents?.filter((r) => r.isVisible !== false && !r.movedOutAt) ?? [];
 
   return (
     <Layout>

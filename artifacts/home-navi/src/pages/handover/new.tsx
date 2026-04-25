@@ -54,6 +54,7 @@ function ResidentPickerDialog({
   const selected = residents.find((r) => r.id.toString() === value);
 
   const filtered = residents.filter((r) => {
+    if (r.movedOutAt) return false;
     const name = `${r.roomNumber} ${r.lastName} ${r.firstName}`;
     return name.includes(search);
   });
