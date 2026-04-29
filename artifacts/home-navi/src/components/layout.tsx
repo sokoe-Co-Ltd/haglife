@@ -149,17 +149,71 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
+const SIDEBAR_W = 288; // w-72 = 288px
+const EDGE_THRESHOLD = 30; // px from left edge to initiate open swipe
+
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [dragProgress, setDragProgress] = useState<number | null>(null);
+
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const isHSwipe = useRef<boolean | null>(null);
+  const canSwipe = useRef(false);
+
+  // progress: 0 = fully closed, 1 = fully open
+  const progress = dragProgress !== null ? dragProgress : mobileMenuOpen ? 1 : 0;
+  const isDragging = dragProgress !== null;
 
   function isActive(href: string) {
     return location === href || (href !== "/" && location.startsWith(href));
   }
 
+  function handleTouchStart(e: React.TouchEvent) {
+    const x = e.touches[0].clientX;
+    touchStartX.current = x;
+    touchStartY.current = e.touches[0].clientY;
+    isHSwipe.current = null;
+    canSwipe.current = mobileMenuOpen || x <= EDGE_THRESHOLD;
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    if (!canSwipe.current) return;
+    const dx = e.touches[0].clientX - touchStartX.current;
+    const dy = e.touches[0].clientY - touchStartY.current;
+
+    if (isHSwipe.current === null) {
+      if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+      isHSwipe.current = Math.abs(dx) > Math.abs(dy);
+    }
+    if (!isHSwipe.current) return;
+
+    if (!mobileMenuOpen) {
+      if (dx <= 0) return;
+      setDragProgress(Math.min(1, dx / SIDEBAR_W));
+    } else {
+      if (dx >= 0) return;
+      setDragProgress(Math.max(0, 1 + dx / SIDEBAR_W));
+    }
+  }
+
+  function handleTouchEnd() {
+    if (dragProgress === null) return;
+    const snap = dragProgress > 0.3;
+    setDragProgress(null);
+    setMobileMenuOpen(snap);
+    canSwipe.current = false;
+  }
+
   return (
-    <div className="flex min-h-screen bg-[#F5F7FA]">
+    <div
+      className="flex min-h-screen bg-[#F5F7FA]"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-56 flex-col bg-white border-r border-gray-100 shadow-sm h-screen sticky top-0 z-20">
         {/* Logo */}
@@ -299,57 +353,74 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </nav>
 
-        {/* Mobile full menu overlay */}
-        {mobileMenuOpen && (
-          <div className="fixed inset-0 z-30 md:hidden">
-            <div className="absolute inset-0 bg-black/40" onClick={() => setMobileMenuOpen(false)} />
-            <div className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-xl flex flex-col">
-              <div className="px-4 py-4 border-b border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <HagulifeLogo size={32} />
-                  <span className="font-bold text-gray-800">ハグライフ南摂津</span>
-                </div>
-                <button onClick={() => setMobileMenuOpen(false)} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100">
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+        {/* Mobile swipe drawer — always mounted, controlled by CSS transform */}
+        <div
+          className="fixed inset-0 z-30 md:hidden"
+          style={{ pointerEvents: progress > 0 ? "auto" : "none" }}
+        >
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black"
+            style={{
+              opacity: progress * 0.45,
+              transition: isDragging ? "none" : "opacity 0.28s ease",
+            }}
+            onClick={() => setMobileMenuOpen(false)}
+          />
+
+          {/* Sidebar panel */}
+          <div
+            className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-xl flex flex-col"
+            style={{
+              transform: `translateX(${(progress - 1) * 100}%)`,
+              transition: isDragging ? "none" : "transform 0.28s ease",
+            }}
+          >
+            <div className="px-4 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <HagulifeLogo size={32} />
+                <span className="font-bold text-gray-800">ハグライフ南摂津</span>
               </div>
-              <nav className="flex-1 py-2 px-2 space-y-0.5 overflow-y-auto">
-                {NAV_ITEMS.map((item) => {
-                  const Icon = item.icon;
-                  const active = isActive(item.href);
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                        active
-                          ? "bg-primary text-white"
-                          : "text-gray-600 hover:bg-primary/10 hover:text-primary"
-                      }`}
-                    >
-                      <Icon style={{ width: 17, height: 17 }} className="shrink-0" />
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </nav>
-              <div className="border-t border-gray-100 px-3 py-3">
-                <div className="flex items-center gap-3 p-2">
-                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                    田
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800">山田 花子</p>
-                    <p className="text-xs text-gray-400">介護職員</p>
-                  </div>
+              <button onClick={() => setMobileMenuOpen(false)} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <nav className="flex-1 py-2 px-2 space-y-0.5 overflow-y-auto">
+              {NAV_ITEMS.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                      active
+                        ? "bg-primary text-white"
+                        : "text-gray-600 hover:bg-primary/10 hover:text-primary"
+                    }`}
+                  >
+                    <Icon style={{ width: 17, height: 17 }} className="shrink-0" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
+            <div className="border-t border-gray-100 px-3 py-3">
+              <div className="flex items-center gap-3 p-2">
+                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                  田
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">山田 花子</p>
+                  <p className="text-xs text-gray-400">介護職員</p>
                 </div>
               </div>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
