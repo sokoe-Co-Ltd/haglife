@@ -392,7 +392,7 @@ export default function HealthDetail() {
               <Card className="shrink-0 bg-primary/5 border-primary/20">
                 <CardContent className="p-5">
                   <div className="flex items-center gap-4 mb-4">
-                    <div className="h-16 w-16 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-2xl shrink-0">
+                    <div className={`h-16 w-16 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-2xl shrink-0 ${resident.gender === "男性" ? "ring-4 ring-red-400" : ""}`}>
                       {resident.lastName.charAt(0)}
                     </div>
                     <div>

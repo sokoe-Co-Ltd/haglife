@@ -285,7 +285,7 @@ export default function EliminationsNew() {
 
         {resident && (
           <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-lg">
+            <div className={`h-10 w-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-lg ${resident.gender === "男性" ? "ring-2 ring-red-400" : ""}`}>
               {resident.lastName.charAt(0)}
             </div>
             <div>
