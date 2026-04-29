@@ -54,16 +54,16 @@ const TEXTURE_COLORS: Record<string, string> = {
 
 const TEXTURE_ICONS: Record<string, string> = {
   "常食": "🍚",
-  "粗きざみ食": "🔪",
-  "きざみ食": "✂️",
-  "ミキサー食": "🌀",
-  "ソフト食": "🥣",
-  "流動食": "🥛",
-  "とろみ食（薄）": "💧",
-  "とろみ食（中）": "💦",
-  "とろみ食（濃）": "🫙",
+  "粗きざみ食": "🥗",
+  "きざみ食": "🥘",
+  "ミキサー食": "🥤",
+  "ソフト食": "🥞",
+  "流動食": "🍵",
+  "とろみ食（薄）": "🧃",
+  "とろみ食（中）": "🍲",
+  "とろみ食（濃）": "🍯",
   "嚥下食": "🍮",
-  "水分のみ": "🚰",
+  "水分のみ": "☕",
 };
 
 function getTextureForMeal(resident: Resident, mealType: MealType): string {
