@@ -355,7 +355,7 @@ export default function VitalsInput() {
             </div>
             <div>
               <div className="text-xs text-gray-400">{resident.roomNumber}</div>
-              <div className="font-bold text-lg text-gray-800">{resident.lastName} {resident.firstName}</div>
+              <div className="font-bold text-lg text-gray-800">{resident.lastName} {resident.firstName}様</div>
             </div>
           </div>
         )}

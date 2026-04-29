@@ -43,14 +43,14 @@ function ResidentWeightCard({ status }: { status: any }) {
             <div className="flex flex-col gap-0.5">
               <div>
                 <span className="text-xs text-gray-400 mr-2">{status.roomNumber}</span>
-                <span className="text-sm font-semibold text-red-600">{status.residentName}</span>
+                <span className="text-sm font-semibold text-red-600">{status.residentName}様</span>
               </div>
               <span className="text-xs font-bold text-red-500">🎂 本日お誕生日</span>
             </div>
           ) : (
             <>
               <span className="text-xs text-gray-400 mr-2">{status.roomNumber}</span>
-              <span className="text-sm font-semibold text-gray-800">{status.residentName}</span>
+              <span className="text-sm font-semibold text-gray-800">{status.residentName}様</span>
             </>
           )}
         </div>
@@ -99,7 +99,7 @@ function WeightNotesPanel() {
         {displayed.map((w: any) => (
           <div key={w.id} className="px-4 py-3 space-y-1">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-bold text-gray-700">{w.residentName}</span>
+              <span className="text-xs font-bold text-gray-700">{w.residentName}様</span>
               <span className="text-xs text-gray-400">
                 {format(new Date(w.recordedAt), "M/d", { locale: ja })}
               </span>

@@ -42,7 +42,7 @@ export default function HandoverDetail() {
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-2 flex-wrap">
                   <CardTitle className="text-xl">
-                    {note.category === "利用者" ? note.residentName : "その他"}
+                    {note.category === "利用者" ? `${note.residentName}様` : "その他"}
                   </CardTitle>
                   <StatusBadge status={note.status} isImportant={note.isImportant} />
                   {note.isDoctorReport && (

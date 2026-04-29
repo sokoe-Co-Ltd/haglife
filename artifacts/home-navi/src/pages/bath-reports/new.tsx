@@ -113,7 +113,7 @@ export default function BathReportsNew() {
                       <SelectContent>
                         {visibleResidents.map((r) => (
                           <SelectItem key={r.id} value={r.id.toString()}>
-                            {r.roomNumber}　{r.lastName} {r.firstName}
+                            {r.roomNumber}　{r.lastName} {r.firstName}様
                           </SelectItem>
                         ))}
                       </SelectContent>

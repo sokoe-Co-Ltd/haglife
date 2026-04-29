@@ -62,7 +62,7 @@ export default function DayServicesList() {
                   >
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-primary">{service.residentName}</p>
+                        <p className="text-sm font-bold text-primary">{service.residentName}様</p>
                         <p className="text-xs text-gray-500 mt-0.5">{service.facilityName}</p>
                       </div>
                       <button

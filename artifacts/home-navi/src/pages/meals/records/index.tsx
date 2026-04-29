@@ -159,7 +159,7 @@ export default function MealsRecordsIndex() {
                   >
                     <span className="text-xs text-gray-400 w-10 shrink-0">{r.roomNumber}</span>
                     <span className={`text-sm font-semibold min-w-0 flex-1 ${hasIssue ? "text-red-700" : hasUnrecorded ? "text-orange-700" : "text-gray-800"}`}>
-                      {r.lastName} {r.firstName}
+                      {r.lastName} {r.firstName}様
                     </span>
                     <div className="flex items-center gap-1 shrink-0">
                       {statuses.map(({ t, s }) => <MealBadge key={t} status={s} type={t} />)}

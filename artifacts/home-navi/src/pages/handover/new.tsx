@@ -75,7 +75,7 @@ function ResidentPickerDialog({
         {selected ? (
           <span className="text-base font-semibold text-gray-900">
             <span className="text-sm font-normal text-gray-400 mr-1.5">{selected.roomNumber}</span>
-            {selected.lastName} {selected.firstName}
+            {selected.lastName} {selected.firstName}様
           </span>
         ) : (
           <span className="text-base text-muted-foreground">利用者を選択</span>
@@ -131,7 +131,7 @@ function ResidentPickerDialog({
                     <div>
                       <span className="text-xs text-gray-400 mr-2">{r.roomNumber}</span>
                       <span className={`text-base font-semibold ${isSelected ? "text-primary" : "text-gray-800"}`}>
-                        {r.lastName} {r.firstName}
+                        {r.lastName} {r.firstName}様
                       </span>
                     </div>
                     {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}

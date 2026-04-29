@@ -286,7 +286,7 @@ function SidePanel({ allResidents, mealMap, floorFilter, activeMealType, onOpenB
               <div key={r.id} className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <span className="text-xs text-gray-500 mr-1">{r.roomNumber}</span>
-                  <span className="text-xs font-semibold text-gray-800">{r.lastName}{r.firstName}</span>
+                  <span className="text-xs font-semibold text-gray-800">{r.lastName}{r.firstName}様</span>
                 </div>
                 <div className="flex gap-0.5 shrink-0">
                   {MEAL_TYPES.map((t) => {
@@ -332,7 +332,7 @@ function MobileMealCard({ resident, mealMap, activeMealType, onEdit, dateIsToday
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-400">{resident.roomNumber}</span>
-          <span className="text-sm font-bold text-gray-800">{resident.lastName} {resident.firstName}</span>
+          <span className="text-sm font-bold text-gray-800">{resident.lastName} {resident.firstName}様</span>
         </div>
         <AlertColumn resident={resident} />
       </div>
@@ -666,7 +666,7 @@ export default function MealsList() {
                         <TableRow key={resident.id} className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${needsAttn ? "bg-red-50/30" : ""}`}>
                           <TableCell className="text-xs text-gray-400 px-3">{resident.roomNumber}</TableCell>
                           <TableCell className="text-sm font-semibold text-gray-800 whitespace-nowrap">
-                            {resident.lastName} {resident.firstName}
+                            {resident.lastName} {resident.firstName}様
                           </TableCell>
                           {MEAL_TYPES.map((t) => {
                             const locked = !showAllRecords && !isMealEditable(t, dateIsToday, mealTimeSettings);

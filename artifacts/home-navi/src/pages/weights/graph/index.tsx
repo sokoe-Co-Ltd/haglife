@@ -53,7 +53,7 @@ export default function WeightGraphList() {
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-gray-400">{r.roomNumber}</span>
                       <span className="text-sm font-semibold text-gray-800">
-                        {r.lastName} {r.firstName}
+                        {r.lastName} {r.firstName}様
                       </span>
                       <span className="text-xs text-gray-400">{r.gender}</span>
                     </div>

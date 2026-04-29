@@ -134,7 +134,7 @@ export default function ResidentsList() {
                           <span className={`text-sm font-bold ${
                             isHospitalized ? "text-blue-700" : isBirthday ? "text-red-600" : "text-gray-800"
                           }`}>
-                            {resident.lastName} {resident.firstName}
+                            {resident.lastName} {resident.firstName}様
                           </span>
                           <span className="text-xs text-gray-500">{resident.gender}</span>
                           {isHospitalized && (

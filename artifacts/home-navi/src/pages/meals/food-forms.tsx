@@ -319,7 +319,7 @@ export default function MealFoodForms() {
                           onClick={() => nav(`/residents/${r.id}`)}
                           className="text-sm font-semibold text-gray-800 hover:text-primary transition-colors whitespace-nowrap"
                         >
-                          {r.lastName} {r.firstName}
+                          {r.lastName} {r.firstName}様
                         </button>
                       </td>
                       {MEAL_TYPES.map((t) => {

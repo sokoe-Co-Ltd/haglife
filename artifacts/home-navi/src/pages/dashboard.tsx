@@ -139,7 +139,7 @@ export default function Dashboard() {
                 <div key={a.residentId} className="shrink-0 bg-red-50 border border-red-200 rounded-xl px-4 py-3.5 flex flex-col gap-1.5 min-w-[190px]">
                   <div className="flex items-center gap-2">
                     <span className="h-3 w-3 bg-red-500 rounded-full shrink-0" />
-                    <span className="text-base font-bold text-red-700">{a.residentName}</span>
+                    <span className="text-base font-bold text-red-700">{a.residentName}様</span>
                   </div>
                   <p className="text-base text-red-600">
                     {a.latestVital ? `体温 ${a.latestVital.temperature}℃` : "バイタル再測定"}
@@ -153,7 +153,7 @@ export default function Dashboard() {
                 <div key={`e-${a.residentId}`} className="shrink-0 bg-red-50 border border-red-200 rounded-xl px-4 py-3.5 flex flex-col gap-1.5 min-w-[190px]">
                   <div className="flex items-center gap-2">
                     <span className="h-3 w-3 bg-red-500 rounded-full shrink-0" />
-                    <span className="text-base font-bold text-red-700">{a.residentName}</span>
+                    <span className="text-base font-bold text-red-700">{a.residentName}様</span>
                   </div>
                   <p className="text-base text-red-600">
                     {a.daysSinceLastBm !== null ? `排便 ${a.daysSinceLastBm}日経過` : "排便記録なし"}
@@ -210,7 +210,7 @@ export default function Dashboard() {
                     </div>
                     <div className="flex-1 min-w-0">
                       {note.residentName && (
-                        <span className="text-base font-bold text-gray-800 mr-1.5">{note.residentName}</span>
+                        <span className="text-base font-bold text-gray-800 mr-1.5">{note.residentName}様</span>
                       )}
                       <span className="text-base text-gray-600 line-clamp-2">{note.content}</span>
                     </div>

@@ -316,7 +316,7 @@ export default function ResidentMealHistory() {
               <>
                 <div className="text-xs text-gray-400">{resident.roomNumber} · 食事記録</div>
                 <h1 className="text-xl font-bold text-gray-800">
-                  {resident.lastName} {resident.firstName}
+                  {resident.lastName} {resident.firstName}様
                 </h1>
               </>
             ) : (

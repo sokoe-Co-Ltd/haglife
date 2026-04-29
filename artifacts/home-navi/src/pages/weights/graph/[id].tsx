@@ -155,7 +155,7 @@ export default function WeightGraphDetail() {
               体重推移グラフ
             </h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              {resident.roomNumber}　{resident.lastName} {resident.firstName}
+              {resident.roomNumber}　{resident.lastName} {resident.firstName}様
             </p>
           </div>
         </div>

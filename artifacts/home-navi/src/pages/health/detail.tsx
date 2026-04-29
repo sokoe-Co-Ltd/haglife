@@ -253,7 +253,7 @@ export default function HealthDetail() {
               <h2 className="text-lg font-bold">退去処理</h2>
             </div>
             <p className="text-sm text-gray-500">
-              {resident?.lastName} {resident?.firstName} さんを退去済みとして記録します。
+              {resident?.lastName} {resident?.firstName}様を退去済みとして記録します。
               情報は5年間保管されます。
             </p>
             <div className="space-y-3">
@@ -296,7 +296,7 @@ export default function HealthDetail() {
               <h2 className="text-lg font-bold">入院記録</h2>
             </div>
             <p className="text-sm text-gray-500">
-              {resident?.lastName} {resident?.firstName} さんの入院を記録します。
+              {resident?.lastName} {resident?.firstName}様の入院を記録します。
             </p>
             <div className="space-y-3">
               <div>
@@ -397,7 +397,7 @@ export default function HealthDetail() {
                     </div>
                     <div>
                       <div className="text-sm font-medium text-muted-foreground">{resident.roomNumber}</div>
-                      <div className="font-bold text-xl">{resident.lastName} {resident.firstName}</div>
+                      <div className="font-bold text-xl">{resident.lastName} {resident.firstName}様</div>
                       <div className="text-sm text-muted-foreground mt-0.5">{resident.gender}</div>
                     </div>
                   </div>

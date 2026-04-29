@@ -73,7 +73,7 @@ function NoteRow({ note, onStatusChange }: { note: any; onStatusChange: () => vo
                 onClick={(e) => e.stopPropagation()}
                 className="text-sm font-bold text-primary hover:underline"
               >
-                {note.residentName}
+                {note.residentName}様
               </Link>
             )}
             <span className="text-xs text-gray-500">{note.category}</span>

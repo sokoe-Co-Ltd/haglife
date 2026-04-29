@@ -48,7 +48,7 @@ export default function ResidentDetail() {
                 <div className="flex-1 text-center md:text-left">
                   <div className="flex flex-col md:flex-row md:items-end gap-2 md:gap-4 mb-2">
                     <span className="text-lg font-medium text-muted-foreground">{resident.roomNumber}</span>
-                    <h2 className="text-3xl font-bold">{resident.lastName} {resident.firstName}</h2>
+                    <h2 className="text-3xl font-bold">{resident.lastName} {resident.firstName}様</h2>
                   </div>
                   <div className="text-sm text-muted-foreground mb-4">
                     {resident.lastNameKana} {resident.firstNameKana} / {resident.lastNameRoman} {resident.firstNameRoman}

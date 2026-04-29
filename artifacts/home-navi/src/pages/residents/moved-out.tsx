@@ -92,7 +92,7 @@ export default function MovedOutResidentsList() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs text-gray-400">{resident.roomNumber}</span>
                       <span className="text-sm font-bold text-gray-700">
-                        {resident.lastName} {resident.firstName}
+                        {resident.lastName} {resident.firstName}様
                       </span>
                       <span className="text-xs text-gray-500">{resident.gender}</span>
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">

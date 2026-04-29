@@ -290,7 +290,7 @@ export default function EliminationsNew() {
             </div>
             <div>
               <div className="text-xs text-muted-foreground">{resident.roomNumber}</div>
-              <div className="font-bold text-lg">{resident.lastName} {resident.firstName}</div>
+              <div className="font-bold text-lg">{resident.lastName} {resident.firstName}様</div>
             </div>
           </div>
         )}

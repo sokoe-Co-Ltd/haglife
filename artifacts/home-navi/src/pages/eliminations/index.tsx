@@ -83,14 +83,14 @@ function ResidentEliminationCard({
             <div className="flex flex-col gap-0.5">
               <div>
                 <span className="text-xs text-gray-400 mr-2">{status.roomNumber}</span>
-                <span className="text-sm font-semibold text-red-600">{status.residentName}</span>
+                <span className="text-sm font-semibold text-red-600">{status.residentName}様</span>
               </div>
               <span className="text-xs font-bold text-red-500">🎂 本日お誕生日</span>
             </div>
           ) : (
             <div className="flex items-center gap-1.5">
               <span className="text-xs text-gray-400">{status.roomNumber}</span>
-              <span className="text-sm font-semibold text-gray-800">{status.residentName}</span>
+              <span className="text-sm font-semibold text-gray-800">{status.residentName}様</span>
             </div>
           )}
           <div className="mt-1">
@@ -239,7 +239,7 @@ export default function EliminationsList() {
                     <div key={s.residentId} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="h-2 w-2 rounded-full bg-primary shrink-0" />
-                        <span className="text-xs text-gray-700">{s.residentName}</span>
+                        <span className="text-xs text-gray-700">{s.residentName}様</span>
                       </div>
                       <span className="text-xs text-primary font-bold">
                         {s.daysSinceLastBm !== null ? `${s.daysSinceLastBm}日経過` : "未記録"}

@@ -73,7 +73,7 @@ export default function BathReportsList() {
                           <div className="flex items-center gap-1.5">
                             {isBirthday && <span className="text-sm">🎂</span>}
                             <span className={`text-sm font-bold ${isBirthday ? "text-red-600" : "text-gray-800"}`}>
-                              {report.residentName}
+                              {report.residentName}様
                             </span>
                           </div>
                           <span className="text-xs text-gray-400 shrink-0">

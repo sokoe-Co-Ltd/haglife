@@ -55,14 +55,14 @@ function ResidentVitalCard({ status, dateStr }: { status: any; dateStr: string }
             <div className="flex flex-col gap-0.5">
               <div>
                 <span className="text-xs text-gray-400 mr-2">{status.roomNumber}</span>
-                <span className="text-sm font-semibold text-red-600">{status.residentName}</span>
+                <span className="text-sm font-semibold text-red-600">{status.residentName}様</span>
               </div>
               <span className="text-xs font-bold text-red-500">🎂 本日お誕生日</span>
             </div>
           ) : (
             <>
               <span className="text-xs text-gray-400 mr-2">{status.roomNumber}</span>
-              <span className="text-sm font-semibold text-gray-800">{status.residentName}</span>
+              <span className="text-sm font-semibold text-gray-800">{status.residentName}様</span>
             </>
           )}
         </div>
@@ -228,7 +228,7 @@ export default function VitalsList() {
                   {recheckNeeded.slice(0, 5).map((s: any) => (
                     <div key={s.residentId} className="flex items-center gap-2">
                       <span className="h-2 w-2 rounded-full bg-red-400 shrink-0" />
-                      <span className="text-xs text-gray-700">{s.residentName}</span>
+                      <span className="text-xs text-gray-700">{s.residentName}様</span>
                     </div>
                   ))}
                   {recheckNeeded.length > 5 && (
