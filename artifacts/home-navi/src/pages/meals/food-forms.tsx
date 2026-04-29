@@ -52,6 +52,20 @@ const TEXTURE_COLORS: Record<string, string> = {
   "水分のみ": "bg-teal-100 text-teal-700",
 };
 
+const TEXTURE_ICONS: Record<string, string> = {
+  "常食": "🍚",
+  "粗きざみ食": "🔪",
+  "きざみ食": "✂️",
+  "ミキサー食": "🌀",
+  "ソフト食": "🥣",
+  "流動食": "🥛",
+  "とろみ食（薄）": "💧",
+  "とろみ食（中）": "💦",
+  "とろみ食（濃）": "🫙",
+  "嚥下食": "🍮",
+  "水分のみ": "🚰",
+};
+
 function getTextureForMeal(resident: Resident, mealType: MealType): string {
   if (mealType === "朝食") return resident.mealTextureBreakfast ?? "";
   if (mealType === "昼食") return resident.mealTextureLunch ?? "";
@@ -67,8 +81,10 @@ export function isMealEnabledForResident(resident: Resident, mealType: MealType)
 function TextureBadge({ value }: { value: string }) {
   if (!value) return <span className="text-xs text-gray-300">未設定</span>;
   const color = TEXTURE_COLORS[value] ?? "bg-gray-100 text-gray-600";
+  const icon = TEXTURE_ICONS[value];
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${color}`}>
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${color}`}>
+      {icon && <span className="text-[11px] leading-none">{icon}</span>}
       {value}
     </span>
   );
