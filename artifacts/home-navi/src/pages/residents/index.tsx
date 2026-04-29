@@ -125,7 +125,7 @@ export default function ResidentsList() {
                           : isBirthday
                           ? "bg-red-100 text-red-600"
                           : "bg-primary/10 text-primary"
-                      } ${resident.gender === "男性" ? "ring-2 ring-red-400" : ""}`}>
+                      } ${resident.gender === "男性" ? "ring-2 ring-blue-400" : "ring-2 ring-red-400"}`}>
                         {isBirthday && !isHospitalized ? "🎂" : resident.lastName.charAt(0)}
                       </div>
                       <div className="flex-1 min-w-0">

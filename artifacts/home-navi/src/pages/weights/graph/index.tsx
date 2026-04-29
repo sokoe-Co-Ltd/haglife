@@ -46,7 +46,7 @@ export default function WeightGraphList() {
                   href={`/weights/graph/${r.id}`}
                   className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-colors"
                 >
-                  <div className={`h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0 ${r.gender === "男性" ? "ring-2 ring-red-400" : ""}`}>
+                  <div className={`h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0 ${r.gender === "男性" ? "ring-2 ring-blue-400" : "ring-2 ring-red-400"}`}>
                     {r.lastName.charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">

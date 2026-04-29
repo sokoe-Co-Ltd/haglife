@@ -42,7 +42,7 @@ export default function ResidentDetail() {
           <div className="space-y-6">
             <Card className="bg-primary/5 border-primary/20">
               <CardContent className="p-6 flex flex-col md:flex-row items-center gap-6">
-                <div className={`h-24 w-24 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-4xl shrink-0 ${resident.gender === "男性" ? "ring-4 ring-red-400" : ""}`}>
+                <div className={`h-24 w-24 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-4xl shrink-0 ${resident.gender === "男性" ? "ring-4 ring-blue-400" : "ring-4 ring-red-400"}`}>
                   {resident.lastName.charAt(0)}
                 </div>
                 <div className="flex-1 text-center md:text-left">
