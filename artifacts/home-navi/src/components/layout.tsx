@@ -23,6 +23,7 @@ import {
 
 const NAV_ITEMS = [
   { href: "/", label: "ホーム", icon: Home },
+  { href: "/residents", label: "利用者一覧", icon: Users },
   { href: "/handover", label: "申し送り", icon: FileText },
   { href: "/vitals", label: "バイタル", icon: Activity },
   { href: "/meals", label: "食事", icon: Utensils },
@@ -30,7 +31,6 @@ const NAV_ITEMS = [
   { href: "/weights", label: "体重", icon: Weight },
   { href: "/day-services", label: "デイ準備物", icon: Briefcase },
   { href: "/bath-reports", label: "入浴報告", icon: Bath },
-  { href: "/residents", label: "利用者一覧", icon: Users },
   { href: "/staff", label: "職員一覧", icon: UserCircle },
   { href: "/residents/moved-out", label: "退去者情報", icon: DoorOpen },
 ];
