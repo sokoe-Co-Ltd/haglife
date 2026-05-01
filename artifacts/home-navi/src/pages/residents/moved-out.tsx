@@ -3,6 +3,7 @@ import { useListResidents } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DoorOpen, ChevronRight, Calendar } from "lucide-react";
 import { Link } from "wouter";
+import { ResidentAvatar } from "@/components/ResidentAvatar";
 import { useState } from "react";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -85,9 +86,7 @@ export default function MovedOutResidentsList() {
                   href={`/residents/moved-out/${resident.id}`}
                   className="flex items-center gap-4 px-4 py-3.5 hover:bg-gray-50 transition-colors"
                 >
-                  <div className={`h-10 w-10 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center font-bold text-sm shrink-0 ${resident.gender === "男性" ? "ring-2 ring-blue-400" : "ring-2 ring-red-400"}`}>
-                    {resident.lastName.charAt(0)}
-                  </div>
+                  <ResidentAvatar resident={resident} size="md" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs text-gray-400">{resident.roomNumber}</span>

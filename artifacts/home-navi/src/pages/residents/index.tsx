@@ -7,6 +7,7 @@ import { Link } from "wouter";
 import { StaffMemoCard } from "@/components/PageRightPanel";
 import { useState } from "react";
 import { isTodayBirthday } from "@/lib/birthday";
+import { ResidentAvatar } from "@/components/ResidentAvatar";
 
 type TabFilter = "すべて" | "女性" | "男性" | "入院中";
 
@@ -119,15 +120,12 @@ export default function ResidentsList() {
                           : "hover:bg-gray-50"
                       }`}
                     >
-                      <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${
-                        isHospitalized
-                          ? "bg-blue-100 text-blue-600"
-                          : isBirthday
-                          ? "bg-red-100 text-red-600"
-                          : "bg-primary/10 text-primary"
-                      } ${resident.gender === "男性" ? "ring-2 ring-blue-400" : "ring-2 ring-red-400"}`}>
-                        {isBirthday && !isHospitalized ? "🎂" : resident.lastName.charAt(0)}
-                      </div>
+                      <ResidentAvatar
+                        resident={resident}
+                        size="md"
+                        isBirthday={isBirthday}
+                        isHospitalized={isHospitalized}
+                      />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-400">{resident.roomNumber}</span>

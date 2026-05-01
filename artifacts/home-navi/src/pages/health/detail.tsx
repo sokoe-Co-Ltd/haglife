@@ -3,6 +3,7 @@ import { useGetResidentHealthSummary, useGetResident, useUpdateResident } from "
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, Users, Phone, MapPin, Briefcase, UserCheck, DoorOpen, Hospital, ChevronRight as ChevronRightIcon } from "lucide-react";
+import { ResidentAvatar } from "@/components/ResidentAvatar";
 import { Button } from "@/components/ui/button";
 import { Link, useParams, useLocation } from "wouter";
 import { format } from "date-fns";
@@ -392,9 +393,7 @@ export default function HealthDetail() {
               <Card className="shrink-0 bg-primary/5 border-primary/20">
                 <CardContent className="p-5">
                   <div className="flex items-center gap-4 mb-4">
-                    <div className={`h-16 w-16 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-2xl shrink-0 ${resident.gender === "男性" ? "ring-4 ring-blue-400" : "ring-4 ring-red-400"}`}>
-                      {resident.lastName.charAt(0)}
-                    </div>
+                    <ResidentAvatar resident={resident} size="lg" />
                     <div>
                       <div className="text-sm font-medium text-muted-foreground">{resident.roomNumber}</div>
                       <div className="font-bold text-xl">{resident.lastName} {resident.firstName}様</div>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout";
+import { ResidentAvatar } from "@/components/ResidentAvatar";
 import { useCreateElimination, useGetResident, useListEliminations } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -285,9 +286,7 @@ export default function EliminationsNew() {
 
         {resident && (
           <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 flex items-center gap-3">
-            <div className={`h-10 w-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-lg ${resident.gender === "男性" ? "ring-2 ring-blue-400" : "ring-2 ring-red-400"}`}>
-              {resident.lastName.charAt(0)}
-            </div>
+            <ResidentAvatar resident={resident} size="md" />
             <div>
               <div className="text-xs text-muted-foreground">{resident.roomNumber}</div>
               <div className="font-bold text-lg">{resident.lastName} {resident.firstName}様</div>

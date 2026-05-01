@@ -1,5 +1,6 @@
 import { Layout } from "@/components/layout";
 import { useListResidents } from "@workspace/api-client-react";
+import { ResidentAvatar } from "@/components/ResidentAvatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, ChevronRight, BarChart2 } from "lucide-react";
 import { Link } from "wouter";
@@ -46,9 +47,7 @@ export default function WeightGraphList() {
                   href={`/weights/graph/${r.id}`}
                   className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-colors"
                 >
-                  <div className={`h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0 ${r.gender === "男性" ? "ring-2 ring-blue-400" : "ring-2 ring-red-400"}`}>
-                    {r.lastName.charAt(0)}
-                  </div>
+                  <ResidentAvatar resident={r} size="sm" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-gray-400">{r.roomNumber}</span>

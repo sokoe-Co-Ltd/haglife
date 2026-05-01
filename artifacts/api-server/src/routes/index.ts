@@ -12,9 +12,11 @@ import bathReportsRouter from "./bathReports";
 import insurancesRouter from "./insurances";
 import dashboardRouter from "./dashboard";
 import settingsRouter from "./settings";
+import photosRouter from "./photos";
 
 const router: IRouter = Router();
 
+router.use(photosRouter);
 router.use(healthRouter);
 router.use(dashboardRouter);
 router.use(residentsRouter);

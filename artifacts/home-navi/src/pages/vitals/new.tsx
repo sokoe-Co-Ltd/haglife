@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Layout } from "@/components/layout";
+import { ResidentAvatar } from "@/components/ResidentAvatar";
 import {
   useCreateVital,
   useUpdateVital,
@@ -350,9 +351,7 @@ export default function VitalsInput() {
         {/* Resident info */}
         {resident && (
           <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 flex items-center gap-3">
-            <div className={`h-11 w-11 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-lg shrink-0 ${resident.gender === "男性" ? "ring-2 ring-blue-400" : "ring-2 ring-red-400"}`}>
-              {resident.lastName.charAt(0)}
-            </div>
+            <ResidentAvatar resident={resident} size="md" />
             <div>
               <div className="text-xs text-gray-400">{resident.roomNumber}</div>
               <div className="font-bold text-lg text-gray-800">{resident.lastName} {resident.firstName}様</div>
