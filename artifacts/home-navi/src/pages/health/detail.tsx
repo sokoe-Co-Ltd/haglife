@@ -346,6 +346,12 @@ export default function HealthDetail() {
           </div>
           {!isLoading && resident && !resident.movedOutAt && (
             <div className="flex items-center gap-2">
+              <Link href={`/residents/${id}?edit=true`}>
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <Pencil className="h-4 w-4" />
+                  編集
+                </Button>
+              </Link>
               {resident.hospitalizedAt ? (
                 <Button
                   variant="outline" size="sm"
@@ -394,16 +400,11 @@ export default function HealthDetail() {
                 <CardContent className="p-5">
                   <div className="flex items-center gap-4 mb-4">
                     <ResidentAvatar resident={resident} size="lg" allowUpload />
-                    <div className="flex-1 min-w-0">
+                    <div>
                       <div className="text-sm font-medium text-muted-foreground">{resident.roomNumber}</div>
                       <div className="font-bold text-xl">{resident.lastName} {resident.firstName}様</div>
                       <div className="text-sm text-muted-foreground mt-0.5">{resident.gender}</div>
                     </div>
-                    <Link href={`/residents/${id}?edit=true`}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground hover:text-primary" title="利用者情報を編集">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </Link>
                   </div>
                   <div className="space-y-0 text-sm">
                     <div className="flex justify-between py-2 border-b border-primary/10">
