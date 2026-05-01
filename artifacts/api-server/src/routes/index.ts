@@ -14,11 +14,13 @@ import dashboardRouter from "./dashboard";
 import settingsRouter from "./settings";
 import photosRouter from "./photos";
 import residentPhotosRouter from "./residentPhotos";
+import eliminationPhotosRouter from "./eliminationPhotos";
 
 const router: IRouter = Router();
 
 router.use(photosRouter);
 router.use(residentPhotosRouter);
+router.use(eliminationPhotosRouter);
 router.use(healthRouter);
 router.use(dashboardRouter);
 router.use(residentsRouter);

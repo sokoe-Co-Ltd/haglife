@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Layout } from "@/components/layout";
 import { ResidentAvatar } from "@/components/ResidentAvatar";
 import { useCreateElimination, useGetResident, useListEliminations } from "@workspace/api-client-react";
@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronLeft, Toilet, History, Pencil, X, Check } from "lucide-react";
+import { ChevronLeft, Toilet, History, Pencil, X, Check, Camera } from "lucide-react";
 import { Link, useParams, useLocation } from "wouter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm, Controller } from "react-hook-form";
@@ -196,6 +196,9 @@ export default function EliminationsNew() {
   const queryClient = useQueryClient();
 
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const { data: resident } = useGetResident(residentId, { query: { enabled: !!residentId } });
   const { data: history = [], isLoading: isHistoryLoading } = useListEliminations(
@@ -224,6 +227,25 @@ export default function EliminationsNew() {
 
   const [combinedMode, setCombinedMode] = useState(false);
 
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("photo", file);
+      const res = await fetch("/api/eliminations/upload-photo", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Upload failed");
+      const json = await res.json();
+      setPhotoUrl(json.photoUrl);
+    } catch {
+      toast({ title: "写真のアップロードに失敗しました", variant: "destructive" });
+    } finally {
+      setPhotoUploading(false);
+      if (photoInputRef.current) photoInputRef.current.value = "";
+    }
+  };
+
   const form = useForm({
     defaultValues: { type: "便", amount: "中量", urineAmount: "中量", notes: "" }
   });
@@ -239,13 +261,13 @@ export default function EliminationsNew() {
         await Promise.all([
           new Promise<void>((resolve, reject) =>
             createMutation.mutate(
-              { data: { residentId, recordedAt: now, type: "便", amount: values.amount, notes: values.notes || null } },
+              { data: { residentId, recordedAt: now, type: "便", amount: values.amount, notes: values.notes || null, photoUrl: photoUrl || null } },
               { onSuccess: () => resolve(), onError: reject }
             )
           ),
           new Promise<void>((resolve, reject) =>
             createMutation.mutate(
-              { data: { residentId, recordedAt: now, type: "尿", amount: values.urineAmount, notes: null } },
+              { data: { residentId, recordedAt: now, type: "尿", amount: values.urineAmount, notes: null, photoUrl: null } },
               { onSuccess: () => resolve(), onError: reject }
             )
           ),
@@ -257,7 +279,7 @@ export default function EliminationsNew() {
       }
     } else {
       createMutation.mutate(
-        { data: { residentId, recordedAt: now, type: values.type, amount: values.amount, notes: values.notes || null } },
+        { data: { residentId, recordedAt: now, type: values.type, amount: values.amount, notes: values.notes || null, photoUrl: photoUrl || null } },
         {
           onSuccess: () => {
             toast({ title: "保存しました" });
@@ -422,7 +444,52 @@ export default function EliminationsNew() {
                 <Textarea {...form.register("notes")} placeholder="特記事項" className="h-24 resize-none" />
               </div>
 
-              <Button type="submit" className="w-full" disabled={createMutation.isPending}>
+              {/* Photo upload */}
+              <div className="space-y-2">
+                <Label>写真</Label>
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={handlePhotoChange}
+                />
+                {photoUrl ? (
+                  <div className="relative inline-block">
+                    <img
+                      src={photoUrl}
+                      alt="排泄写真"
+                      className="w-32 h-32 object-cover rounded-xl border border-gray-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setPhotoUrl(null)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    disabled={photoUploading}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-gray-200 text-gray-400 hover:border-primary hover:text-primary transition-colors text-sm"
+                  >
+                    {photoUploading ? (
+                      <span className="text-xs">アップロード中...</span>
+                    ) : (
+                      <>
+                        <Camera className="h-4 w-4" />
+                        <span>写真を撮影 / 選択</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+
+              <Button type="submit" className="w-full" disabled={createMutation.isPending || photoUploading}>
                 {createMutation.isPending
                   ? "保存中..."
                   : combinedMode
@@ -462,10 +529,10 @@ export default function EliminationsNew() {
                         onSave={(data) => updateMutation.mutate({ id: e.id, data })}
                       />
                     ) : (
-                      <div className="px-3 py-3 flex items-center justify-between">
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                          <div className="text-lg shrink-0">{e.type === "便" ? "💩" : e.type === "尿" ? "🚿" : e.type === "入浴時" ? "🛁" : "📝"}</div>
-                          <div className="min-w-0">
+                      <div className="px-3 py-3 flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-3 min-w-0 flex-1">
+                          <div className="text-lg shrink-0 mt-0.5">{e.type === "便" ? "💩" : e.type === "尿" ? "🚿" : e.type === "入浴時" ? "🛁" : "📝"}</div>
+                          <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-semibold text-gray-800">{e.type}</span>
                               {e.amount && (
@@ -475,9 +542,18 @@ export default function EliminationsNew() {
                               )}
                             </div>
                             {e.notes && <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{e.notes}</p>}
+                            {e.photoUrl && (
+                              <a href={e.photoUrl} target="_blank" rel="noopener noreferrer" className="mt-1.5 inline-block">
+                                <img
+                                  src={e.photoUrl}
+                                  alt="排泄写真"
+                                  className="w-14 h-14 object-cover rounded-lg border border-gray-200 hover:opacity-80 transition-opacity"
+                                />
+                              </a>
+                            )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                        <div className="flex items-center gap-1.5 shrink-0">
                           <span className="text-xs text-gray-400">{formatDateTime(e.recordedAt)}</span>
                           <button
                             onClick={() => setEditingId(e.id)}

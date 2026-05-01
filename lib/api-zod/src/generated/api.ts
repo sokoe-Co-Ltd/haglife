@@ -485,6 +485,7 @@ export const GetResidentHealthSummaryResponse = zod.object({
         ])
         .nullish(),
       notes: zod.string().nullish(),
+      photoUrl: zod.string().nullish(),
       createdAt: zod.string(),
     }),
   ),
@@ -1068,6 +1069,7 @@ export const ListEliminationsResponseItem = zod.object({
     ])
     .nullish(),
   notes: zod.string().nullish(),
+  photoUrl: zod.string().nullish(),
   createdAt: zod.string(),
 });
 export const ListEliminationsResponse = zod.array(ListEliminationsResponseItem);
@@ -1081,6 +1083,7 @@ export const CreateEliminationBody = zod.object({
   type: zod.enum(["尿", "便", "入浴時", "その他"]),
   amount: zod.string().nullish(),
   notes: zod.string().nullish(),
+  photoUrl: zod.string().nullish(),
 });
 
 /**

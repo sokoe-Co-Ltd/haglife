@@ -18,6 +18,7 @@ export const eliminationsTable = pgTable("eliminations", {
   type: text("type").notNull(),
   amount: text("amount"),
   notes: text("notes"),
+  photoUrl: text("photo_url"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

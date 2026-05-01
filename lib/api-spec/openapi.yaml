@@ -1807,6 +1807,8 @@ components:
           enum: [多, 中, 少, 無, null]
         notes:
           type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
         createdAt:
           type: string
       required:
@@ -1829,6 +1831,8 @@ components:
         amount:
           type: ["string", "null"]
         notes:
+          type: ["string", "null"]
+        photoUrl:
           type: ["string", "null"]
       required:
         - residentId

@@ -361,6 +361,8 @@ export interface Elimination {
   amount?: EliminationAmount;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  photoUrl?: string | null;
   createdAt: string;
 }
 
@@ -687,6 +689,8 @@ export interface CreateEliminationBody {
   amount?: string | null;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  photoUrl?: string | null;
 }
 
 export interface ResidentEliminationStatus {
