@@ -27,6 +27,8 @@ export const vitalsTable = pgTable("vitals", {
   bathStaffId: integer("bath_staff_id"),
   bathMemo: text("bath_memo"),
   notes: text("notes"),
+  measuredByStaffId: integer("measured_by_staff_id"),
+  measuredByName: text("measured_by_name"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

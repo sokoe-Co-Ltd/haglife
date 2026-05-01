@@ -6,7 +6,9 @@ import {
   useUpdateVital,
   useGetResident,
   useListVitals,
+  useListStaff,
 } from "@workspace/api-client-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -151,7 +153,12 @@ function HistoryRow({ vital, onEdit }: { vital: any; onEdit?: (id: number) => vo
             </span>
           ))}
         </div>
-        {vital.notes && <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{vital.notes}</p>}
+        <div className="flex flex-wrap items-center gap-x-3 mt-0.5">
+          {vital.notes && <p className="text-xs text-gray-500 line-clamp-1">{vital.notes}</p>}
+          {vital.measuredByName && (
+            <span className="text-xs text-gray-400">測定者: {vital.measuredByName}</span>
+          )}
+        </div>
       </div>
       {onEdit && (
         <button
@@ -193,6 +200,7 @@ export default function VitalsInput() {
   }
 
   const { data: resident } = useGetResident(residentId, { query: { enabled: !!residentId } });
+  const { data: allStaff = [] } = useListStaff({ visible_only: true });
 
   // All vitals for this resident (recent)
   const { data: vitals, isLoading: vitalsLoading } = useListVitals(
@@ -229,6 +237,7 @@ export default function VitalsInput() {
       pulse: "",
       spo2: "",
       notes: "",
+      measuredByStaffId: "",
     },
   });
 
@@ -245,6 +254,7 @@ export default function VitalsInput() {
         pulse:        latestToday.pulse?.toString()       ?? "",
         spo2:         latestToday.spo2?.toString()        ?? "",
         notes:        latestToday.notes ?? "",
+        measuredByStaffId: latestToday.measuredByStaffId?.toString() ?? "",
       });
     }
   }, [latestToday]);
@@ -261,11 +271,12 @@ export default function VitalsInput() {
           pulse:        target.pulse?.toString()       ?? "",
           spo2:         target.spo2?.toString()        ?? "",
           notes:        target.notes ?? "",
+          measuredByStaffId: target.measuredByStaffId?.toString() ?? "",
         });
       }
     } else if (editingId === null && autoFilledRef.current) {
       // User explicitly switched to "new record" mode (再測定)
-      form.reset({ temperature: "", bpSystolic: "", bpDiastolic: "", pulse: "", spo2: "", notes: "" });
+      form.reset({ temperature: "", bpSystolic: "", bpDiastolic: "", pulse: "", spo2: "", notes: "", measuredByStaffId: "" });
     }
   }, [editingId]);
 
@@ -284,6 +295,9 @@ export default function VitalsInput() {
   }
 
   const onSubmit = (values: any) => {
+    const staffId = values.measuredByStaffId ? Number(values.measuredByStaffId) : null;
+    const staffRecord = staffId ? allStaff.find((s: any) => s.id === staffId) : null;
+    const staffName = staffRecord ? `${staffRecord.lastName}${staffRecord.firstName}` : null;
     const parsedVals = {
       temperature: values.temperature ? Number(values.temperature) : undefined,
       bpSystolic: values.bpSystolic ? Number(values.bpSystolic) : undefined,
@@ -291,6 +305,8 @@ export default function VitalsInput() {
       pulse: values.pulse ? Number(values.pulse) : undefined,
       spo2: values.spo2 ? Number(values.spo2) : undefined,
       notes: values.notes || undefined,
+      measuredByStaffId: staffId || undefined,
+      measuredByName: staffName || undefined,
     };
     const needsRecheckVal = autoRecheck(parsedVals);
 
@@ -412,10 +428,15 @@ export default function VitalsInput() {
                 ))}
               </div>
 
-              {latestToday?.notes && (
-                <p className="mt-3 text-sm text-gray-600 bg-white/80 rounded-lg px-3 py-2 border border-gray-100">
-                  {latestToday.notes}
-                </p>
+              {(latestToday?.notes || latestToday?.measuredByName) && (
+                <div className="mt-3 bg-white/80 rounded-lg px-3 py-2 border border-gray-100 space-y-0.5">
+                  {latestToday?.notes && (
+                    <p className="text-sm text-gray-600">{latestToday.notes}</p>
+                  )}
+                  {latestToday?.measuredByName && (
+                    <p className="text-xs text-gray-400">測定者: {latestToday.measuredByName}</p>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>
@@ -496,6 +517,26 @@ export default function VitalsInput() {
                     placeholder="特記事項があれば入力"
                     className="h-20 resize-none"
                   />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-sm font-medium">測定者</Label>
+                  <Select
+                    value={form.watch("measuredByStaffId")}
+                    onValueChange={(v) => form.setValue("measuredByStaffId", v === "none" ? "" : v)}
+                  >
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="測定者を選択（任意）" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">選択なし</SelectItem>
+                      {allStaff.map((s: any) => (
+                        <SelectItem key={s.id} value={String(s.id)}>
+                          {s.lastName}{s.firstName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <Button

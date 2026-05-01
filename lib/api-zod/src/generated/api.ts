@@ -82,6 +82,8 @@ export const GetDashboardAlertsResponse = zod.object({
           bathStaffId: zod.number().nullish(),
           bathMemo: zod.string().nullish(),
           notes: zod.string().nullish(),
+          measuredByStaffId: zod.number().nullish(),
+          measuredByName: zod.string().nullish(),
           createdAt: zod.string(),
         })
         .optional(),
@@ -433,6 +435,8 @@ export const GetResidentHealthSummaryResponse = zod.object({
       bathStaffId: zod.number().nullish(),
       bathMemo: zod.string().nullish(),
       notes: zod.string().nullish(),
+      measuredByStaffId: zod.number().nullish(),
+      measuredByName: zod.string().nullish(),
       createdAt: zod.string(),
     }),
   ),
@@ -753,6 +757,8 @@ export const ListVitalsResponseItem = zod.object({
   bathStaffId: zod.number().nullish(),
   bathMemo: zod.string().nullish(),
   notes: zod.string().nullish(),
+  measuredByStaffId: zod.number().nullish(),
+  measuredByName: zod.string().nullish(),
   createdAt: zod.string(),
 });
 export const ListVitalsResponse = zod.array(ListVitalsResponseItem);
@@ -774,6 +780,8 @@ export const CreateVitalBody = zod.object({
   bathStaffId: zod.number().nullish(),
   bathMemo: zod.string().nullish(),
   notes: zod.string().nullish(),
+  measuredByStaffId: zod.number().nullish(),
+  measuredByName: zod.string().nullish(),
 });
 
 /**
@@ -795,6 +803,8 @@ export const UpdateVitalBody = zod.object({
   bathStaffId: zod.number().nullish(),
   bathMemo: zod.string().nullish(),
   notes: zod.string().nullish(),
+  measuredByStaffId: zod.number().nullish(),
+  measuredByName: zod.string().nullish(),
 });
 
 export const UpdateVitalResponse = zod.object({
@@ -821,6 +831,8 @@ export const UpdateVitalResponse = zod.object({
   bathStaffId: zod.number().nullish(),
   bathMemo: zod.string().nullish(),
   notes: zod.string().nullish(),
+  measuredByStaffId: zod.number().nullish(),
+  measuredByName: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -864,6 +876,8 @@ export const GetVitalsTodayStatusResponseItem = zod.object({
       bathStaffId: zod.number().nullish(),
       bathMemo: zod.string().nullish(),
       notes: zod.string().nullish(),
+      measuredByStaffId: zod.number().nullish(),
+      measuredByName: zod.string().nullish(),
       createdAt: zod.string(),
     })
     .optional(),

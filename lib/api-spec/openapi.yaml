@@ -1505,6 +1505,10 @@ components:
           type: ["string", "null"]
         notes:
           type: ["string", "null"]
+        measuredByStaffId:
+          type: ["integer", "null"]
+        measuredByName:
+          type: ["string", "null"]
         createdAt:
           type: string
       required:
@@ -1544,6 +1548,10 @@ components:
           type: ["string", "null"]
         notes:
           type: ["string", "null"]
+        measuredByStaffId:
+          type: ["integer", "null"]
+        measuredByName:
+          type: ["string", "null"]
       required:
         - residentId
         - recordedAt
@@ -1574,6 +1582,10 @@ components:
         bathMemo:
           type: ["string", "null"]
         notes:
+          type: ["string", "null"]
+        measuredByStaffId:
+          type: ["integer", "null"]
+        measuredByName:
           type: ["string", "null"]
 
     ResidentVitalStatus:

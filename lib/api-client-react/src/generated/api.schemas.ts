@@ -273,6 +273,10 @@ export interface Vital {
   bathMemo?: string | null;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  measuredByStaffId?: number | null;
+  /** @nullable */
+  measuredByName?: string | null;
   createdAt: string;
 }
 
@@ -543,6 +547,10 @@ export interface CreateVitalBody {
   bathMemo?: string | null;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  measuredByStaffId?: number | null;
+  /** @nullable */
+  measuredByName?: string | null;
 }
 
 export interface UpdateVitalBody {
@@ -568,6 +576,10 @@ export interface UpdateVitalBody {
   bathMemo?: string | null;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  measuredByStaffId?: number | null;
+  /** @nullable */
+  measuredByName?: string | null;
 }
 
 export interface ResidentVitalStatus {
