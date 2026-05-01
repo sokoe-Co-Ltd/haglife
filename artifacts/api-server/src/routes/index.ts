@@ -13,10 +13,12 @@ import insurancesRouter from "./insurances";
 import dashboardRouter from "./dashboard";
 import settingsRouter from "./settings";
 import photosRouter from "./photos";
+import residentPhotosRouter from "./residentPhotos";
 
 const router: IRouter = Router();
 
 router.use(photosRouter);
+router.use(residentPhotosRouter);
 router.use(healthRouter);
 router.use(dashboardRouter);
 router.use(residentsRouter);

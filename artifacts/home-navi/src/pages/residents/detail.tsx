@@ -43,7 +43,7 @@ export default function ResidentDetail() {
           <div className="space-y-6">
             <Card className="bg-primary/5 border-primary/20">
               <CardContent className="p-6 flex flex-col md:flex-row items-center gap-6">
-                <ResidentAvatar resident={resident} size="xl" />
+                <ResidentAvatar resident={resident} size="xl" allowUpload />
                 <div className="flex-1 text-center md:text-left">
                   <div className="flex flex-col md:flex-row md:items-end gap-2 md:gap-4 mb-2">
                     <span className="text-lg font-medium text-muted-foreground">{resident.roomNumber}</span>

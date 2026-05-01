@@ -393,7 +393,7 @@ export default function HealthDetail() {
               <Card className="shrink-0 bg-primary/5 border-primary/20">
                 <CardContent className="p-5">
                   <div className="flex items-center gap-4 mb-4">
-                    <ResidentAvatar resident={resident} size="lg" />
+                    <ResidentAvatar resident={resident} size="lg" allowUpload />
                     <div>
                       <div className="text-sm font-medium text-muted-foreground">{resident.roomNumber}</div>
                       <div className="font-bold text-xl">{resident.lastName} {resident.firstName}様</div>
