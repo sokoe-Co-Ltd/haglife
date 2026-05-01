@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { X } from "lucide-react";
 
 interface ResidentAvatarProps {
   resident: {
@@ -20,6 +22,48 @@ const sizeConfig = {
   xl:  { container: "h-24 w-24", text: "text-4xl", ring: "ring-4" },
 };
 
+function PhotoLightbox({
+  src,
+  alt,
+  onClose,
+}: {
+  src: string;
+  alt: string;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [onClose]);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 text-white bg-black/40 hover:bg-black/60 rounded-full p-2 transition-colors"
+        aria-label="閉じる"
+      >
+        <X className="h-6 w-6" />
+      </button>
+      <img
+        src={src}
+        alt={alt}
+        className="max-h-[85vh] max-w-[85vw] rounded-2xl shadow-2xl object-contain"
+        onClick={(e) => e.stopPropagation()}
+      />
+    </div>,
+    document.body
+  );
+}
+
 export function ResidentAvatar({
   resident,
   size = "md",
@@ -28,6 +72,7 @@ export function ResidentAvatar({
   isHospitalized = false,
 }: ResidentAvatarProps) {
   const [imgError, setImgError] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const cfg = sizeConfig[size];
 
   const genderRing =
@@ -42,25 +87,37 @@ export function ResidentAvatar({
     : "bg-primary/10 text-primary";
 
   const showPhoto = resident.photoUrl && !imgError;
+  const altText = `${resident.lastName}${resident.firstName ?? ""}様`;
 
   return (
-    <div
-      className={`${cfg.container} rounded-full shrink-0 overflow-hidden ${genderRing} ${className}`}
-    >
-      {showPhoto ? (
-        <img
+    <>
+      <div
+        className={`${cfg.container} rounded-full shrink-0 overflow-hidden ${genderRing} ${className} ${showPhoto ? "cursor-zoom-in" : ""}`}
+        onClick={showPhoto ? (e) => { e.preventDefault(); e.stopPropagation(); setLightboxOpen(true); } : undefined}
+      >
+        {showPhoto ? (
+          <img
+            src={resident.photoUrl!}
+            alt={altText}
+            className="w-full h-full object-cover"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <div
+            className={`w-full h-full rounded-full flex items-center justify-center font-bold ${cfg.text} ${bgColor}`}
+          >
+            {isBirthday && !isHospitalized ? "🎂" : resident.lastName.charAt(0)}
+          </div>
+        )}
+      </div>
+
+      {lightboxOpen && showPhoto && (
+        <PhotoLightbox
           src={resident.photoUrl!}
-          alt={`${resident.lastName}${resident.firstName ?? ""}様`}
-          className="w-full h-full object-cover"
-          onError={() => setImgError(true)}
+          alt={altText}
+          onClose={() => setLightboxOpen(false)}
         />
-      ) : (
-        <div
-          className={`w-full h-full rounded-full flex items-center justify-center font-bold ${cfg.text} ${bgColor}`}
-        >
-          {isBirthday && !isHospitalized ? "🎂" : resident.lastName.charAt(0)}
-        </div>
       )}
-    </div>
+    </>
   );
 }
