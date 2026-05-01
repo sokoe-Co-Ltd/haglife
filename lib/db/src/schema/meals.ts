@@ -23,6 +23,8 @@ export const mealsTable = pgTable("meals", {
   nutritionSupplementPercent: integer("nutrition_supplement_percent"),
   waterOnly: boolean("water_only").notNull().default(false),
   medicationOk: boolean("medication_ok").notNull().default(false),
+  medicationByStaffId: integer("medication_by_staff_id"),
+  medicationByName: text("medication_by_name"),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

@@ -132,7 +132,11 @@ function MealStatusCell({
         <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-600">
           <AlertTriangle className="h-3 w-3" />要確認
         </span>
-        {meal?.medicationOk && <span className="text-xs text-green-600 font-semibold">服薬OK</span>}
+        {meal?.medicationOk && (
+          <span className="text-xs text-green-600 font-semibold">
+            服薬OK{meal.medicationByName ? `（${meal.medicationByName}）` : ""}
+          </span>
+        )}
       </button>
     );
   }
@@ -148,7 +152,11 @@ function MealStatusCell({
       <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-600">
         <CheckCircle2 className="h-3 w-3" />確認OK
       </span>
-      {meal?.medicationOk && <span className="text-xs text-green-600 font-semibold">服薬OK</span>}
+      {meal?.medicationOk && (
+        <span className="text-xs text-green-600 font-semibold">
+          服薬OK{meal.medicationByName ? `（${meal.medicationByName}）` : ""}
+        </span>
+      )}
     </button>
   );
 }

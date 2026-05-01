@@ -87,12 +87,6 @@ export interface Resident {
   careManagerCompany?: string | null;
   /** @nullable */
   careManagerName?: string | null;
-  /** @nullable */
-  mealTextureBreakfast?: string | null;
-  /** @nullable */
-  mealTextureLunch?: string | null;
-  /** @nullable */
-  mealTextureDinner?: string | null;
   isVisible: boolean;
   createdAt: string;
   updatedAt: string;
@@ -236,12 +230,6 @@ export interface UpdateResidentBody {
   /** @nullable */
   careManagerName?: string | null;
   /** @nullable */
-  mealTextureBreakfast?: string | null;
-  /** @nullable */
-  mealTextureLunch?: string | null;
-  /** @nullable */
-  mealTextureDinner?: string | null;
-  /** @nullable */
   isVisible?: boolean | null;
 }
 
@@ -315,6 +303,10 @@ export interface Meal {
   nutritionSupplementPercent?: number | null;
   waterOnly: boolean;
   medicationOk: boolean;
+  /** @nullable */
+  medicationByStaffId?: number | null;
+  /** @nullable */
+  medicationByName?: string | null;
   /** @nullable */
   notes?: string | null;
   createdAt: string;
@@ -390,7 +382,6 @@ export interface HandoverNote {
   category: HandoverNoteCategory;
   isImportant: boolean;
   isDoctorReport: boolean;
-  status: string;
   content: string;
   /** @nullable */
   authorId?: number | null;
@@ -514,8 +505,6 @@ export interface UpdateHandoverNoteBody {
   /** @nullable */
   isDoctorReport?: boolean | null;
   /** @nullable */
-  status?: string | null;
-  /** @nullable */
   content?: string | null;
   /** @nullable */
   photo1Url?: string | null;
@@ -616,6 +605,10 @@ export interface CreateMealBody {
   waterOnly: boolean;
   medicationOk: boolean;
   /** @nullable */
+  medicationByStaffId?: number | null;
+  /** @nullable */
+  medicationByName?: string | null;
+  /** @nullable */
   notes?: string | null;
 }
 
@@ -636,6 +629,10 @@ export interface UpdateMealBody {
   waterOnly?: boolean | null;
   /** @nullable */
   medicationOk?: boolean | null;
+  /** @nullable */
+  medicationByStaffId?: number | null;
+  /** @nullable */
+  medicationByName?: string | null;
   /** @nullable */
   notes?: string | null;
 }
@@ -885,24 +882,7 @@ export type ListHandoverNotesParams = {
    */
   resident_id?: number | null;
   is_doctor_report?: boolean;
-  today_only?: boolean;
-  /** Filter by date (YYYY-MM-DD). @nullable */
-  date?: string | null;
-  /** Filter by year-month (YYYY-MM). @nullable */
-  year_month?: string | null;
   limit?: number;
-};
-
-export type GetVitalsTodayStatusParams = {
-  /** Filter by date (YYYY-MM-DD). Defaults to today. */
-  date?: string | null;
-};
-
-export type GetWeightsMonthlyStatusParams = {
-  /** Year (e.g. 2026) */
-  year?: number;
-  /** Month 1-12 */
-  month?: number;
 };
 
 export type ListVitalsParams = {
@@ -927,8 +907,6 @@ export type ListMealsParams = {
    */
   resident_id?: number | null;
   today_only?: boolean;
-  /** Filter by date (YYYY-MM-DD). @nullable */
-  date?: string | null;
 };
 
 export type ListWeightsParams = {
@@ -975,8 +953,6 @@ export type ListBathReportsParams = {
    */
   resident_id?: number | null;
   today_only?: boolean;
-  /** Filter by date (YYYY-MM-DD). @nullable */
-  date?: string | null;
 };
 
 export type ListInsurancesParams = {

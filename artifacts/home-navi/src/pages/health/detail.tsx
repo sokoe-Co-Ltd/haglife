@@ -184,7 +184,7 @@ export default function HealthDetail() {
               </div>
               {meal.medicationOk && (
                 <div className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded font-bold border border-green-200">
-                  服薬済
+                  服薬済{meal.medicationByName ? `（${meal.medicationByName}）` : ""}
                 </div>
               )}
             </div>

@@ -49,7 +49,11 @@ function MealTypeBadge({ type, meal }: { type: MealType; meal: Meal | undefined 
           主{meal?.mainDishPercent ?? "—"}% 副{meal?.sideDishPercent ?? "—"}%
         </div>
       )}
-      {meal?.medicationOk && <div className="text-xs text-green-600 mt-0.5">服薬OK</div>}
+      {meal?.medicationOk && (
+        <div className="text-xs text-green-600 mt-0.5">
+          服薬OK{meal.medicationByName ? `（${meal.medicationByName}）` : ""}
+        </div>
+      )}
     </div>
   );
   return (
@@ -69,7 +73,11 @@ function MealTypeBadge({ type, meal }: { type: MealType; meal: Meal | undefined 
           <Droplets className="h-2.5 w-2.5" />{meal.waterMl}mL
         </div>
       )}
-      {meal?.medicationOk && <div className="text-xs text-green-600 mt-0.5">服薬OK</div>}
+      {meal?.medicationOk && (
+        <div className="text-xs text-green-600 mt-0.5">
+          服薬OK{meal.medicationByName ? `（${meal.medicationByName}）` : ""}
+        </div>
+      )}
     </div>
   );
 }

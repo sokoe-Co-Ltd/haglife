@@ -37,8 +37,6 @@ import type {
   HandoverNote,
   HealthStatus,
   Insurance,
-  GetVitalsTodayStatusParams,
-  GetWeightsMonthlyStatusParams,
   ListBathReportsParams,
   ListDayServicesParams,
   ListEliminationsParams,
@@ -2065,33 +2063,27 @@ export const useDeleteVital = <
 /**
  * @summary Get today's vitals status for all residents (for dashboard)
  */
-export const getGetVitalsTodayStatusUrl = (params?: GetVitalsTodayStatusParams) => {
-  const normalizedParams = new URLSearchParams();
-  Object.entries(params || {}).forEach(([key, value]) => {
-    if (value !== undefined && value !== null) normalizedParams.append(key, value.toString());
-  });
-  const qs = normalizedParams.toString();
-  return `/api/vitals/today-status${qs ? `?${qs}` : ""}`;
+export const getGetVitalsTodayStatusUrl = () => {
+  return `/api/vitals/today-status`;
 };
 
 export const getVitalsTodayStatus = async (
-  params?: GetVitalsTodayStatusParams,
   options?: RequestInit,
 ): Promise<ResidentVitalStatus[]> => {
-  return customFetch<ResidentVitalStatus[]>(getGetVitalsTodayStatusUrl(params), {
+  return customFetch<ResidentVitalStatus[]>(getGetVitalsTodayStatusUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetVitalsTodayStatusQueryKey = (params?: GetVitalsTodayStatusParams) => {
-  return [`/api/vitals/today-status`, ...(params ? [params] : [])] as const;
+export const getGetVitalsTodayStatusQueryKey = () => {
+  return [`/api/vitals/today-status`] as const;
 };
 
 export const getGetVitalsTodayStatusQueryOptions = <
   TData = Awaited<ReturnType<typeof getVitalsTodayStatus>>,
   TError = ErrorType<unknown>,
->(params?: GetVitalsTodayStatusParams, options?: {
+>(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof getVitalsTodayStatus>>,
     TError,
@@ -2101,11 +2093,11 @@ export const getGetVitalsTodayStatusQueryOptions = <
 }) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetVitalsTodayStatusQueryKey(params);
+  const queryKey = queryOptions?.queryKey ?? getGetVitalsTodayStatusQueryKey();
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getVitalsTodayStatus>>
-  > = ({ signal }) => getVitalsTodayStatus(params, { signal, ...requestOptions });
+  > = ({ signal }) => getVitalsTodayStatus({ signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getVitalsTodayStatus>>,
@@ -2126,7 +2118,7 @@ export type GetVitalsTodayStatusQueryError = ErrorType<unknown>;
 export function useGetVitalsTodayStatus<
   TData = Awaited<ReturnType<typeof getVitalsTodayStatus>>,
   TError = ErrorType<unknown>,
->(params?: GetVitalsTodayStatusParams, options?: {
+>(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof getVitalsTodayStatus>>,
     TError,
@@ -2134,7 +2126,7 @@ export function useGetVitalsTodayStatus<
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetVitalsTodayStatusQueryOptions(params, options);
+  const queryOptions = getGetVitalsTodayStatusQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
@@ -2848,33 +2840,27 @@ export const useDeleteWeight = <
 /**
  * @summary Get this month's weight status for all residents
  */
-export const getGetWeightsMonthlyStatusUrl = (params?: GetWeightsMonthlyStatusParams) => {
-  const normalizedParams = new URLSearchParams();
-  Object.entries(params || {}).forEach(([key, value]) => {
-    if (value !== undefined && value !== null) normalizedParams.append(key, value.toString());
-  });
-  const qs = normalizedParams.toString();
-  return `/api/weights/monthly-status${qs ? `?${qs}` : ""}`;
+export const getGetWeightsMonthlyStatusUrl = () => {
+  return `/api/weights/monthly-status`;
 };
 
 export const getWeightsMonthlyStatus = async (
-  params?: GetWeightsMonthlyStatusParams,
   options?: RequestInit,
 ): Promise<ResidentWeightStatus[]> => {
-  return customFetch<ResidentWeightStatus[]>(getGetWeightsMonthlyStatusUrl(params), {
+  return customFetch<ResidentWeightStatus[]>(getGetWeightsMonthlyStatusUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetWeightsMonthlyStatusQueryKey = (params?: GetWeightsMonthlyStatusParams) => {
-  return [`/api/weights/monthly-status`, ...(params ? [params] : [])] as const;
+export const getGetWeightsMonthlyStatusQueryKey = () => {
+  return [`/api/weights/monthly-status`] as const;
 };
 
 export const getGetWeightsMonthlyStatusQueryOptions = <
   TData = Awaited<ReturnType<typeof getWeightsMonthlyStatus>>,
   TError = ErrorType<unknown>,
->(params?: GetWeightsMonthlyStatusParams, options?: {
+>(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof getWeightsMonthlyStatus>>,
     TError,
@@ -2884,11 +2870,12 @@ export const getGetWeightsMonthlyStatusQueryOptions = <
 }) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetWeightsMonthlyStatusQueryKey(params);
+  const queryKey =
+    queryOptions?.queryKey ?? getGetWeightsMonthlyStatusQueryKey();
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getWeightsMonthlyStatus>>
-  > = ({ signal }) => getWeightsMonthlyStatus(params, { signal, ...requestOptions });
+  > = ({ signal }) => getWeightsMonthlyStatus({ signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getWeightsMonthlyStatus>>,
@@ -2909,7 +2896,7 @@ export type GetWeightsMonthlyStatusQueryError = ErrorType<unknown>;
 export function useGetWeightsMonthlyStatus<
   TData = Awaited<ReturnType<typeof getWeightsMonthlyStatus>>,
   TError = ErrorType<unknown>,
->(params?: GetWeightsMonthlyStatusParams, options?: {
+>(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof getWeightsMonthlyStatus>>,
     TError,
@@ -2917,7 +2904,7 @@ export function useGetWeightsMonthlyStatus<
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetWeightsMonthlyStatusQueryOptions(params, options);
+  const queryOptions = getGetWeightsMonthlyStatusQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

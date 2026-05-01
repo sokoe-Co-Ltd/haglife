@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import {
   useCreateMeal,
   useUpdateMeal,
+  useListStaff,
   getListMealsQueryKey,
 } from "@workspace/api-client-react";
 import type { Meal, Resident } from "@workspace/api-client-react";
@@ -13,6 +14,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CheckCircle2, Loader2, Pencil } from "lucide-react";
 
 type MealType = "朝食" | "昼食" | "夕食";
@@ -82,12 +90,14 @@ export function MealEntryModal({
   const queryClient = useQueryClient();
   const createMeal = useCreateMeal();
   const updateMeal = useUpdateMeal();
+  const { data: allStaff = [] } = useListStaff({ visible_only: true });
 
   const [waterOnly, setWaterOnly] = useState(false);
   const [mainDishPercent, setMainDishPercent] = useState<number | "">(100);
   const [sideDishPercent, setSideDishPercent] = useState<number | "">(100);
   const [waterMl, setWaterMl] = useState<number | "">("");
   const [medicationOk, setMedicationOk] = useState(false);
+  const [medicationByStaffId, setMedicationByStaffId] = useState<string>("");
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
@@ -97,6 +107,11 @@ export function MealEntryModal({
       setSideDishPercent(existingMeal?.sideDishPercent ?? 100);
       setWaterMl(existingMeal?.waterMl ?? "");
       setMedicationOk(existingMeal?.medicationOk ?? false);
+      setMedicationByStaffId(
+        existingMeal?.medicationByStaffId != null
+          ? String(existingMeal.medicationByStaffId)
+          : ""
+      );
       setNotes(existingMeal?.notes ?? "");
     }
   }, [open, existingMeal]);
@@ -107,7 +122,20 @@ export function MealEntryModal({
   const resolvedSide = sideDishPercent === "" ? null : sideDishPercent;
   const resolvedWater = waterMl === "" ? null : waterMl;
 
+  function resolveStaffFields() {
+    if (!medicationOk || !medicationByStaffId) {
+      return { medicationByStaffId: null, medicationByName: null };
+    }
+    const staff = allStaff.find((s) => String(s.id) === medicationByStaffId);
+    return {
+      medicationByStaffId: staff ? staff.id : null,
+      medicationByName: staff ? `${staff.lastName}${staff.firstName}` : null,
+    };
+  }
+
   const handleSubmit = () => {
+    const staffFields = resolveStaffFields();
+
     const onSuccess = () => {
       queryClient.invalidateQueries({ queryKey: getListMealsQueryKey() });
       onClose();
@@ -120,6 +148,7 @@ export function MealEntryModal({
           data: {
             waterOnly,
             medicationOk,
+            ...staffFields,
             mainDishPercent: waterOnly ? null : resolvedMain,
             sideDishPercent: waterOnly ? null : resolvedSide,
             waterMl: resolvedWater,
@@ -137,6 +166,7 @@ export function MealEntryModal({
             mealType,
             waterOnly,
             medicationOk,
+            ...staffFields,
             mainDishPercent: waterOnly ? null : resolvedMain,
             sideDishPercent: waterOnly ? null : resolvedSide,
             waterMl: resolvedWater,
@@ -220,18 +250,47 @@ export function MealEntryModal({
             </div>
           </div>
 
-          <label className="flex items-center gap-3 p-3 bg-green-50 border border-green-100 rounded-xl cursor-pointer">
-            <input
-              type="checkbox"
-              checked={medicationOk}
-              onChange={(e) => setMedicationOk(e.target.checked)}
-              className="h-4 w-4 accent-green-500"
-            />
-            <span className="text-sm font-semibold text-green-700">服薬OK</span>
+          {/* 服薬OK + 服薬者 */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-3 p-3 bg-green-50 border border-green-100 rounded-xl cursor-pointer">
+              <input
+                type="checkbox"
+                checked={medicationOk}
+                onChange={(e) => {
+                  setMedicationOk(e.target.checked);
+                  if (!e.target.checked) setMedicationByStaffId("");
+                }}
+                className="h-4 w-4 accent-green-500"
+              />
+              <span className="text-sm font-semibold text-green-700">服薬OK</span>
+              {medicationOk && (
+                <CheckCircle2 className="h-4 w-4 text-green-500 ml-auto" />
+              )}
+            </label>
+
             {medicationOk && (
-              <CheckCircle2 className="h-4 w-4 text-green-500 ml-auto" />
+              <div className="px-1">
+                <label className="text-xs font-semibold text-gray-600 mb-1 block">
+                  服薬者
+                </label>
+                <Select
+                  value={medicationByStaffId}
+                  onValueChange={setMedicationByStaffId}
+                >
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="服薬者を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allStaff.map((s) => (
+                      <SelectItem key={s.id} value={String(s.id)} className="text-sm">
+                        {s.lastName}{s.firstName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
-          </label>
+          </div>
 
           <div className="space-y-2">
             <label className="text-sm font-semibold text-gray-700">

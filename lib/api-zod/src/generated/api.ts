@@ -150,10 +150,6 @@ export const ListResidentsResponseItem = zod.object({
   stomaManagement: zod.boolean(),
   photoUrl: zod.string().nullish(),
   moveInDate: zod.string().nullish(),
-  movedOutAt: zod.string().nullish(),
-  movedOutReason: zod.string().nullish(),
-  hospitalizedAt: zod.string().nullish(),
-  hospitalizedReason: zod.string().nullish(),
   characterNotes: zod.string().nullish(),
   clinic1: zod.string().nullish(),
   clinic2: zod.string().nullish(),
@@ -166,12 +162,6 @@ export const ListResidentsResponseItem = zod.object({
   keyPersonTel1: zod.string().nullish(),
   careManagerCompany: zod.string().nullish(),
   careManagerName: zod.string().nullish(),
-  mealTextureBreakfast: zod.string().nullish(),
-  mealTextureLunch: zod.string().nullish(),
-  mealTextureDinner: zod.string().nullish(),
-  mealsBreakfastEnabled: zod.boolean(),
-  mealsLunchEnabled: zod.boolean(),
-  mealsDinnerEnabled: zod.boolean(),
   isVisible: zod.boolean(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
@@ -208,10 +198,6 @@ export const CreateResidentBody = zod.object({
   stomaManagement: zod.boolean(),
   photoUrl: zod.string().nullish(),
   moveInDate: zod.string().nullish(),
-  movedOutAt: zod.string().nullish(),
-  movedOutReason: zod.string().nullish(),
-  hospitalizedAt: zod.string().nullish(),
-  hospitalizedReason: zod.string().nullish(),
   characterNotes: zod.string().nullish(),
   clinic1: zod.string().nullish(),
   clinic2: zod.string().nullish(),
@@ -224,12 +210,6 @@ export const CreateResidentBody = zod.object({
   keyPersonTel1: zod.string().nullish(),
   careManagerCompany: zod.string().nullish(),
   careManagerName: zod.string().nullish(),
-  mealTextureBreakfast: zod.string().nullish(),
-  mealTextureLunch: zod.string().nullish(),
-  mealTextureDinner: zod.string().nullish(),
-  mealsBreakfastEnabled: zod.boolean().nullish(),
-  mealsLunchEnabled: zod.boolean().nullish(),
-  mealsDinnerEnabled: zod.boolean().nullish(),
   isVisible: zod.boolean(),
 });
 
@@ -268,10 +248,6 @@ export const GetResidentResponse = zod.object({
   stomaManagement: zod.boolean(),
   photoUrl: zod.string().nullish(),
   moveInDate: zod.string().nullish(),
-  movedOutAt: zod.string().nullish(),
-  movedOutReason: zod.string().nullish(),
-  hospitalizedAt: zod.string().nullish(),
-  hospitalizedReason: zod.string().nullish(),
   characterNotes: zod.string().nullish(),
   clinic1: zod.string().nullish(),
   clinic2: zod.string().nullish(),
@@ -284,12 +260,6 @@ export const GetResidentResponse = zod.object({
   keyPersonTel1: zod.string().nullish(),
   careManagerCompany: zod.string().nullish(),
   careManagerName: zod.string().nullish(),
-  mealTextureBreakfast: zod.string().nullish(),
-  mealTextureLunch: zod.string().nullish(),
-  mealTextureDinner: zod.string().nullish(),
-  mealsBreakfastEnabled: zod.boolean(),
-  mealsLunchEnabled: zod.boolean(),
-  mealsDinnerEnabled: zod.boolean(),
   isVisible: zod.boolean(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
@@ -319,10 +289,6 @@ export const UpdateResidentBody = zod.object({
   stomaManagement: zod.boolean().nullish(),
   photoUrl: zod.string().nullish(),
   moveInDate: zod.string().nullish(),
-  movedOutAt: zod.string().nullish(),
-  movedOutReason: zod.string().nullish(),
-  hospitalizedAt: zod.string().nullish(),
-  hospitalizedReason: zod.string().nullish(),
   characterNotes: zod.string().nullish(),
   clinic1: zod.string().nullish(),
   clinic2: zod.string().nullish(),
@@ -335,12 +301,6 @@ export const UpdateResidentBody = zod.object({
   keyPersonTel1: zod.string().nullish(),
   careManagerCompany: zod.string().nullish(),
   careManagerName: zod.string().nullish(),
-  mealTextureBreakfast: zod.string().nullish(),
-  mealTextureLunch: zod.string().nullish(),
-  mealTextureDinner: zod.string().nullish(),
-  mealsBreakfastEnabled: zod.boolean().nullish(),
-  mealsLunchEnabled: zod.boolean().nullish(),
-  mealsDinnerEnabled: zod.boolean().nullish(),
   isVisible: zod.boolean().nullish(),
 });
 
@@ -372,10 +332,6 @@ export const UpdateResidentResponse = zod.object({
   stomaManagement: zod.boolean(),
   photoUrl: zod.string().nullish(),
   moveInDate: zod.string().nullish(),
-  movedOutAt: zod.string().nullish(),
-  movedOutReason: zod.string().nullish(),
-  hospitalizedAt: zod.string().nullish(),
-  hospitalizedReason: zod.string().nullish(),
   characterNotes: zod.string().nullish(),
   clinic1: zod.string().nullish(),
   clinic2: zod.string().nullish(),
@@ -388,12 +344,6 @@ export const UpdateResidentResponse = zod.object({
   keyPersonTel1: zod.string().nullish(),
   careManagerCompany: zod.string().nullish(),
   careManagerName: zod.string().nullish(),
-  mealTextureBreakfast: zod.string().nullish(),
-  mealTextureLunch: zod.string().nullish(),
-  mealTextureDinner: zod.string().nullish(),
-  mealsBreakfastEnabled: zod.boolean(),
-  mealsLunchEnabled: zod.boolean(),
-  mealsDinnerEnabled: zod.boolean(),
   isVisible: zod.boolean(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
@@ -442,10 +392,6 @@ export const GetResidentHealthSummaryResponse = zod.object({
     stomaManagement: zod.boolean(),
     photoUrl: zod.string().nullish(),
     moveInDate: zod.string().nullish(),
-  movedOutAt: zod.string().nullish(),
-  movedOutReason: zod.string().nullish(),
-  hospitalizedAt: zod.string().nullish(),
-  hospitalizedReason: zod.string().nullish(),
     characterNotes: zod.string().nullish(),
     clinic1: zod.string().nullish(),
     clinic2: zod.string().nullish(),
@@ -504,6 +450,9 @@ export const GetResidentHealthSummaryResponse = zod.object({
       nutritionSupplementPercent: zod.number().nullish(),
       waterOnly: zod.boolean(),
       medicationOk: zod.boolean(),
+      medicationByStaffId: zod.number().nullish(),
+      medicationByName: zod.string().nullish(),
+      notes: zod.string().nullish(),
       createdAt: zod.string(),
     }),
   ),
@@ -657,9 +606,6 @@ export const listHandoverNotesQueryLimitDefault = 50;
 export const ListHandoverNotesQueryParams = zod.object({
   resident_id: zod.coerce.number().nullish(),
   is_doctor_report: zod.coerce.boolean().optional(),
-  today_only: zod.coerce.boolean().optional(),
-  date: zod.coerce.string().nullish(),
-  year_month: zod.coerce.string().nullish(),
   limit: zod.coerce.number().default(listHandoverNotesQueryLimitDefault),
 });
 
@@ -671,7 +617,6 @@ export const ListHandoverNotesResponseItem = zod.object({
   category: zod.enum(["利用者", "その他"]),
   isImportant: zod.boolean(),
   isDoctorReport: zod.boolean(),
-  status: zod.string(),
   content: zod.string(),
   authorId: zod.number().nullish(),
   authorName: zod.string().nullish(),
@@ -740,7 +685,6 @@ export const UpdateHandoverNoteParams = zod.object({
 export const UpdateHandoverNoteBody = zod.object({
   isImportant: zod.boolean().nullish(),
   isDoctorReport: zod.boolean().nullish(),
-  status: zod.string().nullish(),
   content: zod.string().nullish(),
   photo1Url: zod.string().nullish(),
   photo2Url: zod.string().nullish(),
@@ -935,7 +879,6 @@ export const GetVitalsTodayStatusResponse = zod.array(
 export const ListMealsQueryParams = zod.object({
   resident_id: zod.coerce.number().nullish(),
   today_only: zod.coerce.boolean().optional(),
-  date: zod.coerce.string().nullish(),
 });
 
 export const ListMealsResponseItem = zod.object({
@@ -951,6 +894,9 @@ export const ListMealsResponseItem = zod.object({
   nutritionSupplementPercent: zod.number().nullish(),
   waterOnly: zod.boolean(),
   medicationOk: zod.boolean(),
+  medicationByStaffId: zod.number().nullish(),
+  medicationByName: zod.string().nullish(),
+  notes: zod.string().nullish(),
   createdAt: zod.string(),
 });
 export const ListMealsResponse = zod.array(ListMealsResponseItem);
@@ -969,6 +915,8 @@ export const CreateMealBody = zod.object({
   nutritionSupplementPercent: zod.number().nullish(),
   waterOnly: zod.boolean(),
   medicationOk: zod.boolean(),
+  medicationByStaffId: zod.number().nullish(),
+  medicationByName: zod.string().nullish(),
   notes: zod.string().nullish(),
 });
 
@@ -988,6 +936,8 @@ export const UpdateMealBody = zod.object({
   nutritionSupplementPercent: zod.number().nullish(),
   waterOnly: zod.boolean().nullish(),
   medicationOk: zod.boolean().nullish(),
+  medicationByStaffId: zod.number().nullish(),
+  medicationByName: zod.string().nullish(),
   notes: zod.string().nullish(),
 });
 
@@ -1004,6 +954,8 @@ export const UpdateMealResponse = zod.object({
   nutritionSupplementPercent: zod.number().nullish(),
   waterOnly: zod.boolean(),
   medicationOk: zod.boolean(),
+  medicationByStaffId: zod.number().nullish(),
+  medicationByName: zod.string().nullish(),
   notes: zod.string().nullish(),
   createdAt: zod.string(),
 });
@@ -1270,7 +1222,6 @@ export const ToggleDayServicePreparedResponse = zod.object({
 export const ListBathReportsQueryParams = zod.object({
   resident_id: zod.coerce.number().nullish(),
   today_only: zod.coerce.boolean().optional(),
-  date: zod.string().optional().nullable(),
 });
 
 export const ListBathReportsResponseItem = zod.object({
@@ -1286,8 +1237,6 @@ export const ListBathReportsResponseItem = zod.object({
   pulse: zod.number().nullish(),
   spo2: zod.number().nullish(),
   bathMemo: zod.string().nullish(),
-  handoverNotes: zod.string().nullish(),
-  photoUrl: zod.string().nullish(),
   createdAt: zod.string(),
 });
 export const ListBathReportsResponse = zod.array(ListBathReportsResponseItem);
@@ -1305,8 +1254,6 @@ export const CreateBathReportBody = zod.object({
   pulse: zod.number().nullish(),
   spo2: zod.number().nullish(),
   bathMemo: zod.string().nullish(),
-  handoverNotes: zod.string().nullish(),
-  photoUrl: zod.string().nullish(),
 });
 
 /**
@@ -1324,8 +1271,6 @@ export const UpdateBathReportBody = zod.object({
   pulse: zod.number().nullish(),
   spo2: zod.number().nullish(),
   bathMemo: zod.string().nullish(),
-  handoverNotes: zod.string().nullish(),
-  photoUrl: zod.string().nullish(),
 });
 
 export const UpdateBathReportResponse = zod.object({
@@ -1341,8 +1286,6 @@ export const UpdateBathReportResponse = zod.object({
   pulse: zod.number().nullish(),
   spo2: zod.number().nullish(),
   bathMemo: zod.string().nullish(),
-  handoverNotes: zod.string().nullish(),
-  photoUrl: zod.string().nullish(),
   createdAt: zod.string(),
 });
 

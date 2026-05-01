@@ -1629,6 +1629,12 @@ components:
           type: boolean
         medicationOk:
           type: boolean
+        medicationByStaffId:
+          type: ["integer", "null"]
+        medicationByName:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
         createdAt:
           type: string
       required:
@@ -1664,6 +1670,12 @@ components:
           type: boolean
         medicationOk:
           type: boolean
+        medicationByStaffId:
+          type: ["integer", "null"]
+        medicationByName:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
       required:
         - residentId
         - recordedAt
@@ -1690,6 +1702,12 @@ components:
           type: ["boolean", "null"]
         medicationOk:
           type: ["boolean", "null"]
+        medicationByStaffId:
+          type: ["integer", "null"]
+        medicationByName:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
 
     # ── Weight ────────────────────────────────────────────────────
     Weight:

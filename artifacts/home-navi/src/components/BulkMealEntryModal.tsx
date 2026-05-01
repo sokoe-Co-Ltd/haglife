@@ -124,6 +124,7 @@ export function BulkMealEntryModal({ open, onClose, residents, mealMap, date, fl
           const existingMeal = mealMap[key];
           const payload = {
             waterOnly: draft.waterOnly,
+            medicationOk: false,
             mainDishPercent: draft.waterOnly ? null : draft.main,
             sideDishPercent: draft.waterOnly ? null : draft.side,
             waterMl: null,
