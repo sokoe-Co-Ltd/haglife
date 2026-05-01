@@ -2,7 +2,7 @@ import { Layout } from "@/components/layout";
 import { useGetResidentHealthSummary, useGetResident, useUpdateResident } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronLeft, Users, Phone, MapPin, Briefcase, UserCheck, DoorOpen, Hospital, ChevronRight as ChevronRightIcon } from "lucide-react";
+import { ChevronLeft, Users, Phone, MapPin, Briefcase, UserCheck, DoorOpen, Hospital, ChevronRight as ChevronRightIcon, Pencil } from "lucide-react";
 import { ResidentAvatar } from "@/components/ResidentAvatar";
 import { Button } from "@/components/ui/button";
 import { Link, useParams, useLocation } from "wouter";
@@ -394,11 +394,16 @@ export default function HealthDetail() {
                 <CardContent className="p-5">
                   <div className="flex items-center gap-4 mb-4">
                     <ResidentAvatar resident={resident} size="lg" allowUpload />
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-muted-foreground">{resident.roomNumber}</div>
                       <div className="font-bold text-xl">{resident.lastName} {resident.firstName}様</div>
                       <div className="text-sm text-muted-foreground mt-0.5">{resident.gender}</div>
                     </div>
+                    <Link href={`/residents/${id}?edit=true`}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground hover:text-primary" title="利用者情報を編集">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </Link>
                   </div>
                   <div className="space-y-0 text-sm">
                     <div className="flex justify-between py-2 border-b border-primary/10">
