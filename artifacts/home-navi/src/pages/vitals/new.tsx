@@ -18,13 +18,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  ChevronLeft, AlertCircle, CheckCircle2, Pencil, RefreshCw, Clock,
+  ChevronLeft, AlertCircle, CheckCircle2, Pencil, RefreshCw, Clock, Bath,
 } from "lucide-react";
 import { Link, useParams, useLocation, useSearch } from "wouter";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
 import { ja } from "date-fns/locale";
+
+const BATH_TYPES = ["個浴", "機械浴", "清拭"] as const;
 
 // ── Vital thresholds (fetched from API, with defaults) ─────────────────────
 type ThresholdRange = { min: number; max: number };
@@ -173,7 +175,13 @@ function HistoryRow({ vital, onEdit }: { vital: any; onEdit?: (id: number) => vo
             </span>
           ))}
         </div>
-        <div className="flex flex-wrap items-center gap-x-3 mt-0.5">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+          {vital.isBath && (
+            <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded flex items-center gap-0.5 font-medium">
+              <Bath className="h-3 w-3" />
+              {vital.bathType || "入浴"}
+            </span>
+          )}
           {vital.notes && <p className="text-xs text-gray-500 line-clamp-1">{vital.notes}</p>}
           {vital.measuredByName && (
             <span className="text-xs text-gray-400">測定者: {vital.measuredByName}</span>
@@ -260,6 +268,10 @@ export default function VitalsInput() {
       spo2: "",
       notes: "",
       measuredByStaffId: "",
+      isBath: false,
+      bathType: "",
+      bathStaffId: "",
+      bathMemo: "",
     },
   });
 
@@ -277,6 +289,10 @@ export default function VitalsInput() {
         spo2:         latestToday.spo2?.toString()        ?? "",
         notes:        latestToday.notes ?? "",
         measuredByStaffId: latestToday.measuredByStaffId?.toString() ?? "",
+        isBath: latestToday.isBath ?? false,
+        bathType: latestToday.bathType ?? "",
+        bathStaffId: latestToday.bathStaffId?.toString() ?? "",
+        bathMemo: latestToday.bathMemo ?? "",
       });
     }
   }, [latestToday]);
@@ -294,11 +310,14 @@ export default function VitalsInput() {
           spo2:         target.spo2?.toString()        ?? "",
           notes:        target.notes ?? "",
           measuredByStaffId: target.measuredByStaffId?.toString() ?? "",
+          isBath: target.isBath ?? false,
+          bathType: target.bathType ?? "",
+          bathStaffId: target.bathStaffId?.toString() ?? "",
+          bathMemo: target.bathMemo ?? "",
         });
       }
     } else if (editingId === null && autoFilledRef.current) {
-      // User explicitly switched to "new record" mode (再測定)
-      form.reset({ temperature: "", bpSystolic: "", bpDiastolic: "", pulse: "", spo2: "", notes: "", measuredByStaffId: "" });
+      form.reset({ temperature: "", bpSystolic: "", bpDiastolic: "", pulse: "", spo2: "", notes: "", measuredByStaffId: "", isBath: false, bathType: "", bathStaffId: "", bathMemo: "" });
     }
   }, [editingId]);
 
@@ -320,6 +339,8 @@ export default function VitalsInput() {
     const staffId = values.measuredByStaffId ? Number(values.measuredByStaffId) : null;
     const staffRecord = staffId ? allStaff.find((s: any) => s.id === staffId) : null;
     const staffName = staffRecord ? `${staffRecord.lastName}${staffRecord.firstName}` : null;
+    const isBath = !!values.isBath;
+    const bathStaffId = isBath && values.bathStaffId ? Number(values.bathStaffId) : undefined;
     const parsedVals = {
       temperature: values.temperature ? Number(values.temperature) : undefined,
       bpSystolic: values.bpSystolic ? Number(values.bpSystolic) : undefined,
@@ -329,6 +350,10 @@ export default function VitalsInput() {
       notes: values.notes || undefined,
       measuredByStaffId: staffId || undefined,
       measuredByName: staffName || undefined,
+      isBath,
+      bathType: isBath ? (values.bathType || undefined) : undefined,
+      bathStaffId,
+      bathMemo: isBath ? (values.bathMemo || undefined) : undefined,
     };
     const needsRecheckVal = autoRecheck(parsedVals, thresholds as ThresholdData);
 
@@ -353,7 +378,6 @@ export default function VitalsInput() {
             recordedAt: new Date(dateProp).toISOString(),
             ...parsedVals,
             needsRecheck: needsRecheckVal,
-            isBath: false,
           },
         },
         {
@@ -451,8 +475,16 @@ export default function VitalsInput() {
                 ))}
               </div>
 
-              {(latestToday?.notes || latestToday?.measuredByName) && (
+              {(latestToday?.notes || latestToday?.measuredByName || latestToday?.isBath) && (
                 <div className="mt-3 bg-white/80 rounded-lg px-3 py-2 border border-gray-100 space-y-0.5">
+                  {latestToday?.isBath && (
+                    <div className="flex items-center gap-1.5">
+                      <Bath className="h-3.5 w-3.5 text-blue-500" />
+                      <span className="text-xs font-medium text-blue-700">
+                        入浴{latestToday.bathType ? `（${latestToday.bathType}）` : ""}
+                      </span>
+                    </div>
+                  )}
                   {latestToday?.notes && (
                     <p className="text-sm text-gray-600">{latestToday.notes}</p>
                   )}
@@ -531,6 +563,85 @@ export default function VitalsInput() {
                     register={form.register}
                     watchValue={form.watch("spo2")}
                   />
+                </div>
+
+                {/* ── 入浴セクション ──────────────────────────────────── */}
+                <div className="border-t border-gray-100 pt-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium flex items-center gap-1.5">
+                      <Bath className="h-4 w-4 text-gray-500" />
+                      入浴
+                    </Label>
+                    <div className="flex rounded-lg overflow-hidden border border-gray-200 text-sm">
+                      <button
+                        type="button"
+                        onClick={() => form.setValue("isBath", false)}
+                        className={`px-4 py-1.5 transition-colors ${!form.watch("isBath") ? "bg-gray-700 text-white font-bold" : "bg-white text-gray-500 hover:bg-gray-50"}`}
+                      >
+                        なし
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => form.setValue("isBath", true)}
+                        className={`px-4 py-1.5 transition-colors ${form.watch("isBath") ? "bg-blue-600 text-white font-bold" : "bg-white text-gray-500 hover:bg-gray-50"}`}
+                      >
+                        あり
+                      </button>
+                    </div>
+                  </div>
+
+                  {form.watch("isBath") && (
+                    <div className="space-y-3 pl-1">
+                      <div className="space-y-1.5">
+                        <Label className="text-sm font-medium">入浴方法</Label>
+                        <div className="flex gap-2">
+                          {BATH_TYPES.map((type) => (
+                            <button
+                              key={type}
+                              type="button"
+                              onClick={() => form.setValue("bathType", form.watch("bathType") === type ? "" : type)}
+                              className={`flex-1 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+                                form.watch("bathType") === type
+                                  ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                                  : "bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-600"
+                              }`}
+                            >
+                              {type}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-sm font-medium">入浴介助者</Label>
+                        <Select
+                          value={form.watch("bathStaffId")}
+                          onValueChange={(v) => form.setValue("bathStaffId", v === "none" ? "" : v)}
+                        >
+                          <SelectTrigger className="h-11">
+                            <SelectValue placeholder="介助者を選択（任意）" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">選択なし</SelectItem>
+                            {allStaff.map((s: any) => (
+                              <SelectItem key={s.id} value={String(s.id)}>
+                                {s.lastName}{s.firstName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-sm font-medium">入浴報告</Label>
+                        <Textarea
+                          {...form.register("bathMemo")}
+                          placeholder="入浴の状況などを記入"
+                          className="h-20 resize-none"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-1">
