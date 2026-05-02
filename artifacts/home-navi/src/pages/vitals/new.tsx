@@ -268,7 +268,6 @@ export default function VitalsInput() {
       spo2: "",
       notes: "",
       measuredByStaffId: "",
-      isBath: false,
       bathType: "",
       bathStaffId: "",
       bathMemo: "",
@@ -289,7 +288,6 @@ export default function VitalsInput() {
         spo2:         latestToday.spo2?.toString()        ?? "",
         notes:        latestToday.notes ?? "",
         measuredByStaffId: latestToday.measuredByStaffId?.toString() ?? "",
-        isBath: latestToday.isBath ?? false,
         bathType: latestToday.bathType ?? "",
         bathStaffId: latestToday.bathStaffId?.toString() ?? "",
         bathMemo: latestToday.bathMemo ?? "",
@@ -310,14 +308,13 @@ export default function VitalsInput() {
           spo2:         target.spo2?.toString()        ?? "",
           notes:        target.notes ?? "",
           measuredByStaffId: target.measuredByStaffId?.toString() ?? "",
-          isBath: target.isBath ?? false,
           bathType: target.bathType ?? "",
           bathStaffId: target.bathStaffId?.toString() ?? "",
           bathMemo: target.bathMemo ?? "",
         });
       }
     } else if (editingId === null && autoFilledRef.current) {
-      form.reset({ temperature: "", bpSystolic: "", bpDiastolic: "", pulse: "", spo2: "", notes: "", measuredByStaffId: "", isBath: false, bathType: "", bathStaffId: "", bathMemo: "" });
+      form.reset({ temperature: "", bpSystolic: "", bpDiastolic: "", pulse: "", spo2: "", notes: "", measuredByStaffId: "", bathType: "", bathStaffId: "", bathMemo: "" });
     }
   }, [editingId]);
 
@@ -339,7 +336,7 @@ export default function VitalsInput() {
     const staffId = values.measuredByStaffId ? Number(values.measuredByStaffId) : null;
     const staffRecord = staffId ? allStaff.find((s: any) => s.id === staffId) : null;
     const staffName = staffRecord ? `${staffRecord.lastName}${staffRecord.firstName}` : null;
-    const isBath = !!values.isBath;
+    const isBath = values.bathType !== "" && values.bathType != null;
     const bathStaffId = isBath && values.bathStaffId ? Number(values.bathStaffId) : undefined;
     const parsedVals = {
       temperature: values.temperature ? Number(values.temperature) : undefined,
@@ -567,50 +564,36 @@ export default function VitalsInput() {
 
                 {/* ── 入浴セクション ──────────────────────────────────── */}
                 <div className="border-t border-gray-100 pt-4 space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="space-y-1.5">
                     <Label className="text-sm font-medium flex items-center gap-1.5">
                       <Bath className="h-4 w-4 text-gray-500" />
                       入浴
                     </Label>
-                    <div className="flex rounded-lg overflow-hidden border border-gray-200 text-sm">
-                      <button
-                        type="button"
-                        onClick={() => form.setValue("isBath", false)}
-                        className={`px-4 py-1.5 transition-colors ${!form.watch("isBath") ? "bg-gray-700 text-white font-bold" : "bg-white text-gray-500 hover:bg-gray-50"}`}
-                      >
-                        なし
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => form.setValue("isBath", true)}
-                        className={`px-4 py-1.5 transition-colors ${form.watch("isBath") ? "bg-blue-600 text-white font-bold" : "bg-white text-gray-500 hover:bg-gray-50"}`}
-                      >
-                        あり
-                      </button>
+                    <div className="flex gap-2">
+                      {(["なし", ...BATH_TYPES] as const).map((type) => {
+                        const selected = type === "なし" ? form.watch("bathType") === "" : form.watch("bathType") === type;
+                        return (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() => form.setValue("bathType", type === "なし" ? "" : type)}
+                            className={`flex-1 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+                              selected
+                                ? type === "なし"
+                                  ? "bg-gray-700 text-white border-gray-700 shadow-sm"
+                                  : "bg-blue-600 text-white border-blue-600 shadow-sm"
+                                : "bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-600"
+                            }`}
+                          >
+                            {type}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  {form.watch("isBath") && (
+                  {form.watch("bathType") !== "" && (
                     <div className="space-y-3 pl-1">
-                      <div className="space-y-1.5">
-                        <Label className="text-sm font-medium">入浴方法</Label>
-                        <div className="flex gap-2">
-                          {BATH_TYPES.map((type) => (
-                            <button
-                              key={type}
-                              type="button"
-                              onClick={() => form.setValue("bathType", form.watch("bathType") === type ? "" : type)}
-                              className={`flex-1 py-2.5 rounded-lg border text-sm font-medium transition-all ${
-                                form.watch("bathType") === type
-                                  ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                                  : "bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-600"
-                              }`}
-                            >
-                              {type}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
 
                       <div className="space-y-1">
                         <Label className="text-sm font-medium">入浴介助者</Label>
