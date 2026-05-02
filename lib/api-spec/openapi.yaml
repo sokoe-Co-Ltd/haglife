@@ -31,6 +31,7 @@ tags:
   - name: insurances
     description: Insurance records
   - name: dashboard
+  - name: settings
     description: Dashboard summaries
 
 paths:
@@ -1022,6 +1023,37 @@ paths:
       responses:
         "204":
           description: Deleted
+
+  # ── Settings ──────────────────────────────────────────────────
+  /settings/vital-thresholds:
+    get:
+      operationId: getVitalThresholds
+      tags: [settings]
+      summary: Get vital sign thresholds
+      responses:
+        "200":
+          description: Current vital thresholds
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VitalThresholds"
+    put:
+      operationId: updateVitalThresholds
+      tags: [settings]
+      summary: Update vital sign thresholds
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VitalThresholds"
+      responses:
+        "200":
+          description: Updated vital thresholds
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VitalThresholds"
 
 components:
   schemas:
@@ -2141,3 +2173,28 @@ components:
         - vitalsNeedingRecheck
         - eliminationNeedingAttention
         - weightsNotRecordedThisMonth
+
+    # ── Settings ──────────────────────────────────────────────────
+    ThresholdRange:
+      type: object
+      properties:
+        min:
+          type: number
+        max:
+          type: number
+      required: [min, max]
+
+    VitalThresholds:
+      type: object
+      properties:
+        temperature:
+          $ref: "#/components/schemas/ThresholdRange"
+        bpSystolic:
+          $ref: "#/components/schemas/ThresholdRange"
+        bpDiastolic:
+          $ref: "#/components/schemas/ThresholdRange"
+        pulse:
+          $ref: "#/components/schemas/ThresholdRange"
+        spo2:
+          $ref: "#/components/schemas/ThresholdRange"
+      required: [temperature, bpSystolic, bpDiastolic, pulse, spo2]

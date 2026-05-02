@@ -1372,3 +1372,78 @@ export const UpdateInsuranceResponse = zod.object({
 export const DeleteInsuranceParams = zod.object({
   id: zod.coerce.number(),
 });
+
+/**
+ * @summary Get vital sign thresholds
+ */
+export const GetVitalThresholdsResponse = zod.object({
+  temperature: zod.object({
+    min: zod.number(),
+    max: zod.number(),
+  }),
+  bpSystolic: zod.object({
+    min: zod.number(),
+    max: zod.number(),
+  }),
+  bpDiastolic: zod.object({
+    min: zod.number(),
+    max: zod.number(),
+  }),
+  pulse: zod.object({
+    min: zod.number(),
+    max: zod.number(),
+  }),
+  spo2: zod.object({
+    min: zod.number(),
+    max: zod.number(),
+  }),
+});
+
+/**
+ * @summary Update vital sign thresholds
+ */
+export const UpdateVitalThresholdsBody = zod.object({
+  temperature: zod.object({
+    min: zod.number(),
+    max: zod.number(),
+  }),
+  bpSystolic: zod.object({
+    min: zod.number(),
+    max: zod.number(),
+  }),
+  bpDiastolic: zod.object({
+    min: zod.number(),
+    max: zod.number(),
+  }),
+  pulse: zod.object({
+    min: zod.number(),
+    max: zod.number(),
+  }),
+  spo2: zod.object({
+    min: zod.number(),
+    max: zod.number(),
+  }),
+});
+
+export const UpdateVitalThresholdsResponse = zod.object({
+  temperature: zod.object({
+    min: zod.number(),
+    max: zod.number(),
+  }),
+  bpSystolic: zod.object({
+    min: zod.number(),
+    max: zod.number(),
+  }),
+  bpDiastolic: zod.object({
+    min: zod.number(),
+    max: zod.number(),
+  }),
+  pulse: zod.object({
+    min: zod.number(),
+    max: zod.number(),
+  }),
+  spo2: zod.object({
+    min: zod.number(),
+    max: zod.number(),
+  }),
+});

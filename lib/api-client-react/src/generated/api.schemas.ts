@@ -884,6 +884,19 @@ export interface DashboardAlerts {
   weightsNotRecordedThisMonth: ResidentWeightStatus[];
 }
 
+export interface ThresholdRange {
+  min: number;
+  max: number;
+}
+
+export interface VitalThresholds {
+  temperature: ThresholdRange;
+  bpSystolic: ThresholdRange;
+  bpDiastolic: ThresholdRange;
+  pulse: ThresholdRange;
+  spo2: ThresholdRange;
+}
+
 export type ListResidentsParams = {
   visible_only?: boolean;
 };

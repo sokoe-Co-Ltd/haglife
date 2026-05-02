@@ -19,6 +19,7 @@ import {
   LogOut,
   DoorOpen,
   Circle,
+  Settings,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -33,6 +34,7 @@ const NAV_ITEMS = [
   { href: "/bath-reports", label: "入浴報告", icon: Bath },
   { href: "/staff", label: "職員一覧", icon: UserCircle },
   { href: "/residents/moved-out", label: "退去者情報", icon: DoorOpen },
+  { href: "/settings", label: "設定", icon: Settings },
 ];
 
 const BOTTOM_NAV = [

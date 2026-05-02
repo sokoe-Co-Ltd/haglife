@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext, createContext } from "react";
 import { Layout } from "@/components/layout";
 import { ResidentAvatar } from "@/components/ResidentAvatar";
 import {
@@ -7,6 +7,7 @@ import {
   useGetResident,
   useListVitals,
   useListStaff,
+  useGetVitalThresholds,
 } from "@workspace/api-client-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQueryClient } from "@tanstack/react-query";
@@ -22,39 +23,55 @@ import {
 import { Link, useParams, useLocation, useSearch } from "wouter";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
-import { format, subDays, parseISO } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ja } from "date-fns/locale";
 
-// ── Standard thresholds for Japanese elderly ───────────────────────────────
-const THRESHOLDS = {
-  temperature: { min: 35.8, max: 37.4, label: "体温 (KT)", unit: "°C" },
-  bpSystolic:  { min: 90,   max: 159,  label: "血圧上",    unit: "mmHg" },
-  bpDiastolic: { min: 60,   max: 99,   label: "血圧下",    unit: "mmHg" },
-  pulse:       { min: 50,   max: 100,  label: "脈拍 (P)",  unit: "bpm" },
-  spo2:        { min: 95,   max: 100,  label: "SpO2",      unit: "%" },
-} as const;
+// ── Vital thresholds (fetched from API, with defaults) ─────────────────────
+type ThresholdRange = { min: number; max: number };
+type ThresholdData = {
+  temperature: ThresholdRange;
+  bpSystolic:  ThresholdRange;
+  bpDiastolic: ThresholdRange;
+  pulse:       ThresholdRange;
+  spo2:        ThresholdRange;
+};
 
-type ThresholdKey = keyof typeof THRESHOLDS;
+const THRESHOLD_META: Record<keyof ThresholdData, { label: string; unit: string }> = {
+  temperature: { label: "体温 (KT)", unit: "°C"   },
+  bpSystolic:  { label: "血圧上",    unit: "mmHg" },
+  bpDiastolic: { label: "血圧下",    unit: "mmHg" },
+  pulse:       { label: "脈拍 (P)",  unit: "bpm"  },
+  spo2:        { label: "SpO2",      unit: "%"    },
+};
 
-function isOut(value: number | null | undefined, key: ThresholdKey): boolean {
+const DEFAULT_THRESHOLDS: ThresholdData = {
+  temperature: { min: 35.8, max: 37.4 },
+  bpSystolic:  { min: 90,   max: 159  },
+  bpDiastolic: { min: 60,   max: 99   },
+  pulse:       { min: 50,   max: 100  },
+  spo2:        { min: 95,   max: 100  },
+};
+
+const VitalThresholdsCtx = createContext<ThresholdData>(DEFAULT_THRESHOLDS);
+
+type ThresholdKey = keyof ThresholdData;
+
+function isOut(value: number | null | undefined, key: ThresholdKey, thresholds: ThresholdData): boolean {
   if (value == null || isNaN(value)) return false;
-  const { min, max } = THRESHOLDS[key];
+  const { min, max } = thresholds[key];
   return value < min || value > max;
 }
 
-function autoRecheck(vals: {
-  temperature?: number | null;
-  bpSystolic?: number | null;
-  bpDiastolic?: number | null;
-  pulse?: number | null;
-  spo2?: number | null;
-}): boolean {
+function autoRecheck(
+  vals: { temperature?: number | null; bpSystolic?: number | null; bpDiastolic?: number | null; pulse?: number | null; spo2?: number | null },
+  thresholds: ThresholdData
+): boolean {
   return (
-    isOut(vals.temperature, "temperature") ||
-    isOut(vals.bpSystolic, "bpSystolic") ||
-    isOut(vals.bpDiastolic, "bpDiastolic") ||
-    isOut(vals.pulse, "pulse") ||
-    isOut(vals.spo2, "spo2")
+    isOut(vals.temperature, "temperature", thresholds) ||
+    isOut(vals.bpSystolic,  "bpSystolic",  thresholds) ||
+    isOut(vals.bpDiastolic, "bpDiastolic", thresholds) ||
+    isOut(vals.pulse,       "pulse",       thresholds) ||
+    isOut(vals.spo2,        "spo2",        thresholds)
   );
 }
 
@@ -68,8 +85,9 @@ function VitalValue({
   field: ThresholdKey;
   suffix?: string;
 }) {
+  const thresholds = useContext(VitalThresholdsCtx);
   if (value == null) return <span className="text-gray-300">—</span>;
-  const out = isOut(value, field);
+  const out = isOut(value, field, thresholds);
   return (
     <span className={`font-bold ${out ? "text-red-600" : "text-gray-800"}`}>
       {value}{suffix}
@@ -96,9 +114,11 @@ function VitalInputRow({
   register: any;
   watchValue: string;
 }) {
-  const { min, max, unit } = THRESHOLDS[field];
+  const thresholds = useContext(VitalThresholdsCtx);
+  const { min, max } = thresholds[field];
+  const { unit } = THRESHOLD_META[field];
   const numVal = watchValue ? parseFloat(watchValue) : null;
-  const out = isOut(numVal, field);
+  const out = isOut(numVal, field, thresholds);
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between">
@@ -199,6 +219,8 @@ export default function VitalsInput() {
     }, 50);
   }
 
+  const { data: thresholds = DEFAULT_THRESHOLDS } = useGetVitalThresholds();
+
   const { data: resident } = useGetResident(residentId, { query: { enabled: !!residentId } });
   const { data: allStaff = [] } = useListStaff({ visible_only: true });
 
@@ -287,7 +309,7 @@ export default function VitalsInput() {
     pulse: form.watch("pulse") ? parseFloat(form.watch("pulse")) : null,
     spo2: form.watch("spo2") ? parseFloat(form.watch("spo2")) : null,
   };
-  const autoRecheckFlag = autoRecheck(watchedVals);
+  const autoRecheckFlag = autoRecheck(watchedVals, thresholds as ThresholdData);
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ["/api/vitals"] });
@@ -308,7 +330,7 @@ export default function VitalsInput() {
       measuredByStaffId: staffId || undefined,
       measuredByName: staffName || undefined,
     };
-    const needsRecheckVal = autoRecheck(parsedVals);
+    const needsRecheckVal = autoRecheck(parsedVals, thresholds as ThresholdData);
 
     if (editingId != null) {
       updateMutation.mutate(
@@ -349,6 +371,7 @@ export default function VitalsInput() {
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   return (
+    <VitalThresholdsCtx.Provider value={thresholds as ThresholdData}>
     <Layout>
       <div className="space-y-5 max-w-2xl mx-auto">
         {/* Header */}
@@ -614,5 +637,6 @@ export default function VitalsInput() {
         </Card>
       </div>
     </Layout>
+    </VitalThresholdsCtx.Provider>
   );
 }

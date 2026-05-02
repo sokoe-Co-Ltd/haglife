@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout";
-import { useGetVitalsTodayStatus } from "@workspace/api-client-react";
+import { useGetVitalsTodayStatus, useGetVitalThresholds } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Activity, AlertCircle, CheckCircle2, ChevronRight, Plus, Settings, FileDown } from "lucide-react";
 import { Link } from "wouter";
@@ -100,6 +100,7 @@ export default function VitalsList() {
   }
 
   const { data: statuses, isLoading } = useGetVitalsTodayStatus({ date: dateStr });
+  const { data: thresholds } = useGetVitalThresholds();
 
   const recheckNeeded = statuses?.filter((s) => s.needsRecheck) || [];
   const ok = statuses?.filter((s) => !s.needsRecheck && s.recordedToday) || [];
@@ -107,7 +108,7 @@ export default function VitalsList() {
 
   const quickActions = [
     { label: "新規記録", icon: Plus, href: "/vitals/new", color: "bg-primary" },
-    { label: "基準値設定", icon: Settings, href: "/vitals/thresholds" },
+    { label: "基準値設定", icon: Settings, href: "/settings" },
     {
       label: "PDF出力",
       icon: FileDown,
@@ -238,13 +239,13 @@ export default function VitalsList() {
               </InfoCard>
             )}
 
-            <InfoCard title="基準値（高齢者標準）">
+            <InfoCard title="基準値（設定で変更可）">
               <div className="space-y-1.5 text-xs text-gray-600">
-                <div className="flex justify-between"><span>体温 (KT)</span><span className="font-mono text-gray-700">35.8 – 37.4°C</span></div>
-                <div className="flex justify-between"><span>血圧上 (BP)</span><span className="font-mono text-gray-700">90 – 159 mmHg</span></div>
-                <div className="flex justify-between"><span>血圧下</span><span className="font-mono text-gray-700">60 – 99 mmHg</span></div>
-                <div className="flex justify-between"><span>脈拍 (P)</span><span className="font-mono text-gray-700">50 – 100 bpm</span></div>
-                <div className="flex justify-between"><span>SpO2</span><span className="font-mono text-gray-700">95 – 100%</span></div>
+                <div className="flex justify-between"><span>体温 (KT)</span><span className="font-mono text-gray-700">{thresholds?.temperature?.min ?? 35.8} – {thresholds?.temperature?.max ?? 37.4}°C</span></div>
+                <div className="flex justify-between"><span>血圧上 (BP)</span><span className="font-mono text-gray-700">{thresholds?.bpSystolic?.min ?? 90} – {thresholds?.bpSystolic?.max ?? 159} mmHg</span></div>
+                <div className="flex justify-between"><span>血圧下</span><span className="font-mono text-gray-700">{thresholds?.bpDiastolic?.min ?? 60} – {thresholds?.bpDiastolic?.max ?? 99} mmHg</span></div>
+                <div className="flex justify-between"><span>脈拍 (P)</span><span className="font-mono text-gray-700">{thresholds?.pulse?.min ?? 50} – {thresholds?.pulse?.max ?? 100} bpm</span></div>
+                <div className="flex justify-between"><span>SpO2</span><span className="font-mono text-gray-700">{thresholds?.spo2?.min ?? 95} – {thresholds?.spo2?.max ?? 100}%</span></div>
               </div>
             </InfoCard>
 

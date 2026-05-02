@@ -65,6 +65,7 @@ import type {
   UpdateVitalBody,
   UpdateWeightBody,
   Vital,
+  VitalThresholds,
   Weight,
 } from "./api.schemas";
 
@@ -4562,4 +4563,165 @@ export const useDeleteInsurance = <
   TContext
 > => {
   return useMutation(getDeleteInsuranceMutationOptions(options));
+};
+
+/**
+ * @summary Get vital sign thresholds
+ */
+export const getGetVitalThresholdsUrl = () => {
+  return `/api/settings/vital-thresholds`;
+};
+
+export const getVitalThresholds = async (
+  options?: RequestInit,
+): Promise<VitalThresholds> => {
+  return customFetch<VitalThresholds>(getGetVitalThresholdsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetVitalThresholdsQueryKey = () => {
+  return [`/api/settings/vital-thresholds`] as const;
+};
+
+export const getGetVitalThresholdsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getVitalThresholds>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getVitalThresholds>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetVitalThresholdsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getVitalThresholds>>
+  > = ({ signal }) => getVitalThresholds({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getVitalThresholds>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetVitalThresholdsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getVitalThresholds>>
+>;
+export type GetVitalThresholdsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get vital sign thresholds
+ */
+
+export function useGetVitalThresholds<
+  TData = Awaited<ReturnType<typeof getVitalThresholds>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getVitalThresholds>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetVitalThresholdsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update vital sign thresholds
+ */
+export const getUpdateVitalThresholdsUrl = () => {
+  return `/api/settings/vital-thresholds`;
+};
+
+export const updateVitalThresholds = async (
+  vitalThresholds: VitalThresholds,
+  options?: RequestInit,
+): Promise<VitalThresholds> => {
+  return customFetch<VitalThresholds>(getUpdateVitalThresholdsUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(vitalThresholds),
+  });
+};
+
+export const getUpdateVitalThresholdsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateVitalThresholds>>,
+    TError,
+    { data: BodyType<VitalThresholds> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateVitalThresholds>>,
+  TError,
+  { data: BodyType<VitalThresholds> },
+  TContext
+> => {
+  const mutationKey = ["updateVitalThresholds"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateVitalThresholds>>,
+    { data: BodyType<VitalThresholds> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateVitalThresholds(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateVitalThresholdsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateVitalThresholds>>
+>;
+export type UpdateVitalThresholdsMutationBody = BodyType<VitalThresholds>;
+export type UpdateVitalThresholdsMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update vital sign thresholds
+ */
+export const useUpdateVitalThresholds = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateVitalThresholds>>,
+    TError,
+    { data: BodyType<VitalThresholds> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateVitalThresholds>>,
+  TError,
+  { data: BodyType<VitalThresholds> },
+  TContext
+> => {
+  return useMutation(getUpdateVitalThresholdsMutationOptions(options));
 };
