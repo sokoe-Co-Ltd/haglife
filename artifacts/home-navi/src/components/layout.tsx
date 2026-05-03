@@ -152,7 +152,6 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
 }
 
 const SIDEBAR_W = 288; // w-72 = 288px
-const EDGE_THRESHOLD = 30; // px from left edge to initiate open swipe
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -178,7 +177,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     touchStartX.current = x;
     touchStartY.current = e.touches[0].clientY;
     isHSwipe.current = null;
-    canSwipe.current = mobileMenuOpen || x <= EDGE_THRESHOLD;
+    canSwipe.current = true;
   }
 
   function handleTouchMove(e: React.TouchEvent) {
