@@ -139,14 +139,15 @@ function VitalInputRow({
           type="number"
           step={step}
           {...regProps}
-          onBlur={(e) => {
+          onChange={(e) => {
             if (transformOnBlur && setValue) {
               const transformed = transformOnBlur(e.target.value);
               if (transformed !== e.target.value) {
                 setValue(name, transformed);
+                return;
               }
             }
-            regProps.onBlur(e);
+            regProps.onChange(e);
           }}
           placeholder={placeholder}
           className={`h-11 text-base ${out ? "border-red-300 bg-red-50 focus:border-red-400" : ""}`}
