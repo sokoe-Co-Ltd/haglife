@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Layout } from "@/components/layout";
 import { useGetVitalsTodayStatus, useGetVitalThresholds } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Activity, AlertCircle, CheckCircle2, ChevronRight, Plus, Settings, FileDown } from "lucide-react";
+import { Activity, AlertCircle, CheckCircle2, ChevronRight, Plus, FileDown } from "lucide-react";
 import { Link } from "wouter";
 import { DayNav } from "@/components/date-nav";
 import { format } from "date-fns";
@@ -108,7 +108,6 @@ export default function VitalsList() {
 
   const quickActions = [
     { label: "新規記録", icon: Plus, href: "/vitals/new", color: "bg-primary" },
-    { label: "基準値設定", icon: Settings, href: "/settings" },
     {
       label: "PDF出力",
       icon: FileDown,
