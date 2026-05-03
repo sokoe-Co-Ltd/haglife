@@ -6,7 +6,14 @@ import AppRouter from "./AppRouter";
 import { OfflineProvider } from "@/contexts/OfflineContext";
 import { OfflineBanner } from "@/components/OfflineBanner";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function App() {
   return (

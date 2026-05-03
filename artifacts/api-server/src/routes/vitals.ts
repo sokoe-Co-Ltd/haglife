@@ -36,13 +36,13 @@ router.get("/vitals", async (req, res): Promise<void> => {
     conditions.push(gte(vitalsTable.recordedAt, start));
     conditions.push(lte(vitalsTable.recordedAt, end));
   }
-  const rows = await db
-    .select()
-    .from(vitalsTable)
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(desc(vitalsTable.recordedAt));
-  // Add residentName
-  const residents = await db.select().from(residentsTable);
+  const [rows, residents] = await Promise.all([
+    db.select().from(vitalsTable)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(vitalsTable.recordedAt)),
+    db.select({ id: residentsTable.id, lastName: residentsTable.lastName, firstName: residentsTable.firstName })
+      .from(residentsTable),
+  ]);
   const rMap = new Map(residents.map(r => [r.id, `${r.lastName}${r.firstName}`]));
   const result = rows.map(v => ({
     ...v,

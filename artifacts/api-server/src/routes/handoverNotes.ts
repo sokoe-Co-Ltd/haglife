@@ -13,17 +13,40 @@ import {
 const router: IRouter = Router();
 
 async function withNames(note: typeof handoverNotesTable.$inferSelect) {
-  let residentName: string | null = null;
-  let authorName: string | null = null;
-  if (note.residentId) {
-    const [r] = await db.select().from(residentsTable).where(eq(residentsTable.id, note.residentId));
-    if (r) residentName = `${r.lastName}${r.firstName}`;
-  }
-  if (note.authorId) {
-    const [s] = await db.select().from(staffTable).where(eq(staffTable.id, note.authorId));
-    if (s) authorName = `${s.lastName}${s.firstName}`;
-  }
-  return { ...note, residentName, authorName };
+  const [residents, staff] = await Promise.all([
+    note.residentId
+      ? db.select({ id: residentsTable.id, lastName: residentsTable.lastName, firstName: residentsTable.firstName })
+          .from(residentsTable).where(eq(residentsTable.id, note.residentId))
+      : Promise.resolve([]),
+    note.authorId
+      ? db.select({ id: staffTable.id, lastName: staffTable.lastName, firstName: staffTable.firstName })
+          .from(staffTable).where(eq(staffTable.id, note.authorId))
+      : Promise.resolve([]),
+  ]);
+  const r = residents[0];
+  const s = staff[0];
+  return {
+    ...note,
+    residentName: r ? `${r.lastName}${r.firstName}` : null,
+    authorName: s ? `${s.lastName}${s.firstName}` : null,
+  };
+}
+
+async function withNamesBulk(notes: (typeof handoverNotesTable.$inferSelect)[]) {
+  if (notes.length === 0) return [];
+  const [residents, staffRows] = await Promise.all([
+    db.select({ id: residentsTable.id, lastName: residentsTable.lastName, firstName: residentsTable.firstName })
+      .from(residentsTable),
+    db.select({ id: staffTable.id, lastName: staffTable.lastName, firstName: staffTable.firstName })
+      .from(staffTable),
+  ]);
+  const rMap = new Map(residents.map(r => [r.id, `${r.lastName}${r.firstName}`]));
+  const sMap = new Map(staffRows.map(s => [s.id, `${s.lastName}${s.firstName}`]));
+  return notes.map(n => ({
+    ...n,
+    residentName: n.residentId ? (rMap.get(n.residentId) ?? null) : null,
+    authorName: n.authorId ? (sMap.get(n.authorId) ?? null) : null,
+  }));
 }
 
 function dayRange(dateStr?: string | null) {
@@ -64,7 +87,7 @@ router.get("/handover-notes", async (req, res): Promise<void> => {
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(handoverNotesTable.recordedAt))
     .limit(limit);
-  const result = await Promise.all(rows.map(withNames));
+  const result = await withNamesBulk(rows);
   res.json(result);
 });
 

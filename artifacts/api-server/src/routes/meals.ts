@@ -40,12 +40,13 @@ router.get("/meals", async (req, res): Promise<void> => {
     conditions.push(gte(mealsTable.recordedAt, start));
     conditions.push(lte(mealsTable.recordedAt, end));
   }
-  const rows = await db
-    .select()
-    .from(mealsTable)
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(desc(mealsTable.recordedAt));
-  const residents = await db.select().from(residentsTable);
+  const [rows, residents] = await Promise.all([
+    db.select().from(mealsTable)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(mealsTable.recordedAt)),
+    db.select({ id: residentsTable.id, lastName: residentsTable.lastName, firstName: residentsTable.firstName })
+      .from(residentsTable),
+  ]);
   const rMap = new Map(residents.map(r => [r.id, `${r.lastName}${r.firstName}`]));
   const result = rows.map(m => ({ ...m, residentName: rMap.get(m.residentId) ?? null }));
   res.json(result);

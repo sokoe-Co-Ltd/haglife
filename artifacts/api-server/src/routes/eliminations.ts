@@ -26,12 +26,13 @@ router.get("/eliminations", async (req, res): Promise<void> => {
   if (query.success && query.data.resident_id != null) {
     conditions.push(eq(eliminationsTable.residentId, query.data.resident_id));
   }
-  const rows = await db
-    .select()
-    .from(eliminationsTable)
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(desc(eliminationsTable.recordedAt));
-  const residents = await db.select().from(residentsTable);
+  const [rows, residents] = await Promise.all([
+    db.select().from(eliminationsTable)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(eliminationsTable.recordedAt)),
+    db.select({ id: residentsTable.id, lastName: residentsTable.lastName, firstName: residentsTable.firstName })
+      .from(residentsTable),
+  ]);
   const rMap = new Map(residents.map(r => [r.id, `${r.lastName}${r.firstName}`]));
   const result = rows.map(e => ({ ...e, residentName: rMap.get(e.residentId) ?? null }));
   res.json(result);
