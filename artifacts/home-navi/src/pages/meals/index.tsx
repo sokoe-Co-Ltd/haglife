@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import {
   Utensils, CheckCircle2, AlertTriangle,
-  ChevronRight, ClipboardCheck, FileSearch, Edit3, Settings2, Lock, Clock,
+  ChevronRight, ClipboardCheck, FileSearch, Edit3, Settings2, Lock,
   List, ListChecks,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -212,11 +212,10 @@ interface SidePanelProps {
   onOpenBulkEdit: () => void;
   dateIsToday: boolean;
   mealTimeSettings: MealTimeSettings;
-  onOpenTimeSettings: () => void;
   showAllRecords: boolean;
   onToggleShowAllRecords: () => void;
 }
-function SidePanel({ allResidents, mealMap, floorFilter, activeMealType, onOpenBulkEdit, dateIsToday, mealTimeSettings, onOpenTimeSettings, showAllRecords, onToggleShowAllRecords }: SidePanelProps) {
+function SidePanel({ allResidents, mealMap, floorFilter, activeMealType, onOpenBulkEdit, dateIsToday, mealTimeSettings, showAllRecords, onToggleShowAllRecords }: SidePanelProps) {
   const [memo, setMemo] = useState("");
   const [, nav] = useLocation();
 
@@ -274,13 +273,6 @@ function SidePanel({ allResidents, mealMap, floorFilter, activeMealType, onOpenB
           bg="bg-purple-50"
           iconBg="bg-purple-500"
           onClick={() => nav("/meals/food-forms")}
-        />
-        <QuickActionBtn
-          icon={Clock}
-          label="食事時間帯の設定"
-          bg="bg-orange-50"
-          iconBg="bg-orange-500"
-          onClick={onOpenTimeSettings}
         />
       </div>
 
@@ -422,8 +414,6 @@ export default function MealsList() {
   const [floorFilter, setFloorFilter] = useState("all");
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
-  const [timeSettingsOpen, setTimeSettingsOpen] = useState(false);
-  const [draftSettings, setDraftSettings] = useState<MealTimeSettings>(DEFAULT_MEAL_TIMES);
   const [showAllRecords, setShowAllRecords] = useState(false);
   const [, nav] = useLocation();
   const { toast } = useToast();
@@ -435,26 +425,6 @@ export default function MealsList() {
       const res = await fetch("/api/settings/meal-times");
       if (!res.ok) return DEFAULT_MEAL_TIMES;
       return res.json();
-    },
-  });
-
-  const saveSettingsMutation = useMutation({
-    mutationFn: async (settings: MealTimeSettings) => {
-      const res = await fetch("/api/settings/meal-times", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
-      });
-      if (!res.ok) throw new Error("保存に失敗しました");
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: MEAL_TIMES_QUERY_KEY });
-      setTimeSettingsOpen(false);
-      toast({ title: "食事時間帯を更新しました" });
-    },
-    onError: () => {
-      toast({ title: "保存に失敗しました", variant: "destructive" });
     },
   });
 
@@ -474,15 +444,6 @@ export default function MealsList() {
     if (!isMealEnabledForResident(resident, mealType)) return;
     setEditTarget({ resident, mealType });
   };
-
-  function openTimeSettings() {
-    setDraftSettings(mealTimeSettings);
-    setTimeSettingsOpen(true);
-  }
-
-  function updateDraftHour(meal: MealType, field: "start" | "end", hour: number) {
-    setDraftSettings((prev) => ({ ...prev, [meal]: { ...prev[meal], [field]: hour } }));
-  }
 
   const { data: residents = [], isLoading: isResidentsLoading } = useListResidents();
   const { data: meals = [], isLoading: isMealsLoading } = useListMeals({ date: dateStr });
@@ -713,7 +674,6 @@ export default function MealsList() {
             onOpenBulkEdit={() => setBulkEditOpen(true)}
             dateIsToday={dateIsToday}
             mealTimeSettings={mealTimeSettings}
-            onOpenTimeSettings={openTimeSettings}
             showAllRecords={showAllRecords}
             onToggleShowAllRecords={() => setShowAllRecords((p) => !p)}
           />
@@ -796,81 +756,6 @@ export default function MealsList() {
         floorFilter={floorFilter}
       />
 
-      <Dialog open={timeSettingsOpen} onOpenChange={setTimeSettingsOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <Clock className="h-4 w-4 text-primary" />
-              食事時間帯の設定
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-5 py-2">
-            <p className="text-xs text-gray-500">各食事の入力可能な時間帯を設定してください。この時間帯以外は当日の入力がロックされます。</p>
-            {(["朝食", "昼食", "夕食"] as MealType[]).map((meal) => (
-              <div key={meal} className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-gray-700 w-10">{meal}</span>
-                  <span className="text-xs text-gray-400">
-                    {draftSettings[meal].start}:00 〜 {draftSettings[meal].end}:59
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex-1">
-                    <label className="text-xs text-gray-500 block mb-1">開始時刻</label>
-                    <Select
-                      value={String(draftSettings[meal].start)}
-                      onValueChange={(v) => updateDraftHour(meal, "start", Number(v))}
-                    >
-                      <SelectTrigger className="h-8">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-48">
-                        {Array.from({ length: 24 }, (_, i) => (
-                          <SelectItem key={i} value={String(i)} className="text-sm">
-                            {i}:00
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <span className="text-gray-400 mt-4">〜</span>
-                  <div className="flex-1">
-                    <label className="text-xs text-gray-500 block mb-1">終了時刻</label>
-                    <Select
-                      value={String(draftSettings[meal].end)}
-                      onValueChange={(v) => updateDraftHour(meal, "end", Number(v))}
-                    >
-                      <SelectTrigger className="h-8">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-48">
-                        {Array.from({ length: 24 }, (_, i) => (
-                          <SelectItem key={i} value={String(i)} className="text-sm">
-                            {i}:59
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" size="sm" onClick={() => setTimeSettingsOpen(false)}>
-              キャンセル
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => saveSettingsMutation.mutate(draftSettings)}
-              disabled={saveSettingsMutation.isPending}
-              className="bg-primary text-white hover:bg-primary/90"
-            >
-              {saveSettingsMutation.isPending ? "保存中…" : "保存する"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Layout>
   );
 }

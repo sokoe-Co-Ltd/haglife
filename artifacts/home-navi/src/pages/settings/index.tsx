@@ -6,9 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Settings, Save, RotateCcw } from "lucide-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Settings, Save, RotateCcw, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
+// ── バイタル基準値 ─────────────────────────────────────────────────────────
 const DEFAULT_THRESHOLDS = {
   temperature: { min: 35.8, max: 37.4 },
   bpSystolic:  { min: 90,   max: 159  },
@@ -18,34 +23,44 @@ const DEFAULT_THRESHOLDS = {
 };
 
 const THRESHOLD_LABELS: Record<string, { label: string; unit: string; step: string }> = {
-  temperature: { label: "体温 (KT)",  unit: "°C",   step: "0.1" },
+  temperature: { label: "体温 (KT)",    unit: "°C",   step: "0.1" },
   bpSystolic:  { label: "血圧 上 (BP)", unit: "mmHg", step: "1"   },
-  bpDiastolic: { label: "血圧 下",    unit: "mmHg", step: "1"   },
-  pulse:       { label: "脈拍 (P)",   unit: "bpm",  step: "1"   },
-  spo2:        { label: "SpO2",       unit: "%",    step: "1"   },
+  bpDiastolic: { label: "血圧 下",      unit: "mmHg", step: "1"   },
+  pulse:       { label: "脈拍 (P)",     unit: "bpm",  step: "1"   },
+  spo2:        { label: "SpO2",         unit: "%",    step: "1"   },
 };
 
 type ThresholdKey = keyof typeof DEFAULT_THRESHOLDS;
-
-type FormState = {
-  [K in ThresholdKey]: { min: string; max: string };
-};
+type FormState = { [K in ThresholdKey]: { min: string; max: string } };
 
 function toFormState(data: typeof DEFAULT_THRESHOLDS): FormState {
   return {
     temperature: { min: String(data.temperature.min), max: String(data.temperature.max) },
     bpSystolic:  { min: String(data.bpSystolic.min),  max: String(data.bpSystolic.max)  },
     bpDiastolic: { min: String(data.bpDiastolic.min), max: String(data.bpDiastolic.max) },
-    pulse:       { min: String(data.pulse.min),       max: String(data.pulse.max)       },
-    spo2:        { min: String(data.spo2.min),        max: String(data.spo2.max)        },
+    pulse:       { min: String(data.pulse.min),        max: String(data.pulse.max)       },
+    spo2:        { min: String(data.spo2.min),         max: String(data.spo2.max)        },
   };
 }
 
+// ── 食事時間帯 ──────────────────────────────────────────────────────────────
+type MealType = "朝食" | "昼食" | "夕食";
+type MealTimeSettings = { [K in MealType]: { start: number; end: number } };
+
+const DEFAULT_MEAL_TIMES: MealTimeSettings = {
+  朝食: { start: 7,  end: 10 },
+  昼食: { start: 11, end: 14 },
+  夕食: { start: 17, end: 20 },
+};
+const MEAL_TIMES_QUERY_KEY = ["mealTimeSettings"];
+
 export default function SettingsPage() {
   const { toast } = useToast();
-  const { data: savedThresholds, isLoading } = useGetVitalThresholds();
-  const updateMutation = useUpdateVitalThresholds();
+  const queryClient = useQueryClient();
 
+  // ── バイタル基準値 state ──
+  const { data: savedThresholds, isLoading: isThresholdsLoading } = useGetVitalThresholds();
+  const updateThresholdsMutation = useUpdateVitalThresholds();
   const [form, setForm] = useState<FormState>(toFormState(DEFAULT_THRESHOLDS));
   const [isDirty, setIsDirty] = useState(false);
 
@@ -57,10 +72,7 @@ export default function SettingsPage() {
   }, [savedThresholds]);
 
   function handleChange(key: ThresholdKey, field: "min" | "max", value: string) {
-    setForm((prev) => ({
-      ...prev,
-      [key]: { ...prev[key], [field]: value },
-    }));
+    setForm((prev) => ({ ...prev, [key]: { ...prev[key], [field]: value } }));
     setIsDirty(true);
   }
 
@@ -77,28 +89,64 @@ export default function SettingsPage() {
       pulse:       { min: parseFloat(form.pulse.min),       max: parseFloat(form.pulse.max)       },
       spo2:        { min: parseFloat(form.spo2.min),        max: parseFloat(form.spo2.max)        },
     };
-
     for (const [key, val] of Object.entries(body)) {
       if (isNaN(val.min) || isNaN(val.max) || val.min >= val.max) {
-        toast({
-          title: `${THRESHOLD_LABELS[key]?.label ?? key}の値が不正です（最小 < 最大 にしてください）`,
-          variant: "destructive",
-        });
+        toast({ title: `${THRESHOLD_LABELS[key]?.label ?? key}の値が不正です（最小 < 最大）`, variant: "destructive" });
         return;
       }
     }
-
-    updateMutation.mutate(
+    updateThresholdsMutation.mutate(
       { data: body },
       {
-        onSuccess: () => {
-          toast({ title: "基準値を保存しました" });
-          setIsDirty(false);
-        },
+        onSuccess: () => { toast({ title: "基準値を保存しました" }); setIsDirty(false); },
         onError: () => toast({ title: "保存に失敗しました", variant: "destructive" }),
       }
     );
   }
+
+  // ── 食事時間帯 state ──
+  const { data: mealTimeSettings = DEFAULT_MEAL_TIMES, isLoading: isMealTimesLoading } =
+    useQuery<MealTimeSettings>({
+      queryKey: MEAL_TIMES_QUERY_KEY,
+      queryFn: async () => {
+        const res = await fetch("/api/settings/meal-times");
+        if (!res.ok) return DEFAULT_MEAL_TIMES;
+        return res.json();
+      },
+    });
+
+  const [draftMealTimes, setDraftMealTimes] = useState<MealTimeSettings>(DEFAULT_MEAL_TIMES);
+  const [isMealTimesDirty, setIsMealTimesDirty] = useState(false);
+
+  useEffect(() => {
+    if (mealTimeSettings) {
+      setDraftMealTimes(mealTimeSettings);
+      setIsMealTimesDirty(false);
+    }
+  }, [mealTimeSettings]);
+
+  function updateMealHour(meal: MealType, field: "start" | "end", hour: number) {
+    setDraftMealTimes((prev) => ({ ...prev, [meal]: { ...prev[meal], [field]: hour } }));
+    setIsMealTimesDirty(true);
+  }
+
+  const saveMealTimesMutation = useMutation({
+    mutationFn: async (settings: MealTimeSettings) => {
+      const res = await fetch("/api/settings/meal-times", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+      if (!res.ok) throw new Error("保存に失敗しました");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: MEAL_TIMES_QUERY_KEY });
+      toast({ title: "食事時間帯を保存しました" });
+      setIsMealTimesDirty(false);
+    },
+    onError: () => toast({ title: "保存に失敗しました", variant: "destructive" }),
+  });
 
   return (
     <Layout>
@@ -113,6 +161,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* バイタル基準値 */}
         <Card>
           <CardContent className="p-5 space-y-5">
             <div className="flex items-center justify-between">
@@ -130,11 +179,9 @@ export default function SettingsPage() {
               この範囲を外れた値は <span className="font-bold text-red-600">要再測定</span> として記録されます。全画面で共通の基準値が使用されます。
             </p>
 
-            {isLoading ? (
+            {isThresholdsLoading ? (
               <div className="space-y-4">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Skeleton key={i} className="h-14 w-full" />
-                ))}
+                {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
               </div>
             ) : (
               <div className="space-y-4">
@@ -178,11 +225,88 @@ export default function SettingsPage() {
 
             <Button
               onClick={handleSave}
-              disabled={!isDirty || updateMutation.isPending || isLoading}
+              disabled={!isDirty || updateThresholdsMutation.isPending || isThresholdsLoading}
               className="w-full h-11 font-bold gap-2"
             >
               <Save className="h-4 w-4" />
-              {updateMutation.isPending ? "保存中..." : "基準値を保存"}
+              {updateThresholdsMutation.isPending ? "保存中..." : "基準値を保存"}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* 食事時間帯 */}
+        <Card>
+          <CardContent className="p-5 space-y-5">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4.5 w-4.5 text-orange-500" />
+              <h2 className="font-bold text-gray-700">食事時間帯</h2>
+            </div>
+
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
+              各食事の入力可能な時間帯を設定してください。この時間帯以外は当日の入力がロックされます。
+            </p>
+
+            {isMealTimesLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {(["朝食", "昼食", "夕食"] as MealType[]).map((meal) => (
+                  <div key={meal} className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-gray-700 w-10">{meal}</span>
+                      <span className="text-xs text-gray-400">
+                        {draftMealTimes[meal].start}:00 〜 {draftMealTimes[meal].end}:59
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <Label className="text-xs text-gray-500 mb-1 block">開始時刻</Label>
+                        <Select
+                          value={String(draftMealTimes[meal].start)}
+                          onValueChange={(v) => updateMealHour(meal, "start", Number(v))}
+                        >
+                          <SelectTrigger className="h-10">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-48">
+                            {Array.from({ length: 24 }, (_, i) => (
+                              <SelectItem key={i} value={String(i)}>{i}:00</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <span className="text-gray-400 mt-4">〜</span>
+                      <div className="flex-1">
+                        <Label className="text-xs text-gray-500 mb-1 block">終了時刻</Label>
+                        <Select
+                          value={String(draftMealTimes[meal].end)}
+                          onValueChange={(v) => updateMealHour(meal, "end", Number(v))}
+                        >
+                          <SelectTrigger className="h-10">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-48">
+                            {Array.from({ length: 24 }, (_, i) => (
+                              <SelectItem key={i} value={String(i)}>{i}:59</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <Button
+              onClick={() => saveMealTimesMutation.mutate(draftMealTimes)}
+              disabled={!isMealTimesDirty || saveMealTimesMutation.isPending || isMealTimesLoading}
+              className="w-full h-11 font-bold gap-2"
+            >
+              <Save className="h-4 w-4" />
+              {saveMealTimesMutation.isPending ? "保存中..." : "食事時間帯を保存"}
             </Button>
           </CardContent>
         </Card>
