@@ -107,6 +107,8 @@ function VitalInputRow({
   field,
   register,
   watchValue,
+  transformOnBlur,
+  setValue,
 }: {
   label: string;
   name: string;
@@ -115,12 +117,15 @@ function VitalInputRow({
   field: ThresholdKey;
   register: any;
   watchValue: string;
+  transformOnBlur?: (val: string) => string;
+  setValue?: (name: string, val: string) => void;
 }) {
   const thresholds = useContext(VitalThresholdsCtx);
   const { min, max } = thresholds[field];
   const { unit } = THRESHOLD_META[field];
   const numVal = watchValue ? parseFloat(watchValue) : null;
   const out = isOut(numVal, field, thresholds);
+  const regProps = register(name);
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between">
@@ -131,7 +136,16 @@ function VitalInputRow({
         <Input
           type="number"
           step={step}
-          {...register(name)}
+          {...regProps}
+          onBlur={(e) => {
+            if (transformOnBlur && setValue) {
+              const transformed = transformOnBlur(e.target.value);
+              if (transformed !== e.target.value) {
+                setValue(name, transformed);
+              }
+            }
+            regProps.onBlur(e);
+          }}
           placeholder={placeholder}
           className={`h-11 text-base ${out ? "border-red-300 bg-red-50 focus:border-red-400" : ""}`}
         />
@@ -527,6 +541,15 @@ export default function VitalsInput() {
                     field="temperature"
                     register={form.register}
                     watchValue={form.watch("temperature")}
+                    setValue={form.setValue}
+                    transformOnBlur={(v) => {
+                      // "365" → "36.5", "370" → "37.0" など3桁整数を自動変換
+                      if (/^\d{3}$/.test(v)) {
+                        const n = Number(v);
+                        if (n >= 300 && n <= 429) return `${v.slice(0, 2)}.${v.slice(2)}`;
+                      }
+                      return v;
+                    }}
                   />
                   <VitalInputRow
                     label="脈拍 (P)"
