@@ -123,7 +123,9 @@ function VitalInputRow({
   const thresholds = useContext(VitalThresholdsCtx);
   const { min, max } = thresholds[field];
   const { unit } = THRESHOLD_META[field];
-  const numVal = watchValue ? parseFloat(watchValue) : null;
+  // 変換後の値で基準値チェック（入力途中の誤検知を防ぐ）
+  const displayVal = transformOnBlur ? transformOnBlur(watchValue) : watchValue;
+  const numVal = displayVal ? parseFloat(displayVal) : null;
   const out = isOut(numVal, field, thresholds);
   const regProps = register(name);
   return (
