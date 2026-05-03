@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Settings, Save, RotateCcw, Clock, ChevronDown } from "lucide-react";
+import { Settings, Save, RotateCcw, Clock, ChevronDown, Activity } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -170,7 +170,10 @@ export default function SettingsPage() {
             onClick={() => setVitalsOpen((p) => !p)}
             className="w-full flex items-center justify-between px-5 py-4 text-left"
           >
-            <h2 className="font-bold text-gray-700">バイタル基準値</h2>
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-primary" />
+              <h2 className="font-bold text-gray-700">バイタル基準値</h2>
+            </div>
             <ChevronDown
               className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${vitalsOpen ? "rotate-180" : ""}`}
             />
