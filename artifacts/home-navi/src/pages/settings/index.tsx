@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Settings, Save, RotateCcw, Clock } from "lucide-react";
+import { Settings, Save, RotateCcw, Clock, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -63,6 +63,8 @@ export default function SettingsPage() {
   const updateThresholdsMutation = useUpdateVitalThresholds();
   const [form, setForm] = useState<FormState>(toFormState(DEFAULT_THRESHOLDS));
   const [isDirty, setIsDirty] = useState(false);
+  const [vitalsOpen, setVitalsOpen] = useState(true);
+  const [mealTimesOpen, setMealTimesOpen] = useState(true);
 
   useEffect(() => {
     if (savedThresholds) {
@@ -163,152 +165,174 @@ export default function SettingsPage() {
 
         {/* バイタル基準値 */}
         <Card>
-          <CardContent className="p-5 space-y-5">
-            <div className="flex items-center justify-between">
-              <h2 className="font-bold text-gray-700">バイタル基準値</h2>
-              <button
-                onClick={handleReset}
-                className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-                デフォルトに戻す
-              </button>
-            </div>
+          <button
+            type="button"
+            onClick={() => setVitalsOpen((p) => !p)}
+            className="w-full flex items-center justify-between px-5 py-4 text-left"
+          >
+            <h2 className="font-bold text-gray-700">バイタル基準値</h2>
+            <ChevronDown
+              className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${vitalsOpen ? "rotate-180" : ""}`}
+            />
+          </button>
 
-            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
-              この範囲を外れた値は <span className="font-bold text-red-600">要再測定</span> として記録されます。全画面で共通の基準値が使用されます。
-            </p>
-
-            {isThresholdsLoading ? (
-              <div className="space-y-4">
-                {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
+          {vitalsOpen && (
+            <CardContent className="px-5 pb-5 pt-0 space-y-5">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100 flex-1">
+                  この範囲を外れた値は <span className="font-bold text-red-600">要再測定</span> として記録されます。全画面で共通の基準値が使用されます。
+                </p>
+                <button
+                  onClick={handleReset}
+                  className="ml-3 shrink-0 flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  デフォルト
+                </button>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {(Object.keys(THRESHOLD_LABELS) as ThresholdKey[]).map((key) => {
-                  const { label, unit } = THRESHOLD_LABELS[key];
-                  return (
-                    <div key={key} className="space-y-1.5">
-                      <Label className="text-sm font-medium text-gray-700">
-                        {label}
-                        <span className="ml-1 text-xs text-gray-400 font-normal">({unit})</span>
-                      </Label>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1">
-                          <Label className="text-xs text-gray-400 mb-1 block">最小値（下限）</Label>
-                          <Input
-                            type="number"
-                            step={THRESHOLD_LABELS[key].step}
-                            value={form[key].min}
-                            onChange={(e) => handleChange(key, "min", e.target.value)}
-                            className="h-10 text-base"
-                          />
+
+              {isThresholdsLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {(Object.keys(THRESHOLD_LABELS) as ThresholdKey[]).map((key) => {
+                    const { label, unit } = THRESHOLD_LABELS[key];
+                    return (
+                      <div key={key} className="space-y-1.5">
+                        <Label className="text-sm font-medium text-gray-700">
+                          {label}
+                          <span className="ml-1 text-xs text-gray-400 font-normal">({unit})</span>
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1">
+                            <Label className="text-xs text-gray-400 mb-1 block">最小値（下限）</Label>
+                            <Input
+                              type="number"
+                              step={THRESHOLD_LABELS[key].step}
+                              value={form[key].min}
+                              onChange={(e) => handleChange(key, "min", e.target.value)}
+                              className="h-10 text-base"
+                            />
+                          </div>
+                          <span className="text-gray-400 mt-5">〜</span>
+                          <div className="flex-1">
+                            <Label className="text-xs text-gray-400 mb-1 block">最大値（上限）</Label>
+                            <Input
+                              type="number"
+                              step={THRESHOLD_LABELS[key].step}
+                              value={form[key].max}
+                              onChange={(e) => handleChange(key, "max", e.target.value)}
+                              className="h-10 text-base"
+                            />
+                          </div>
+                          <span className="text-gray-400 mt-5 text-xs w-8 shrink-0">{unit}</span>
                         </div>
-                        <span className="text-gray-400 mt-5">〜</span>
-                        <div className="flex-1">
-                          <Label className="text-xs text-gray-400 mb-1 block">最大値（上限）</Label>
-                          <Input
-                            type="number"
-                            step={THRESHOLD_LABELS[key].step}
-                            value={form[key].max}
-                            onChange={(e) => handleChange(key, "max", e.target.value)}
-                            className="h-10 text-base"
-                          />
-                        </div>
-                        <span className="text-gray-400 mt-5 text-xs w-8 shrink-0">{unit}</span>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              )}
 
-            <Button
-              onClick={handleSave}
-              disabled={!isDirty || updateThresholdsMutation.isPending || isThresholdsLoading}
-              className="w-full h-11 font-bold gap-2"
-            >
-              <Save className="h-4 w-4" />
-              {updateThresholdsMutation.isPending ? "保存中..." : "基準値を保存"}
-            </Button>
-          </CardContent>
+              <Button
+                onClick={handleSave}
+                disabled={!isDirty || updateThresholdsMutation.isPending || isThresholdsLoading}
+                className="w-full h-11 font-bold gap-2"
+              >
+                <Save className="h-4 w-4" />
+                {updateThresholdsMutation.isPending ? "保存中..." : "基準値を保存"}
+              </Button>
+            </CardContent>
+          )}
         </Card>
 
         {/* 食事時間帯 */}
         <Card>
-          <CardContent className="p-5 space-y-5">
+          <button
+            type="button"
+            onClick={() => setMealTimesOpen((p) => !p)}
+            className="w-full flex items-center justify-between px-5 py-4 text-left"
+          >
             <div className="flex items-center gap-2">
-              <Clock className="h-4.5 w-4.5 text-orange-500" />
+              <Clock className="h-4 w-4 text-orange-500" />
               <h2 className="font-bold text-gray-700">食事時間帯</h2>
             </div>
+            <ChevronDown
+              className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${mealTimesOpen ? "rotate-180" : ""}`}
+            />
+          </button>
 
-            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
-              各食事の入力可能な時間帯を設定してください。この時間帯以外は当日の入力がロックされます。
-            </p>
+          {mealTimesOpen && (
+            <CardContent className="px-5 pb-5 pt-0 space-y-5">
+              <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
+                各食事の入力可能な時間帯を設定してください。この時間帯以外は当日の入力がロックされます。
+              </p>
 
-            {isMealTimesLoading ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {(["朝食", "昼食", "夕食"] as MealType[]).map((meal) => (
-                  <div key={meal} className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-gray-700 w-10">{meal}</span>
-                      <span className="text-xs text-gray-400">
-                        {draftMealTimes[meal].start}:00 〜 {draftMealTimes[meal].end}:59
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1">
-                        <Label className="text-xs text-gray-500 mb-1 block">開始時刻</Label>
-                        <Select
-                          value={String(draftMealTimes[meal].start)}
-                          onValueChange={(v) => updateMealHour(meal, "start", Number(v))}
-                        >
-                          <SelectTrigger className="h-10">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="max-h-48">
-                            {Array.from({ length: 24 }, (_, i) => (
-                              <SelectItem key={i} value={String(i)}>{i}:00</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+              {isMealTimesLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {(["朝食", "昼食", "夕食"] as MealType[]).map((meal) => (
+                    <div key={meal} className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-gray-700 w-10">{meal}</span>
+                        <span className="text-xs text-gray-400">
+                          {draftMealTimes[meal].start}:00 〜 {draftMealTimes[meal].end}:59
+                        </span>
                       </div>
-                      <span className="text-gray-400 mt-4">〜</span>
-                      <div className="flex-1">
-                        <Label className="text-xs text-gray-500 mb-1 block">終了時刻</Label>
-                        <Select
-                          value={String(draftMealTimes[meal].end)}
-                          onValueChange={(v) => updateMealHour(meal, "end", Number(v))}
-                        >
-                          <SelectTrigger className="h-10">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="max-h-48">
-                            {Array.from({ length: 24 }, (_, i) => (
-                              <SelectItem key={i} value={String(i)}>{i}:59</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <Label className="text-xs text-gray-500 mb-1 block">開始時刻</Label>
+                          <Select
+                            value={String(draftMealTimes[meal].start)}
+                            onValueChange={(v) => updateMealHour(meal, "start", Number(v))}
+                          >
+                            <SelectTrigger className="h-10">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-48">
+                              {Array.from({ length: 24 }, (_, i) => (
+                                <SelectItem key={i} value={String(i)}>{i}:00</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <span className="text-gray-400 mt-4">〜</span>
+                        <div className="flex-1">
+                          <Label className="text-xs text-gray-500 mb-1 block">終了時刻</Label>
+                          <Select
+                            value={String(draftMealTimes[meal].end)}
+                            onValueChange={(v) => updateMealHour(meal, "end", Number(v))}
+                          >
+                            <SelectTrigger className="h-10">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-48">
+                              {Array.from({ length: 24 }, (_, i) => (
+                                <SelectItem key={i} value={String(i)}>{i}:59</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
 
-            <Button
-              onClick={() => saveMealTimesMutation.mutate(draftMealTimes)}
-              disabled={!isMealTimesDirty || saveMealTimesMutation.isPending || isMealTimesLoading}
-              className="w-full h-11 font-bold gap-2"
-            >
-              <Save className="h-4 w-4" />
-              {saveMealTimesMutation.isPending ? "保存中..." : "食事時間帯を保存"}
-            </Button>
-          </CardContent>
+              <Button
+                onClick={() => saveMealTimesMutation.mutate(draftMealTimes)}
+                disabled={!isMealTimesDirty || saveMealTimesMutation.isPending || isMealTimesLoading}
+                className="w-full h-11 font-bold gap-2"
+              >
+                <Save className="h-4 w-4" />
+                {saveMealTimesMutation.isPending ? "保存中..." : "食事時間帯を保存"}
+              </Button>
+            </CardContent>
+          )}
         </Card>
       </div>
     </Layout>
