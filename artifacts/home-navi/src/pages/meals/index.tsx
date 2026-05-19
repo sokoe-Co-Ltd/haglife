@@ -89,8 +89,11 @@ function getMeal(map: Record<string, Meal>, residentId: number, type: MealType):
 const STATUS_SORT: Record<MealStatus, number> = { "未記録": 0, "要確認": 1, "確認OK": 2 };
 
 function MealStatusCell({
-  meal, onClick, locked, disabled,
-}: { meal: Meal | undefined; onClick?: () => void; locked?: boolean; disabled?: boolean }) {
+  meal, onClick, locked, disabled, loading,
+}: { meal: Meal | undefined; onClick?: () => void; locked?: boolean; disabled?: boolean; loading?: boolean }) {
+  if (loading) {
+    return <div className="w-full rounded-lg py-2 px-1 flex justify-center"><Skeleton className="h-6 w-14 rounded" /></div>;
+  }
   const status = deriveMealStatus(meal);
   const base =
     "w-full rounded-lg py-2 px-1 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40";
@@ -325,8 +328,9 @@ interface MobileMealCardProps {
   dateIsToday: boolean;
   mealTimeSettings: MealTimeSettings;
   showAllRecords: boolean;
+  mealsLoading?: boolean;
 }
-function MobileMealCard({ resident, mealMap, activeMealType, onEdit, dateIsToday, mealTimeSettings, showAllRecords }: MobileMealCardProps) {
+function MobileMealCard({ resident, mealMap, activeMealType, onEdit, dateIsToday, mealTimeSettings, showAllRecords, mealsLoading }: MobileMealCardProps) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
@@ -358,7 +362,7 @@ function MobileMealCard({ resident, mealMap, activeMealType, onEdit, dateIsToday
               key={t}
               type="button"
               onClick={() => !locked && onEdit(t)}
-              disabled={locked}
+              disabled={locked || mealsLoading}
               className={`rounded-xl p-2 text-center transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 ${
                 locked
                   ? "bg-gray-50 opacity-50 cursor-not-allowed"
@@ -370,7 +374,9 @@ function MobileMealCard({ resident, mealMap, activeMealType, onEdit, dateIsToday
               <div className={`text-xs font-bold mb-1 flex items-center justify-center gap-0.5 ${locked ? "text-gray-400" : isActive ? "text-primary" : "text-gray-500"}`}>
                 {t[0]}{locked && <Lock className="h-2.5 w-2.5" />}
               </div>
-              {status === "未記録" ? (
+              {mealsLoading ? (
+                <Skeleton className="h-5 w-10 mx-auto rounded" />
+              ) : status === "未記録" ? (
                 <span className={`inline-flex px-1.5 py-0.5 rounded text-xs font-bold ${locked ? "border border-gray-300 text-gray-400" : "border border-orange-400 text-orange-500"}`}>未記録</span>
               ) : status === "要確認" ? (
                 <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-600">
@@ -609,7 +615,7 @@ export default function MealsList() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {isLoading ? (
+                  {isResidentsLoading ? (
                     Array.from({ length: 6 }).map((_, i) => (
                       <TableRow key={i} className="border-b border-gray-50">
                         <TableCell><Skeleton className="h-4 w-8" /></TableCell>
@@ -647,6 +653,7 @@ export default function MealsList() {
                                   onClick={mealEnabled && !locked ? () => openEdit(resident, t) : undefined}
                                   locked={locked && mealEnabled}
                                   disabled={!mealEnabled}
+                                  loading={isMealsLoading}
                                 />
                               </TableCell>
                             );
@@ -706,7 +713,7 @@ export default function MealsList() {
             </div>
           )}
 
-          {isLoading ? (
+          {isResidentsLoading ? (
             Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4">
                 <Skeleton className="h-4 w-32 mb-3" />
@@ -730,6 +737,7 @@ export default function MealsList() {
                 dateIsToday={dateIsToday}
                 mealTimeSettings={mealTimeSettings}
                 showAllRecords={showAllRecords}
+                mealsLoading={isMealsLoading}
               />
             ))
           )}
