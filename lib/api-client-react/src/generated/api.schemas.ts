@@ -897,6 +897,127 @@ export interface VitalThresholds {
   spo2: ThresholdRange;
 }
 
+export type ServiceTypeCategory =
+  (typeof ServiceTypeCategory)[keyof typeof ServiceTypeCategory];
+
+export const ServiceTypeCategory = {
+  body: "body",
+  life: "life",
+  bathing: "bathing",
+  toileting: "toileting",
+  accompaniment: "accompaniment",
+  meal: "meal",
+  cleaning: "cleaning",
+  other: "other",
+} as const;
+
+export interface ServiceType {
+  id: string;
+  name: string;
+  shortLabel: string;
+  category: ServiceTypeCategory;
+  durationMinutes: number;
+  unitPrice?: number | null;
+  color?: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ServiceTypeCreateCategory =
+  (typeof ServiceTypeCreateCategory)[keyof typeof ServiceTypeCreateCategory];
+
+export const ServiceTypeCreateCategory = {
+  body: "body",
+  life: "life",
+  bathing: "bathing",
+  toileting: "toileting",
+  accompaniment: "accompaniment",
+  meal: "meal",
+  cleaning: "cleaning",
+  other: "other",
+} as const;
+
+export interface ServiceTypeCreate {
+  name: string;
+  shortLabel: string;
+  category: ServiceTypeCreateCategory;
+  durationMinutes: number;
+  unitPrice?: number | null;
+  color?: string | null;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
+export type ServiceTypeUpdateCategory =
+  (typeof ServiceTypeUpdateCategory)[keyof typeof ServiceTypeUpdateCategory];
+
+export const ServiceTypeUpdateCategory = {
+  body: "body",
+  life: "life",
+  bathing: "bathing",
+  toileting: "toileting",
+  accompaniment: "accompaniment",
+  meal: "meal",
+  cleaning: "cleaning",
+  other: "other",
+} as const;
+
+export interface ServiceTypeUpdate {
+  name?: string;
+  shortLabel?: string;
+  category?: ServiceTypeUpdateCategory;
+  durationMinutes?: number;
+  unitPrice?: number | null;
+  color?: string | null;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
+export interface VisitConflict {
+  cellAId: number;
+  cellBId: number;
+  staffId?: number | null;
+  aStart: string;
+  aEnd: string;
+  bStart: string;
+  bEnd: string;
+}
+
+export interface RouteSheetCellData {
+  id: number;
+  routeSheetRowId: number;
+  startTime: string;
+  endTime: string;
+  isBreak: boolean;
+  residentName?: string | null;
+  serviceLabel?: string | null;
+  notes?: string | null;
+  residentId?: number | null;
+  serviceTypeId?: string | null;
+}
+
+export interface RouteSheetRowData {
+  id: number;
+  routeSheetId: number;
+  staffName?: string | null;
+  shiftType?: string | null;
+  sortOrder: number;
+  staffId?: number | null;
+  cells?: RouteSheetCellData[];
+}
+
+export interface RouteSheetResponse {
+  id?: number;
+  date?: string;
+  headerNote?: string | null;
+  dayServiceNote?: string | null;
+  specialNote?: string | null;
+  rows?: RouteSheetRowData[];
+  conflicts?: VisitConflict[];
+}
+
 export type ListResidentsParams = {
   visible_only?: boolean;
 };
@@ -986,4 +1107,12 @@ export type ListBathReportsParams = {
 
 export type ListInsurancesParams = {
   resident_id: number;
+};
+
+export type ListServiceTypesParams = {
+  isActive?: boolean;
+};
+
+export type GetRouteSheetParams = {
+  date: string;
 };

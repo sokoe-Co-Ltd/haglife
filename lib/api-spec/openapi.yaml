@@ -33,6 +33,10 @@ tags:
   - name: dashboard
   - name: settings
     description: Dashboard summaries
+  - name: service-types
+    description: Visit service type master
+  - name: route-sheets
+    description: Route sheet (visit schedule)
 
 paths:
   /healthz:
@@ -1106,6 +1110,125 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/VitalThresholds"
+
+  # ── Service Types ────────────────────────────────────────────────
+  /service-types:
+    get:
+      operationId: listServiceTypes
+      tags: [service-types]
+      summary: List all service types
+      parameters:
+        - in: query
+          name: isActive
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServiceType"
+    post:
+      operationId: createServiceType
+      tags: [service-types]
+      summary: Create a service type
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceTypeCreate"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceType"
+
+  /service-types/{id}:
+    get:
+      operationId: getServiceType
+      tags: [service-types]
+      summary: Get a service type
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceType"
+        "404":
+          description: Not Found
+    patch:
+      operationId: updateServiceType
+      tags: [service-types]
+      summary: Update a service type
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceTypeUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceType"
+    delete:
+      operationId: deleteServiceType
+      tags: [service-types]
+      summary: Delete a service type
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: No Content
+
+  # ── Route Sheets ─────────────────────────────────────────────────
+  /route-sheets:
+    get:
+      operationId: getRouteSheet
+      tags: [route-sheets]
+      summary: Get route sheet for a date
+      parameters:
+        - in: query
+          name: date
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouteSheetResponse"
 
 components:
   schemas:
@@ -2250,3 +2373,191 @@ components:
         spo2:
           $ref: "#/components/schemas/ThresholdRange"
       required: [temperature, bpSystolic, bpDiastolic, pulse, spo2]
+
+    # ── Service Types ──────────────────────────────────────────────
+    ServiceType:
+      type: object
+      required: [id, name, shortLabel, category, durationMinutes, sortOrder, isActive, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        shortLabel:
+          type: string
+        category:
+          type: string
+          enum: [body, life, bathing, toileting, accompaniment, meal, cleaning, other]
+        durationMinutes:
+          type: integer
+        unitPrice:
+          type: integer
+          nullable: true
+        color:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ServiceTypeCreate:
+      type: object
+      required: [name, shortLabel, category, durationMinutes]
+      properties:
+        name:
+          type: string
+        shortLabel:
+          type: string
+        category:
+          type: string
+          enum: [body, life, bathing, toileting, accompaniment, meal, cleaning, other]
+        durationMinutes:
+          type: integer
+        unitPrice:
+          type: integer
+          nullable: true
+        color:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+          default: 0
+        isActive:
+          type: boolean
+          default: true
+
+    ServiceTypeUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        shortLabel:
+          type: string
+        category:
+          type: string
+          enum: [body, life, bathing, toileting, accompaniment, meal, cleaning, other]
+        durationMinutes:
+          type: integer
+        unitPrice:
+          type: integer
+          nullable: true
+        color:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+        isActive:
+          type: boolean
+
+    # ── Route Sheets ───────────────────────────────────────────────
+    VisitConflict:
+      type: object
+      required: [cellAId, cellBId, aStart, aEnd, bStart, bEnd]
+      properties:
+        cellAId:
+          type: integer
+        cellBId:
+          type: integer
+        staffId:
+          type: integer
+          nullable: true
+        aStart:
+          type: string
+          example: "10:00:00"
+        aEnd:
+          type: string
+          example: "10:30:00"
+        bStart:
+          type: string
+          example: "10:15:00"
+        bEnd:
+          type: string
+          example: "10:45:00"
+
+    RouteSheetCellData:
+      type: object
+      required: [id, routeSheetRowId, startTime, endTime, isBreak]
+      properties:
+        id:
+          type: integer
+        routeSheetRowId:
+          type: integer
+        startTime:
+          type: string
+        endTime:
+          type: string
+        isBreak:
+          type: boolean
+        residentName:
+          type: string
+          nullable: true
+        serviceLabel:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        residentId:
+          type: integer
+          nullable: true
+        serviceTypeId:
+          type: string
+          nullable: true
+
+    RouteSheetRowData:
+      type: object
+      required: [id, routeSheetId, sortOrder]
+      properties:
+        id:
+          type: integer
+        routeSheetId:
+          type: integer
+        staffName:
+          type: string
+          nullable: true
+        shiftType:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+        staffId:
+          type: integer
+          nullable: true
+        cells:
+          type: array
+          items:
+            $ref: "#/components/schemas/RouteSheetCellData"
+
+    RouteSheetResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        date:
+          type: string
+          format: date
+        headerNote:
+          type: string
+          nullable: true
+        dayServiceNote:
+          type: string
+          nullable: true
+        specialNote:
+          type: string
+          nullable: true
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/RouteSheetRowData"
+        conflicts:
+          type: array
+          items:
+            $ref: "#/components/schemas/VisitConflict"

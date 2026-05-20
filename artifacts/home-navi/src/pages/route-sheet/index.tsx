@@ -11,7 +11,9 @@ import {
   useListDayServices,
   useToggleDayServicePrepared,
   getListDayServicesQueryKey,
+  useListServiceTypes,
 } from "@workspace/api-client-react";
+import { ConflictBanner } from "@/components/route-sheet/ConflictBanner";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -74,6 +76,15 @@ const gridBg = {
 };
 
 // ── Types ──────────────────────────────────────────────────────────────────────
+type VisitConflictItem = {
+  cellAId: number;
+  cellBId: number;
+  staffId?: number | null;
+  aStart: string;
+  aEnd: string;
+  bStart: string;
+  bEnd: string;
+};
 type SheetCell = {
   id?: number;
   startTime: string;
@@ -82,12 +93,15 @@ type SheetCell = {
   residentName?: string | null;
   serviceLabel?: string | null;
   notes?: string | null;
+  residentId?: number | null;
+  serviceTypeId?: string | null;
 };
 type SheetRow = {
   id?: number;
   staffName: string;
   shiftType: string;
   sortOrder: number;
+  staffId?: number | null;
   cells: SheetCell[];
 };
 type RouteSheetData = {
@@ -97,6 +111,7 @@ type RouteSheetData = {
   dayServiceNote?: string | null;
   specialNote?: string | null;
   rows: SheetRow[];
+  conflicts?: VisitConflictItem[];
 };
 interface CellModalState {
   rowIndex: number;
@@ -140,6 +155,13 @@ function emptySheet(date: string): RouteSheetData {
 function defaultRows(): SheetRow[] {
   return DEFAULT_SHIFTS.map((s) => ({ staffName: "", shiftType: s.shiftType, sortOrder: s.sortOrder, cells: [] }));
 }
+function addMinutes(hhmm: string, mins: number): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const total = h * 60 + m + mins;
+  const nh = Math.floor(total / 60) % 24;
+  const nm = total % 60;
+  return `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
+}
 
 // ── API ────────────────────────────────────────────────────────────────────────
 async function fetchSheet(date: string): Promise<RouteSheetData | null> {
@@ -158,21 +180,24 @@ async function saveSheet(date: string, data: Omit<RouteSheetData, "id" | "date">
 }
 
 // ── CellBlock ──────────────────────────────────────────────────────────────────
-function CellBlock({ cell, onClick }: { cell: SheetCell; onClick: () => void }) {
+function CellBlock({ cell, onClick, isConflict }: { cell: SheetCell; onClick: () => void; isConflict?: boolean }) {
   return (
     <button
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       style={{ left: cellLeft(cell.startTime), width: cellWidth(cell.startTime, cell.endTime) }}
-      className={`absolute top-0.5 bottom-0.5 border rounded text-left overflow-hidden px-1 hover:opacity-80 transition-opacity cursor-pointer z-10 ${cellBg(cell)}`}
+      className={`absolute top-0.5 bottom-0.5 border rounded text-left overflow-hidden px-1 hover:opacity-80 transition-opacity cursor-pointer z-10 ${cellBg(cell)} ${isConflict ? "ring-2 ring-red-500 ring-offset-1 z-20" : ""}`}
     >
       {cell.isBreak ? (
         <span className="flex items-center gap-0.5 text-[9px] font-bold h-full">
           <Coffee className="h-2.5 w-2.5 shrink-0" />休憩
         </span>
       ) : (
-        <div className="flex flex-col justify-center h-full">
+        <div className="flex flex-col justify-center h-full relative">
           <div className="text-[9px] font-semibold leading-tight truncate">{cell.residentName || "─"}</div>
           <div className="text-[8px] opacity-75 leading-tight truncate whitespace-pre-line">{cell.serviceLabel}</div>
+          {isConflict && (
+            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full" />
+          )}
         </div>
       )}
     </button>
@@ -189,6 +214,7 @@ function CellModal({ state, residents, onSave, onDelete, onClose }: {
 }) {
   const [form, setForm] = useState<SheetCell>(state.cell);
   const set = (k: keyof SheetCell, v: any) => setForm((p) => ({ ...p, [k]: v }));
+  const { data: serviceTypes = [] } = useListServiceTypes({ isActive: true } as any);
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -213,32 +239,74 @@ function CellModal({ state, residents, onSave, onDelete, onClose }: {
           </div>
           {!form.isBreak && (
             <>
+              {/* 利用者選択 — マスタ選択 or フリーテキスト */}
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">利用者名</label>
+                <label className="text-xs text-gray-500 mb-1 block">利用者</label>
                 <select
                   autoFocus
-                  value={form.residentName ?? ""}
-                  onChange={(e) => set("residentName", e.target.value)}
+                  value={form.residentId?.toString() ?? ""}
+                  onChange={(e) => {
+                    const id = e.target.value ? parseInt(e.target.value) : null;
+                    const resident = id ? residents.find((r) => r.id === id) : null;
+                    setForm((p) => ({
+                      ...p,
+                      residentId: id,
+                      residentName: resident ? resident.name : p.residentName,
+                    }));
+                  }}
                   className="w-full h-8 px-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
                 >
-                  <option value="">利用者を選択...</option>
+                  <option value="">— 手入力 —</option>
                   {residents.map((r) => (
-                    <option key={r.id} value={r.name}>{r.name}</option>
+                    <option key={r.id} value={r.id}>{r.name}</option>
                   ))}
-                  {/* 既存データにリスト外の名前がある場合も表示できるよう保持 */}
-                  {form.residentName && !residents.some((r) => r.name === form.residentName) && (
-                    <option value={form.residentName}>{form.residentName}</option>
-                  )}
                 </select>
+                {!form.residentId && (
+                  <Input
+                    value={form.residentName ?? ""}
+                    onChange={(e) => set("residentName", e.target.value)}
+                    placeholder="利用者名（フリーテキスト）"
+                    className="h-8 text-sm mt-1"
+                  />
+                )}
               </div>
+              {/* サービス種別 — マスタ選択 or フリーテキスト */}
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">サービス種別</label>
-                <Input
-                  value={form.serviceLabel ?? ""}
-                  onChange={(e) => set("serviceLabel", e.target.value)}
-                  placeholder="身０ など"
-                  className="h-8 text-sm"
-                />
+                <select
+                  value={form.serviceTypeId ?? ""}
+                  onChange={(e) => {
+                    const id = e.target.value || null;
+                    const st = id ? (serviceTypes as any[]).find((s) => s.id === id) : null;
+                    setForm((p) => ({
+                      ...p,
+                      serviceTypeId: id,
+                      serviceLabel: st ? st.shortLabel : p.serviceLabel,
+                      endTime: (st && p.startTime) ? addMinutes(p.startTime, st.durationMinutes) : p.endTime,
+                    }));
+                  }}
+                  className="w-full h-8 px-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                >
+                  <option value="">— 手入力 —</option>
+                  {(serviceTypes as any[]).map((st) => (
+                    <option key={st.id} value={st.id}>
+                      {st.name}（{st.durationMinutes}分）
+                    </option>
+                  ))}
+                </select>
+                {!form.serviceTypeId && (
+                  <Input
+                    value={form.serviceLabel ?? ""}
+                    onChange={(e) => set("serviceLabel", e.target.value)}
+                    placeholder="身０ など"
+                    className="h-8 text-sm mt-1"
+                  />
+                )}
+                {form.serviceTypeId && (
+                  <p className="text-[10px] text-gray-400 mt-0.5">
+                    略称: {(serviceTypes as any[]).find((s) => s.id === form.serviceTypeId)?.shortLabel} ／ 終了時刻自動計算済み
+                  </p>
+                )}
               </div>
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">メモ</label>
@@ -287,14 +355,16 @@ export default function RouteSheetPage() {
     (s) => Array.isArray(s.usageDays) && s.usageDays.includes(todayDow)
   );
   function handleTogglePrepared(id: number) {
-    togglePrepared.mutate({ data: { id } }, {
+    togglePrepared.mutate({ id } as any, {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: getListDayServicesQueryKey() }),
     });
   }
 
   // ── Residents list ────────────────────────────────────────────────────────
   const { data: allResidents = [] } = useListResidents();
-  const residents = allResidents.filter((r) => !r.movedOutAt);
+  const residents: { id: number; name: string }[] = (allResidents as any[])
+    .filter((r) => !r.movedOutAt)
+    .map((r) => ({ id: r.id as number, name: `${r.lastName} ${r.firstName}` }));
 
   // ── Local state ──────────────────────────────────────────────────────────
   const [localSheet, setLocalSheet] = useState<RouteSheetData | null>(null);
@@ -318,6 +388,23 @@ export default function RouteSheetPage() {
     ...rawSheet,
     rows: rawSheet.rows.length > 0 ? rawSheet.rows : defaultRows(),
   };
+
+  // Conflicts come from the last server response (loaded), not from local edits
+  const conflicts: VisitConflictItem[] = (loaded as any)?.conflicts ?? [];
+  const conflictCellIds = new Set<number>();
+  conflicts.forEach((c) => { conflictCellIds.add(c.cellAId); conflictCellIds.add(c.cellBId); });
+
+  // Build lookup maps for ConflictBanner
+  const cellsById: Record<number, { residentName?: string | null; startTime: string }> = {};
+  const rowsByCellId: Record<number, { staffName?: string | null }> = {};
+  sheet.rows.forEach((row) => {
+    row.cells.forEach((cell) => {
+      if (cell.id) {
+        cellsById[cell.id] = { residentName: cell.residentName, startTime: cell.startTime };
+        rowsByCellId[cell.id] = { staffName: row.staffName };
+      }
+    });
+  });
 
   function mark(updated: RouteSheetData) {
     setLocalSheet(updated);
@@ -513,6 +600,9 @@ export default function RouteSheetPage() {
           </div>
         </div>
 
+        {/* ── Conflict banner ── */}
+        <ConflictBanner conflicts={conflicts} cellsById={cellsById} rowsByCellId={rowsByCellId} />
+
         {/* ── Time grid ── */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           {isLoading ? (
@@ -611,7 +701,12 @@ export default function RouteSheetPage() {
                           style={{ height: 40, width: TOTAL_W, ...gridBg }}
                         >
                           {row.cells.map((cell, ci) => (
-                            <CellBlock key={ci} cell={cell} onClick={() => openEditCell(ri, ci)} />
+                            <CellBlock
+                              key={ci}
+                              cell={cell}
+                              onClick={() => openEditCell(ri, ci)}
+                              isConflict={cell.id !== undefined && conflictCellIds.has(cell.id)}
+                            />
                           ))}
                         </div>
                       </td>

@@ -1539,3 +1539,205 @@ export const UpdateVitalThresholdsResponse = zod.object({
     max: zod.number(),
   }),
 });
+
+/**
+ * @summary List all service types
+ */
+export const ListServiceTypesQueryParams = zod.object({
+  isActive: zod.coerce.boolean().optional(),
+});
+
+export const ListServiceTypesResponseItem = zod.object({
+  id: zod.string().uuid(),
+  name: zod.string(),
+  shortLabel: zod.string(),
+  category: zod.enum([
+    "body",
+    "life",
+    "bathing",
+    "toileting",
+    "accompaniment",
+    "meal",
+    "cleaning",
+    "other",
+  ]),
+  durationMinutes: zod.number(),
+  unitPrice: zod.number().nullish(),
+  color: zod.string().nullish(),
+  sortOrder: zod.number(),
+  isActive: zod.boolean(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+export const ListServiceTypesResponse = zod.array(ListServiceTypesResponseItem);
+
+/**
+ * @summary Create a service type
+ */
+export const createServiceTypeBodySortOrderDefault = 0;
+export const createServiceTypeBodyIsActiveDefault = true;
+
+export const CreateServiceTypeBody = zod.object({
+  name: zod.string(),
+  shortLabel: zod.string(),
+  category: zod.enum([
+    "body",
+    "life",
+    "bathing",
+    "toileting",
+    "accompaniment",
+    "meal",
+    "cleaning",
+    "other",
+  ]),
+  durationMinutes: zod.number(),
+  unitPrice: zod.number().nullish(),
+  color: zod.string().nullish(),
+  sortOrder: zod.number().default(createServiceTypeBodySortOrderDefault),
+  isActive: zod.boolean().default(createServiceTypeBodyIsActiveDefault),
+});
+
+/**
+ * @summary Get a service type
+ */
+export const GetServiceTypeParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const GetServiceTypeResponse = zod.object({
+  id: zod.string().uuid(),
+  name: zod.string(),
+  shortLabel: zod.string(),
+  category: zod.enum([
+    "body",
+    "life",
+    "bathing",
+    "toileting",
+    "accompaniment",
+    "meal",
+    "cleaning",
+    "other",
+  ]),
+  durationMinutes: zod.number(),
+  unitPrice: zod.number().nullish(),
+  color: zod.string().nullish(),
+  sortOrder: zod.number(),
+  isActive: zod.boolean(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Update a service type
+ */
+export const UpdateServiceTypeParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const UpdateServiceTypeBody = zod.object({
+  name: zod.string().optional(),
+  shortLabel: zod.string().optional(),
+  category: zod
+    .enum([
+      "body",
+      "life",
+      "bathing",
+      "toileting",
+      "accompaniment",
+      "meal",
+      "cleaning",
+      "other",
+    ])
+    .optional(),
+  durationMinutes: zod.number().optional(),
+  unitPrice: zod.number().nullish(),
+  color: zod.string().nullish(),
+  sortOrder: zod.number().optional(),
+  isActive: zod.boolean().optional(),
+});
+
+export const UpdateServiceTypeResponse = zod.object({
+  id: zod.string().uuid(),
+  name: zod.string(),
+  shortLabel: zod.string(),
+  category: zod.enum([
+    "body",
+    "life",
+    "bathing",
+    "toileting",
+    "accompaniment",
+    "meal",
+    "cleaning",
+    "other",
+  ]),
+  durationMinutes: zod.number(),
+  unitPrice: zod.number().nullish(),
+  color: zod.string().nullish(),
+  sortOrder: zod.number(),
+  isActive: zod.boolean(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Delete a service type
+ */
+export const DeleteServiceTypeParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+/**
+ * @summary Get route sheet for a date
+ */
+export const GetRouteSheetQueryParams = zod.object({
+  date: zod.date(),
+});
+
+export const GetRouteSheetResponse = zod.object({
+  id: zod.number().optional(),
+  date: zod.coerce.date().optional(),
+  headerNote: zod.string().nullish(),
+  dayServiceNote: zod.string().nullish(),
+  specialNote: zod.string().nullish(),
+  rows: zod
+    .array(
+      zod.object({
+        id: zod.number(),
+        routeSheetId: zod.number(),
+        staffName: zod.string().nullish(),
+        shiftType: zod.string().nullish(),
+        sortOrder: zod.number(),
+        staffId: zod.number().nullish(),
+        cells: zod
+          .array(
+            zod.object({
+              id: zod.number(),
+              routeSheetRowId: zod.number(),
+              startTime: zod.string(),
+              endTime: zod.string(),
+              isBreak: zod.boolean(),
+              residentName: zod.string().nullish(),
+              serviceLabel: zod.string().nullish(),
+              notes: zod.string().nullish(),
+              residentId: zod.number().nullish(),
+              serviceTypeId: zod.string().nullish(),
+            }),
+          )
+          .optional(),
+      }),
+    )
+    .optional(),
+  conflicts: zod
+    .array(
+      zod.object({
+        cellAId: zod.number(),
+        cellBId: zod.number(),
+        staffId: zod.number().nullish(),
+        aStart: zod.string(),
+        aEnd: zod.string(),
+        bStart: zod.string(),
+        bEnd: zod.string(),
+      }),
+    )
+    .optional(),
+});

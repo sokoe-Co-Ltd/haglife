@@ -30,6 +30,7 @@ import StaffDetail from "./pages/staff/detail";
 import HealthDetail from "./pages/health/detail";
 import SettingsPage from "./pages/settings";
 import RouteSheetPage from "./pages/route-sheet/index";
+import ServiceTypesPage from "./pages/service-types";
 import { Layout } from "./components/layout";
 
 const PlaceholderPage = ({ title }: { title: string }) => (
@@ -74,6 +75,7 @@ export default function AppRouter() {
       <Route path="/staff/:id" component={StaffDetail} />
       <Route path="/health/:id" component={HealthDetail} />
       <Route path="/route-sheet" component={RouteSheetPage} />
+      <Route path="/service-types" component={ServiceTypesPage} />
       <Route path="/settings" component={SettingsPage} />
       <Route component={() => <PlaceholderPage title="見つかりません" />} />
     </Switch>

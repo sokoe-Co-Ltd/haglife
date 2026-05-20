@@ -10,3 +10,5 @@ export * from "./bathReports";
 export * from "./insurances";
 export * from "./facilitySettings";
 export * from "./routeSheets";
+export * from "./service-types";
+export * from "./views";

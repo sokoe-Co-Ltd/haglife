@@ -13,6 +13,7 @@ import insurancesRouter from "./insurances";
 import dashboardRouter from "./dashboard";
 import settingsRouter from "./settings";
 import routeSheetsRouter from "./routeSheets";
+import serviceTypesRouter from "./serviceTypes";
 import photosRouter from "./photos";
 import residentPhotosRouter from "./residentPhotos";
 import eliminationPhotosRouter from "./eliminationPhotos";
@@ -36,5 +37,6 @@ router.use(bathReportsRouter);
 router.use(insurancesRouter);
 router.use(settingsRouter);
 router.use(routeSheetsRouter);
+router.use(serviceTypesRouter);
 
 export default router;

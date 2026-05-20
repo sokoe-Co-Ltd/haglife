@@ -36,6 +36,7 @@ const NAV_ITEMS = [
   { href: "/day-services", label: "デイ準備物", icon: Briefcase },
   { href: "/bath-reports", label: "入浴報告", icon: Bath },
   { href: "/route-sheet", label: "ルート票", icon: Route },
+  { href: "/service-types", label: "サービス種別", icon: Settings },
   { href: "/staff", label: "職員一覧", icon: UserCircle },
   { href: "/residents/moved-out", label: "退去者情報", icon: DoorOpen },
   { href: "/settings", label: "設定", icon: Settings },

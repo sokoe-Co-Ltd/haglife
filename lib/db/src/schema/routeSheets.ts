@@ -23,6 +23,7 @@ export const routeSheetRowsTable = pgTable("route_sheet_rows", {
   staffName: text("staff_name").notNull(),
   shiftType: text("shift_type").notNull().default("日"),
   sortOrder: integer("sort_order").notNull().default(0),
+  staffId: integer("staff_id"),
 });
 
 export const routeSheetCellsTable = pgTable("route_sheet_cells", {
@@ -34,6 +35,8 @@ export const routeSheetCellsTable = pgTable("route_sheet_cells", {
   residentName: text("resident_name"),
   serviceLabel: text("service_label"),
   notes: text("notes"),
+  residentId: integer("resident_id"),
+  serviceTypeId: text("service_type_id"),
 });
 
 export type RouteSheet = typeof routeSheetsTable.$inferSelect;

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, desc } from "drizzle-orm";
-import { db, routeSheetsTable, routeSheetRowsTable, routeSheetCellsTable } from "@workspace/db";
+import { eq, desc, inArray } from "drizzle-orm";
+import { db, routeSheetsTable, routeSheetRowsTable, routeSheetCellsTable, visitConflictsView } from "@workspace/db";
 import { z } from "zod";
 
 const router: IRouter = Router();
@@ -13,6 +13,8 @@ const CellInput = z.object({
   residentName: z.string().nullable().optional(),
   serviceLabel: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
+  residentId: z.number().int().nullable().optional(),
+  serviceTypeId: z.string().nullable().optional(),
 });
 
 const RowInput = z.object({
@@ -20,6 +22,7 @@ const RowInput = z.object({
   staffName: z.string(),
   shiftType: z.string().default("日"),
   sortOrder: z.number().int().default(0),
+  staffId: z.number().int().nullable().optional(),
   cells: z.array(CellInput).default([]),
 });
 
@@ -53,7 +56,24 @@ async function buildSheet(sheetId: number) {
     })
   );
 
-  return { ...sheet, rows: rowsWithCells };
+  const conflicts = await db
+    .select()
+    .from(visitConflictsView)
+    .where(eq(visitConflictsView.routeSheetId, sheetId));
+
+  return {
+    ...sheet,
+    rows: rowsWithCells,
+    conflicts: conflicts.map((c) => ({
+      cellAId: c.cellAId,
+      cellBId: c.cellBId,
+      staffId: c.staffId,
+      aStart: c.aStart,
+      aEnd: c.aEnd,
+      bStart: c.bStart,
+      bEnd: c.bEnd,
+    })),
+  };
 }
 
 router.get("/route-sheets", async (req, res): Promise<void> => {
@@ -123,6 +143,7 @@ router.put("/route-sheets/:date", async (req, res): Promise<void> => {
       staffName: row.staffName,
       shiftType: row.shiftType,
       sortOrder: row.sortOrder ?? i,
+      staffId: row.staffId ?? null,
     }).returning();
 
     if (row.cells.length > 0) {
@@ -135,6 +156,8 @@ router.put("/route-sheets/:date", async (req, res): Promise<void> => {
           residentName: cell.residentName ?? null,
           serviceLabel: cell.serviceLabel ?? null,
           notes: cell.notes ?? null,
+          residentId: cell.residentId ?? null,
+          serviceTypeId: cell.serviceTypeId ?? null,
         }))
       );
     }
