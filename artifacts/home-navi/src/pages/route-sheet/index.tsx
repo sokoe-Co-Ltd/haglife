@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState } from "react";
 import { Layout } from "@/components/layout";
 import { useAppDate } from "@/contexts/AppDateContext";
 import { DayNav } from "@/components/date-nav";
@@ -6,6 +6,11 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import {
+  useListDayServices,
+  useToggleDayServicePrepared,
+  getListDayServicesQueryKey,
+} from "@workspace/api-client-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -18,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import {
   Plus, Trash2, Save, Printer, Pencil, Coffee, GripVertical,
+  CheckCircle2, Circle, ExternalLink,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -335,6 +341,20 @@ export default function RouteSheetPage() {
     queryFn: () => fetchSheet(dateStr),
   });
 
+  // ── Day services (linked) ─────────────────────────────────────────────────
+  const { data: allDayServices } = useListDayServices();
+  const togglePrepared = useToggleDayServicePrepared();
+  const DOW_JP = ["日", "月", "火", "水", "木", "金", "土"] as const;
+  const todayDow = DOW_JP[appDate.getDay()];
+  const todayServices = (allDayServices ?? []).filter(
+    (s) => Array.isArray(s.usageDays) && s.usageDays.includes(todayDow)
+  );
+  function handleTogglePrepared(id: number) {
+    togglePrepared.mutate({ data: { id } }, {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListDayServicesQueryKey() }),
+    });
+  }
+
   const [localSheet, setLocalSheet] = useState<RouteSheetData | null>(null);
   const [dirty, setDirty] = useState(false);
   const [cellModal, setCellModal] = useState<CellModalState | null>(null);
@@ -528,15 +548,78 @@ export default function RouteSheetPage() {
 
         {/* ── Day service + notes ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="bg-white rounded-xl border border-gray-200 p-3">
-            <div className="text-xs font-semibold text-gray-500 mb-1.5">デイサービス</div>
+          {/* デイサービス — linked to day-services data */}
+          <div className="bg-white rounded-xl border border-gray-200 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-500">
+                デイサービス
+                {todayServices.length > 0 && (
+                  <span className="ml-1.5 text-primary font-bold">{todayServices.length}名</span>
+                )}
+              </span>
+              <a
+                href="/day-services"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                <ExternalLink className="h-3 w-3" />詳細管理
+              </a>
+            </div>
+
+            {todayServices.length === 0 ? (
+              <p className="text-xs text-gray-400 py-1">本日のデイサービス予定はありません</p>
+            ) : (
+              <div className="space-y-1.5">
+                {todayServices.map((svc) => (
+                  <div
+                    key={svc.id}
+                    className={`flex items-start gap-2 rounded-lg p-2 border transition-colors ${
+                      svc.isPrepared ? "border-green-200 bg-green-50/60" : "border-gray-100 bg-gray-50/50"
+                    }`}
+                  >
+                    <button
+                      onClick={() => handleTogglePrepared(svc.id)}
+                      className={`mt-0.5 shrink-0 transition-colors ${
+                        svc.isPrepared ? "text-green-500 hover:text-green-600" : "text-gray-300 hover:text-primary/60"
+                      }`}
+                    >
+                      {svc.isPrepared
+                        ? <CheckCircle2 className="h-5 w-5" />
+                        : <Circle className="h-5 w-5" />}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-1.5 flex-wrap">
+                        <span className="text-xs font-bold text-gray-800">{svc.residentName}様</span>
+                        {svc.facilityName && (
+                          <span className="text-[10px] text-gray-400">{svc.facilityName}</span>
+                        )}
+                      </div>
+                      {svc.itemsToBring && (
+                        <p className="text-[10px] text-gray-500 mt-0.5">
+                          <span className="font-semibold">持参物：</span>{svc.itemsToBring}
+                        </p>
+                      )}
+                      {svc.itemLocations && (
+                        <p className="text-[10px] text-gray-400 mt-0.5">
+                          <span className="font-semibold">置き場所：</span>{svc.itemLocations}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Optional supplementary memo */}
             <Input
               value={sheet.dayServiceNote ?? ""}
               onChange={(e) => mark({ ...sheet, dayServiceNote: e.target.value })}
-              placeholder="担当者名・備考"
-              className="h-8 text-sm"
+              placeholder="担当者名・補足メモ"
+              className="h-7 text-xs"
             />
           </div>
+
           <div className="bg-white rounded-xl border border-gray-200 p-3">
             <div className="text-xs font-semibold text-gray-500 mb-1.5">特記事項</div>
             <Textarea
