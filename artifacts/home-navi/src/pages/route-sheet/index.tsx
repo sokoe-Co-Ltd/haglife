@@ -180,8 +180,9 @@ function CellBlock({ cell, onClick }: { cell: SheetCell; onClick: () => void }) 
 }
 
 // ── CellModal ──────────────────────────────────────────────────────────────────
-function CellModal({ state, onSave, onDelete, onClose }: {
+function CellModal({ state, residents, onSave, onDelete, onClose }: {
   state: CellModalState;
+  residents: { id: number; name: string }[];
   onSave: (ri: number, ci: number | null, cell: SheetCell) => void;
   onDelete: (ri: number, ci: number) => void;
   onClose: () => void;
@@ -214,13 +215,21 @@ function CellModal({ state, onSave, onDelete, onClose }: {
             <>
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">利用者名</label>
-                <Input
+                <select
                   autoFocus
                   value={form.residentName ?? ""}
                   onChange={(e) => set("residentName", e.target.value)}
-                  placeholder="山田 花子"
-                  className="h-8 text-sm"
-                />
+                  className="w-full h-8 px-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                >
+                  <option value="">利用者を選択...</option>
+                  {residents.map((r) => (
+                    <option key={r.id} value={r.name}>{r.name}</option>
+                  ))}
+                  {/* 既存データにリスト外の名前がある場合も表示できるよう保持 */}
+                  {form.residentName && !residents.some((r) => r.name === form.residentName) && (
+                    <option value={form.residentName}>{form.residentName}</option>
+                  )}
+                </select>
               </div>
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">サービス種別</label>
@@ -698,6 +707,7 @@ export default function RouteSheetPage() {
       {cellModal && (
         <CellModal
           state={cellModal}
+          residents={residents}
           onSave={saveCell}
           onDelete={deleteCell}
           onClose={() => setCellModal(null)}
