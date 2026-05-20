@@ -92,14 +92,12 @@ interface MonthlyViewProps {
 function MonthlyView({ mealsByDate, year, month, onEdit, onNewEntry }: MonthlyViewProps) {
   const monthStart = startOfMonth(new Date(year, month, 1));
   const monthEnd = endOfMonth(monthStart);
-  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const today = new Date();
+  const allDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  // 今日以前の日のみ表示（未来は不要）
+  const days = allDays.filter((d) => d <= today);
 
-  const daysWithData = days.filter((d) => {
-    const key = format(d, "yyyy-MM-dd");
-    return mealsByDate.has(key);
-  });
-
-  if (daysWithData.length === 0) {
+  if (days.length === 0) {
     return (
       <div className="py-12 text-center text-gray-400 text-sm">
         この月の記録はありません
@@ -107,9 +105,12 @@ function MonthlyView({ mealsByDate, year, month, onEdit, onNewEntry }: MonthlyVi
     );
   }
 
+  // 新しい日付順（今日→月初）
+  const sortedDays = [...days].reverse();
+
   return (
     <div className="space-y-3">
-      {daysWithData.map((day) => {
+      {sortedDays.map((day) => {
         const key = format(day, "yyyy-MM-dd");
         const dayMeals = mealsByDate.get(key) ?? [];
         const mealMap = Object.fromEntries(dayMeals.map((m) => [m.mealType, m]));
