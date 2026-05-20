@@ -7,6 +7,7 @@ import { ja } from "date-fns/locale";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import {
+  useListResidents,
   useListDayServices,
   useToggleDayServicePrepared,
   getListDayServicesQueryKey,
@@ -20,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Save, Printer, CheckCircle2, Circle, ExternalLink, Pencil, Trash2, Coffee,
+  UserRound, X,
 } from "lucide-react";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -281,6 +283,10 @@ export default function RouteSheetPage() {
     });
   }
 
+  // ── Residents list ────────────────────────────────────────────────────────
+  const { data: allResidents = [] } = useListResidents();
+  const residents = allResidents.filter((r) => !r.movedOutAt);
+
   // ── Local state ──────────────────────────────────────────────────────────
   const [localSheet, setLocalSheet] = useState<RouteSheetData | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -288,6 +294,7 @@ export default function RouteSheetPage() {
   const [dragOverRow, setDragOverRow] = useState<number | null>(null);
   const [editingName, setEditingName] = useState<number | null>(null);
   const [nameInput, setNameInput] = useState("");
+  const [selectedResident, setSelectedResident] = useState<{ id: number; name: string } | null>(null);
 
   // Reset local state on date change
   const prevDate = useRef(dateStr);
@@ -384,7 +391,7 @@ export default function RouteSheetPage() {
         startTime: minToTime(startMin),
         endTime: minToTime(endMin),
         isBreak: card.isBreak,
-        residentName: "",
+        residentName: card.isBreak ? "" : (selectedResident?.name ?? ""),
         serviceLabel: card.fullLabel,
       },
     });
@@ -431,25 +438,69 @@ export default function RouteSheetPage() {
         </div>
 
         {/* ── Service card palette ── */}
-        <div className="bg-white rounded-xl border border-gray-200 p-3">
-          <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">
-            サービスカード ─ ドラッグしてスタッフ行へ配置
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {SERVICE_CARDS.map((card) => (
-              <div
-                key={card.id}
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData("application/json", JSON.stringify(card));
-                  e.dataTransfer.effectAllowed = "copy";
-                }}
-                className={`cursor-grab active:cursor-grabbing border rounded-lg px-3 py-2 select-none text-center min-w-[76px] transition-transform hover:scale-105 active:scale-95 shadow-sm ${CARD_CLS[card.color]}`}
-              >
-                <div className="text-xs font-bold leading-tight">{card.label}</div>
-                <div className="text-[10px] opacity-60 mt-0.5">{card.durationMin}分</div>
+        <div className="bg-white rounded-xl border border-gray-200 p-3 space-y-3">
+          {/* ① 利用者選択 */}
+          <div>
+            <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
+              ① 訪問先の利用者を選択
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="relative">
+                <UserRound className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+                <select
+                  value={selectedResident?.id.toString() ?? ""}
+                  onChange={(e) => {
+                    if (!e.target.value) { setSelectedResident(null); return; }
+                    const id = parseInt(e.target.value);
+                    const r = residents.find((x) => x.id === id);
+                    if (r) setSelectedResident({ id: r.id, name: r.name });
+                  }}
+                  className="h-9 pl-8 pr-3 text-sm border border-input rounded-md bg-background appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30 min-w-[160px]"
+                >
+                  <option value="">利用者を選択...</option>
+                  {residents.map((r) => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </select>
               </div>
-            ))}
+              {selectedResident && (
+                <div className="flex items-center gap-1.5 bg-primary/10 text-primary border border-primary/20 rounded-full px-3 py-1">
+                  <span className="text-xs font-bold">{selectedResident.name}様</span>
+                  <button
+                    onClick={() => setSelectedResident(null)}
+                    className="text-primary/60 hover:text-primary ml-0.5"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ② サービスカード */}
+          <div>
+            <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
+              ② サービスカードをドラッグしてスタッフ行へ配置
+              {!selectedResident && (
+                <span className="ml-1.5 text-amber-500 normal-case">（利用者を先に選択するとスムーズです）</span>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {SERVICE_CARDS.map((card) => (
+                <div
+                  key={card.id}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("application/json", JSON.stringify(card));
+                    e.dataTransfer.effectAllowed = "copy";
+                  }}
+                  className={`cursor-grab active:cursor-grabbing border rounded-lg px-3 py-2 select-none text-center min-w-[76px] transition-transform hover:scale-105 active:scale-95 shadow-sm ${CARD_CLS[card.color]} ${selectedResident && !card.isBreak ? "ring-2 ring-primary/40 ring-offset-1" : ""}`}
+                >
+                  <div className="text-xs font-bold leading-tight">{card.label}</div>
+                  <div className="text-[10px] opacity-60 mt-0.5">{card.durationMin}分</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
