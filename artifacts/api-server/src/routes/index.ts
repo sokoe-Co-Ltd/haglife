@@ -12,6 +12,7 @@ import bathReportsRouter from "./bathReports";
 import insurancesRouter from "./insurances";
 import dashboardRouter from "./dashboard";
 import settingsRouter from "./settings";
+import routeSheetsRouter from "./routeSheets";
 import photosRouter from "./photos";
 import residentPhotosRouter from "./residentPhotos";
 import eliminationPhotosRouter from "./eliminationPhotos";
@@ -34,5 +35,6 @@ router.use(dayServicesRouter);
 router.use(bathReportsRouter);
 router.use(insurancesRouter);
 router.use(settingsRouter);
+router.use(routeSheetsRouter);
 
 export default router;
