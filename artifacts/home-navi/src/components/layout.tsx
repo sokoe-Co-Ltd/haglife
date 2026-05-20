@@ -3,6 +3,8 @@ import { Link, useLocation } from "wouter";
 import { OfflineBannerSpacer } from "@/components/OfflineBanner";
 import { useListHandoverNotes } from "@workspace/api-client-react";
 import { format } from "date-fns";
+import { DayNav } from "@/components/date-nav";
+import { useAppDate } from "@/contexts/AppDateContext";
 import {
   Home,
   FileText,
@@ -157,6 +159,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const { appDate, setAppDate } = useAppDate();
   const [dragProgress, setDragProgress] = useState<number | null>(null);
 
   const touchStartX = useRef(0);
@@ -285,11 +288,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </div>
 
               <div className="flex items-center gap-2">
-                {/* Date (desktop only) */}
-                <span className="hidden md:flex items-center gap-1 text-sm text-gray-500">
-                  <span className="text-base">📅</span>
-                  {formatDate()}
-                </span>
+                {/* Date (desktop only) — clickable to change app-wide date */}
+                <div className="hidden md:flex">
+                  <DayNav date={appDate} onChange={setAppDate} />
+                </div>
 
                 {/* Notification bell */}
                 <div className="relative">

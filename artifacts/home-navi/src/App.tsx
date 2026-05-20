@@ -5,6 +5,7 @@ import { Router as WouterRouter } from "wouter";
 import AppRouter from "./AppRouter";
 import { OfflineProvider } from "@/contexts/OfflineContext";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { AppDateProvider } from "@/contexts/AppDateContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,15 +19,17 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <OfflineProvider>
-        <TooltipProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <OfflineBanner />
-            <AppRouter />
-          </WouterRouter>
-          <Toaster />
-        </TooltipProvider>
-      </OfflineProvider>
+      <AppDateProvider>
+        <OfflineProvider>
+          <TooltipProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <OfflineBanner />
+              <AppRouter />
+            </WouterRouter>
+            <Toaster />
+          </TooltipProvider>
+        </OfflineProvider>
+      </AppDateProvider>
     </QueryClientProvider>
   );
 }

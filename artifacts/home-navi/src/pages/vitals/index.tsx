@@ -1,6 +1,6 @@
-import { useState } from "react";
 import { Layout } from "@/components/layout";
 import { useGetVitalsTodayStatus, useGetVitalThresholds } from "@workspace/api-client-react";
+import { useAppDate } from "@/contexts/AppDateContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Activity, AlertCircle, CheckCircle2, ChevronRight, Plus, FileDown } from "lucide-react";
 import { Link } from "wouter";
@@ -11,20 +11,6 @@ import { Button } from "@/components/ui/button";
 import { isTodayBirthday } from "@/lib/birthday";
 import { printVitalsPdf } from "@/lib/printVitalsPdf";
 
-const SESSION_KEY = "vitals-selected-date";
-
-function saveDate(d: Date) {
-  sessionStorage.setItem(SESSION_KEY, d.toISOString());
-}
-
-function loadDate(): Date {
-  const stored = sessionStorage.getItem(SESSION_KEY);
-  if (stored) {
-    const d = new Date(stored);
-    if (!isNaN(d.getTime())) return d;
-  }
-  return new Date();
-}
 
 function ResidentVitalCard({ status, dateStr }: { status: any; dateStr: string }) {
   const needsRecheck = status.needsRecheck;
@@ -91,11 +77,10 @@ function ResidentVitalCard({ status, dateStr }: { status: any; dateStr: string }
 }
 
 export default function VitalsList() {
-  const [date, setDate] = useState<Date>(loadDate);
+  const { appDate: date, setAppDate: setDate } = useAppDate();
   const dateStr = format(date, "yyyy-MM-dd");
 
   function handleDateChange(d: Date) {
-    saveDate(d);
     setDate(d);
   }
 

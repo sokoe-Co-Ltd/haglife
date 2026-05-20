@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useAppDate } from "@/contexts/AppDateContext";
 import { Layout } from "@/components/layout";
 import {
   useListHandoverNotes,
@@ -104,7 +105,7 @@ function NoteRow({ note, onStatusChange }: { note: any; onStatusChange: () => vo
 
 export default function HandoverList() {
   const [viewMode, setViewMode] = useState<ViewMode>("day");
-  const [date, setDate] = useState(new Date());
+  const { appDate: date, setAppDate: setDate } = useAppDate();
   const [monthYear, setMonthYear] = useState({ year: new Date().getFullYear(), month: new Date().getMonth() + 1 });
   const [activeTab, setActiveTab] = useState<Tab>("未対応");
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useAppDate } from "@/contexts/AppDateContext";
 import { Layout } from "@/components/layout";
 import { useCheckEliminationRound, useResetEliminationRound } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -153,7 +153,7 @@ function useRoundStatus(dateStr: string) {
 }
 
 export default function EliminationsList() {
-  const [date, setDate] = useState<Date>(() => new Date());
+  const { appDate: date, setAppDate: setDate } = useAppDate();
   const queryClient = useQueryClient();
   const dateStr = format(date, "yyyy-MM-dd");
   const dateIsToday = dateFnsIsToday(date);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useAppDate } from "@/contexts/AppDateContext";
 import { Layout } from "@/components/layout";
 import { useListBathReports } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,7 +12,7 @@ import { StaffMemoCard, InfoCard } from "@/components/PageRightPanel";
 import { isTodayBirthday } from "@/lib/birthday";
 
 export default function BathReportsList() {
-  const [date, setDate] = useState(new Date());
+  const { appDate: date, setAppDate: setDate } = useAppDate();
   const dateStr = format(date, "yyyy-MM-dd");
 
   const { data: reports, isLoading } = useListBathReports({ date: dateStr });

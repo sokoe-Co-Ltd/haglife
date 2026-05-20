@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useAppDate } from "@/contexts/AppDateContext";
 import { useLocation } from "wouter";
 import { Layout } from "@/components/layout";
 import { useListResidents, useListMeals } from "@workspace/api-client-react";
@@ -403,18 +404,8 @@ interface EditTarget {
   mealType: MealType;
 }
 
-const DATE_KEY = "meals-selected-date";
-
-function loadDate(): Date {
-  try {
-    const s = sessionStorage.getItem(DATE_KEY);
-    if (s) return new Date(s);
-  } catch {}
-  return new Date();
-}
-
 export default function MealsList() {
-  const [date, setDate] = useState<Date>(loadDate);
+  const { appDate: date, setAppDate: setDate } = useAppDate();
   const [activeMealType, setActiveMealType] = useState<MealType>(getCurrentMealType);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("すべて");
   const [floorFilter, setFloorFilter] = useState("all");
