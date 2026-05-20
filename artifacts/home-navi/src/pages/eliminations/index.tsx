@@ -24,7 +24,25 @@ type RoundStatus = {
   daysSinceLastBm: number | null;
   checkedThisRound: boolean;
   needsAttention: boolean;
+  lastBackCheckAt: string | null;
+  daysSinceLastBackCheck: number | null;
 };
+
+function BackCheckBadge({ days }: { days: number | null }) {
+  if (days === null) return null;
+  if (days === 0) {
+    return (
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-green-50 text-green-500 border border-green-200">
+        本日確認済み
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-gray-100 text-gray-500">
+      {days}日前確認
+    </span>
+  );
+}
 
 function BmBadge({ days, stomaManagement }: { days: number | null; stomaManagement: boolean }) {
   if (stomaManagement) {
@@ -93,8 +111,9 @@ function ResidentEliminationCard({
               <span className="text-sm font-semibold text-gray-800">{status.residentName}様</span>
             </div>
           )}
-          <div className="mt-1">
+          <div className="mt-1 flex items-center gap-1.5 flex-wrap">
             <BmBadge days={status.daysSinceLastBm} stomaManagement={status.stomaManagement} />
+            <BackCheckBadge days={status.daysSinceLastBackCheck} />
           </div>
         </div>
       </div>

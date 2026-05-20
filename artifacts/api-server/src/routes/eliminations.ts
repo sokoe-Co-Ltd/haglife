@@ -175,13 +175,21 @@ router.post("/eliminations/rounds/check", async (req, res): Promise<void> => {
   }
   const [state] = await db.select().from(eliminationRoundStateTable).orderBy(desc(eliminationRoundStateTable.lastResetAt)).limit(1);
   const resetAt = state?.lastResetAt ?? new Date(0);
-  await db.insert(eliminationRoundChecksTable).values({
-    residentId: parsed.data.residentId,
-    staffId: parsed.data.staffId ?? null,
-    checkedAt: new Date(),
-    roundResetAt: resetAt,
-    isActive: true,
-  });
+  const now = new Date();
+  await Promise.all([
+    db.insert(eliminationRoundChecksTable).values({
+      residentId: parsed.data.residentId,
+      staffId: parsed.data.staffId ?? null,
+      checkedAt: now,
+      roundResetAt: resetAt,
+      isActive: true,
+    }),
+    db.insert(eliminationBackChecksTable).values({
+      residentId: parsed.data.residentId,
+      checkedAt: now,
+      notes: null,
+    }),
+  ]);
   res.json({ success: true });
 });
 
