@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronLeft, Weight, History, Pencil, X, Check, CalendarDays } from "lucide-react";
+import { ChevronLeft, Weight, History, Pencil, X, Check, CalendarDays, Plus } from "lucide-react";
 import { Link, useParams } from "wouter";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
@@ -124,6 +124,7 @@ export default function WeightsNew() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
 
   const { data: resident } = useGetResident(residentId, { query: { enabled: !!residentId } });
   const { data: allWeights = [], isLoading: isHistoryLoading } = useListWeights(
@@ -168,6 +169,7 @@ export default function WeightsNew() {
         onSuccess: () => {
           toast({ title: "保存しました" });
           form.reset();
+          setShowAddForm(false);
           queryClient.invalidateQueries({ queryKey: getListWeightsQueryKey({ resident_id: residentId }) });
         },
         onError: () => toast({ title: "エラーが発生しました", variant: "destructive" }),
@@ -203,11 +205,20 @@ export default function WeightsNew() {
           </div>
         )}
 
-        {/* New entry form — hidden if already recorded this month */}
-        {!hasThisMonthRecord ? (
+        {/* New entry form */}
+        {!hasThisMonthRecord || showAddForm ? (
           <Card>
             <CardContent className="p-5">
-              <h2 className="font-bold text-gray-700 mb-4 text-sm">今月の体重を記録</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-bold text-gray-700 text-sm">
+                  {hasThisMonthRecord ? "もう一度記録する" : "今月の体重を記録"}
+                </h2>
+                {hasThisMonthRecord && (
+                  <button onClick={() => { setShowAddForm(false); form.reset(); }} className="text-gray-400 hover:text-gray-600">
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <div className="space-y-2">
                   <Label>体重 (kg)</Label>
@@ -231,9 +242,20 @@ export default function WeightsNew() {
             </CardContent>
           </Card>
         ) : (
-          <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 flex items-center gap-2.5 text-green-700 text-sm font-medium">
-            <Check className="h-4 w-4 shrink-0" />
-            今月の体重は記録済みです。過去の記録から編集できます。
+          <div className="space-y-2">
+            <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 flex items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2.5 text-green-700 text-sm font-medium">
+                <Check className="h-4 w-4 shrink-0" />
+                今月の体重は記録済みです
+              </div>
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="flex items-center gap-1 text-xs text-primary font-medium hover:underline shrink-0"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                もう一度記録
+              </button>
+            </div>
           </div>
         )}
 
