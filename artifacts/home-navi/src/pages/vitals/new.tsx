@@ -8,6 +8,7 @@ import {
   useListVitals,
   useListStaff,
   useGetVitalThresholds,
+  useGetResidentVitalThresholds,
 } from "@workspace/api-client-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQueryClient } from "@tanstack/react-query";
@@ -244,7 +245,9 @@ export default function VitalsInput() {
     }, 50);
   }
 
-  const { data: thresholds = DEFAULT_THRESHOLDS } = useGetVitalThresholds();
+  const { data: globalThresholds = DEFAULT_THRESHOLDS } = useGetVitalThresholds();
+  const { data: residentThresholds } = useGetResidentVitalThresholds(residentId, { query: { enabled: !!residentId } });
+  const thresholds: ThresholdData = (residentThresholds ?? globalThresholds) as ThresholdData;
 
   const { data: resident } = useGetResident(residentId, { query: { enabled: !!residentId } });
   const { data: allStaff = [] } = useListStaff({ visible_only: true });

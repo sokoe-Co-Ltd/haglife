@@ -359,6 +359,98 @@ export const DeleteResidentParams = zod.object({
 });
 
 /**
+ * @summary Get per-resident vital thresholds (null = use global defaults)
+ */
+export const GetResidentVitalThresholdsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetResidentVitalThresholdsResponse = zod.union([
+  zod.object({
+    temperature: zod.object({
+      min: zod.number(),
+      max: zod.number(),
+    }),
+    bpSystolic: zod.object({
+      min: zod.number(),
+      max: zod.number(),
+    }),
+    bpDiastolic: zod.object({
+      min: zod.number(),
+      max: zod.number(),
+    }),
+    pulse: zod.object({
+      min: zod.number(),
+      max: zod.number(),
+    }),
+    spo2: zod.object({
+      min: zod.number(),
+      max: zod.number(),
+    }),
+  }),
+  zod.null(),
+]);
+
+/**
+ * @summary Set per-resident vital thresholds (null to reset to global)
+ */
+export const UpdateResidentVitalThresholdsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateResidentVitalThresholdsBody = zod.union([
+  zod.object({
+    temperature: zod.object({
+      min: zod.number(),
+      max: zod.number(),
+    }),
+    bpSystolic: zod.object({
+      min: zod.number(),
+      max: zod.number(),
+    }),
+    bpDiastolic: zod.object({
+      min: zod.number(),
+      max: zod.number(),
+    }),
+    pulse: zod.object({
+      min: zod.number(),
+      max: zod.number(),
+    }),
+    spo2: zod.object({
+      min: zod.number(),
+      max: zod.number(),
+    }),
+  }),
+  zod.null(),
+]);
+
+export const UpdateResidentVitalThresholdsResponse = zod.union([
+  zod.object({
+    temperature: zod.object({
+      min: zod.number(),
+      max: zod.number(),
+    }),
+    bpSystolic: zod.object({
+      min: zod.number(),
+      max: zod.number(),
+    }),
+    bpDiastolic: zod.object({
+      min: zod.number(),
+      max: zod.number(),
+    }),
+    pulse: zod.object({
+      min: zod.number(),
+      max: zod.number(),
+    }),
+    spo2: zod.object({
+      min: zod.number(),
+      max: zod.number(),
+    }),
+  }),
+  zod.null(),
+]);
+
+/**
  * @summary Get all health data for a resident (for health management screen)
  */
 export const GetResidentHealthSummaryParams = zod.object({

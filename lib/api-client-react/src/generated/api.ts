@@ -742,6 +742,189 @@ export const useDeleteResident = <
 };
 
 /**
+ * @summary Get per-resident vital thresholds (null = use global defaults)
+ */
+export const getGetResidentVitalThresholdsUrl = (id: number) => {
+  return `/api/residents/${id}/vital-thresholds`;
+};
+
+export const getResidentVitalThresholds = async (
+  id: number,
+  options?: RequestInit,
+): Promise<VitalThresholds | null> => {
+  return customFetch<VitalThresholds | null>(
+    getGetResidentVitalThresholdsUrl(id),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetResidentVitalThresholdsQueryKey = (id: number) => {
+  return [`/api/residents/${id}/vital-thresholds`] as const;
+};
+
+export const getGetResidentVitalThresholdsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getResidentVitalThresholds>>,
+  TError = ErrorType<void>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getResidentVitalThresholds>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetResidentVitalThresholdsQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getResidentVitalThresholds>>
+  > = ({ signal }) =>
+    getResidentVitalThresholds(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getResidentVitalThresholds>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetResidentVitalThresholdsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getResidentVitalThresholds>>
+>;
+export type GetResidentVitalThresholdsQueryError = ErrorType<void>;
+
+/**
+ * @summary Get per-resident vital thresholds (null = use global defaults)
+ */
+
+export function useGetResidentVitalThresholds<
+  TData = Awaited<ReturnType<typeof getResidentVitalThresholds>>,
+  TError = ErrorType<void>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getResidentVitalThresholds>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetResidentVitalThresholdsQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Set per-resident vital thresholds (null to reset to global)
+ */
+export const getUpdateResidentVitalThresholdsUrl = (id: number) => {
+  return `/api/residents/${id}/vital-thresholds`;
+};
+
+export const updateResidentVitalThresholds = async (
+  id: number,
+  vitalThresholdsNull: VitalThresholds | null,
+  options?: RequestInit,
+): Promise<VitalThresholds | null> => {
+  return customFetch<VitalThresholds | null>(
+    getUpdateResidentVitalThresholdsUrl(id),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(vitalThresholdsNull),
+    },
+  );
+};
+
+export const getUpdateResidentVitalThresholdsMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateResidentVitalThresholds>>,
+    TError,
+    { id: number; data: BodyType<VitalThresholds | null> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateResidentVitalThresholds>>,
+  TError,
+  { id: number; data: BodyType<VitalThresholds | null> },
+  TContext
+> => {
+  const mutationKey = ["updateResidentVitalThresholds"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateResidentVitalThresholds>>,
+    { id: number; data: BodyType<VitalThresholds | null> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateResidentVitalThresholds(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateResidentVitalThresholdsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateResidentVitalThresholds>>
+>;
+export type UpdateResidentVitalThresholdsMutationBody =
+  BodyType<VitalThresholds | null>;
+export type UpdateResidentVitalThresholdsMutationError = ErrorType<void>;
+
+/**
+ * @summary Set per-resident vital thresholds (null to reset to global)
+ */
+export const useUpdateResidentVitalThresholds = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateResidentVitalThresholds>>,
+    TError,
+    { id: number; data: BodyType<VitalThresholds | null> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateResidentVitalThresholds>>,
+  TError,
+  { id: number; data: BodyType<VitalThresholds | null> },
+  TContext
+> => {
+  return useMutation(getUpdateResidentVitalThresholdsMutationOptions(options));
+};
+
+/**
  * @summary Get all health data for a resident (for health management screen)
  */
 export const getGetResidentHealthSummaryUrl = (id: number) => {

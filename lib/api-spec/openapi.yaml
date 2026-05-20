@@ -170,6 +170,58 @@ paths:
         "204":
           description: Deleted
 
+  /residents/{id}/vital-thresholds:
+    get:
+      operationId: getResidentVitalThresholds
+      tags: [residents]
+      summary: Get per-resident vital thresholds (null = use global defaults)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Per-resident vital thresholds or null
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/VitalThresholds"
+                  - type: "null"
+        "404":
+          description: Not found
+    put:
+      operationId: updateResidentVitalThresholds
+      tags: [residents]
+      summary: Set per-resident vital thresholds (null to reset to global)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/VitalThresholds"
+                - type: "null"
+      responses:
+        "200":
+          description: Updated per-resident vital thresholds or null
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/VitalThresholds"
+                  - type: "null"
+        "404":
+          description: Not found
+
   /residents/{id}/health-summary:
     get:
       operationId: getResidentHealthSummary

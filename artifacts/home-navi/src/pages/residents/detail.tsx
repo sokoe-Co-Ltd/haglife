@@ -1,8 +1,12 @@
 import { Layout } from "@/components/layout";
-import { useGetResident, useUpdateResident } from "@workspace/api-client-react";
+import {
+  useGetResident, useUpdateResident,
+  useGetResidentVitalThresholds, useUpdateResidentVitalThresholds,
+  useGetVitalThresholds,
+} from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronLeft, User, Phone, Home, FileText, Pencil, Save, X, Stethoscope, Building2 } from "lucide-react";
+import { ChevronLeft, User, Phone, Home, FileText, Pencil, Save, X, Stethoscope, Building2, Activity, RotateCcw } from "lucide-react";
 import { ResidentAvatar } from "@/components/ResidentAvatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +20,183 @@ import { useQueryClient } from "@tanstack/react-query";
 const CARE_LEVELS = ["支1","支2","介1","介2","介3","介4","介5","新規申請中","区分変更中"];
 const GENDERS = ["男性","女性"];
 const BIRTH_ERAS = ["大正","昭和","平成","令和"];
+
+// ── バイタル基準値カード ──────────────────────────────────────────────────────
+const DEFAULT_THRESHOLDS = {
+  temperature: { min: 35.8, max: 37.4 },
+  bpSystolic:  { min: 90,   max: 159  },
+  bpDiastolic: { min: 60,   max: 99   },
+  pulse:       { min: 50,   max: 100  },
+  spo2:        { min: 95,   max: 100  },
+};
+const THRESHOLD_LABELS = {
+  temperature: { label: "体温 (KT)",    unit: "°C",   step: "0.1" },
+  bpSystolic:  { label: "血圧 上 (BP)", unit: "mmHg", step: "1"   },
+  bpDiastolic: { label: "血圧 下",      unit: "mmHg", step: "1"   },
+  pulse:       { label: "脈拍 (P)",     unit: "bpm",  step: "1"   },
+  spo2:        { label: "SpO2",         unit: "%",    step: "1"   },
+};
+type ThresholdKey = keyof typeof DEFAULT_THRESHOLDS;
+type ThresholdForm = { [K in ThresholdKey]: { min: string; max: string } };
+
+function toThresholdForm(data: typeof DEFAULT_THRESHOLDS): ThresholdForm {
+  return Object.fromEntries(
+    Object.entries(data).map(([k, v]) => [k, { min: String(v.min), max: String(v.max) }])
+  ) as ThresholdForm;
+}
+
+function VitalThresholdsCard({ residentId }: { residentId: number }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { data: globalThresholds } = useGetVitalThresholds();
+  const { data: residentThresholds, isLoading } = useGetResidentVitalThresholds(residentId, {
+    query: { enabled: !!residentId },
+  });
+  const updateMutation = useUpdateResidentVitalThresholds();
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState<ThresholdForm>(toThresholdForm(DEFAULT_THRESHOLDS));
+
+  const hasCustom = residentThresholds != null;
+  const effectiveThresholds = (residentThresholds ?? globalThresholds ?? DEFAULT_THRESHOLDS) as typeof DEFAULT_THRESHOLDS;
+
+  useEffect(() => {
+    if (editing) {
+      setForm(toThresholdForm(effectiveThresholds));
+    }
+  }, [editing, residentThresholds, globalThresholds]);
+
+  function handleSave() {
+    const body = Object.fromEntries(
+      (Object.keys(THRESHOLD_LABELS) as ThresholdKey[]).map((k) => [
+        k,
+        { min: parseFloat(form[k].min), max: parseFloat(form[k].max) },
+      ])
+    ) as typeof DEFAULT_THRESHOLDS;
+    for (const [key, val] of Object.entries(body)) {
+      if (isNaN(val.min) || isNaN(val.max) || val.min >= val.max) {
+        toast({ title: `${THRESHOLD_LABELS[key as ThresholdKey]?.label ?? key}の値が不正です（最小 < 最大）`, variant: "destructive" });
+        return;
+      }
+    }
+    updateMutation.mutate(
+      { id: residentId, data: body },
+      {
+        onSuccess: () => {
+          toast({ title: "基準値を保存しました" });
+          setEditing(false);
+          queryClient.invalidateQueries({ queryKey: [`/api/residents/${residentId}/vital-thresholds`] });
+        },
+        onError: () => toast({ title: "保存に失敗しました", variant: "destructive" }),
+      }
+    );
+  }
+
+  function handleReset() {
+    updateMutation.mutate(
+      { id: residentId, data: null as any },
+      {
+        onSuccess: () => {
+          toast({ title: "施設デフォルトに戻しました" });
+          setEditing(false);
+          queryClient.invalidateQueries({ queryKey: [`/api/residents/${residentId}/vital-thresholds`] });
+        },
+        onError: () => toast({ title: "リセットに失敗しました", variant: "destructive" }),
+      }
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="py-3 px-4 border-b">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Activity className="h-4 w-4 text-primary" />バイタル基準値
+            {!isLoading && (
+              <span className={`text-xs font-normal px-2 py-0.5 rounded-full ${hasCustom ? "bg-primary/10 text-primary" : "bg-gray-100 text-gray-500"}`}>
+                {hasCustom ? "個別設定" : "施設デフォルト"}
+              </span>
+            )}
+          </CardTitle>
+          {!editing ? (
+            <Button variant="ghost" size="sm" onClick={() => setEditing(true)} className="h-7 gap-1 text-xs text-muted-foreground">
+              <Pencil className="h-3 w-3" />編集
+            </Button>
+          ) : (
+            <div className="flex items-center gap-1">
+              {hasCustom && (
+                <Button variant="ghost" size="sm" onClick={handleReset} disabled={updateMutation.isPending} className="h-7 gap-1 text-xs text-gray-400">
+                  <RotateCcw className="h-3 w-3" />デフォルトに戻す
+                </Button>
+              )}
+              <Button variant="ghost" size="sm" onClick={() => setEditing(false)} className="h-7 text-xs text-muted-foreground">
+                <X className="h-3.5 w-3.5" />
+              </Button>
+              <Button size="sm" onClick={handleSave} disabled={updateMutation.isPending} className="h-7 gap-1 text-xs">
+                <Save className="h-3 w-3" />{updateMutation.isPending ? "保存中..." : "保存"}
+              </Button>
+            </div>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="p-4">
+        {isLoading ? (
+          <div className="space-y-2">{Array.from({length:5}).map((_,i)=><Skeleton key={i} className="h-8 w-full" />)}</div>
+        ) : editing ? (
+          <div className="space-y-3">
+            {(Object.keys(THRESHOLD_LABELS) as ThresholdKey[]).map((key) => {
+              const { label, unit, step } = THRESHOLD_LABELS[key];
+              return (
+                <div key={key} className="grid grid-cols-[1fr_auto_1fr_auto] items-center gap-2">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">{label} 最小</p>
+                    <div className="flex items-center gap-1">
+                      <Input
+                        type="number" step={step}
+                        value={form[key].min}
+                        onChange={e => setForm(prev => ({ ...prev, [key]: { ...prev[key], min: e.target.value } }))}
+                        className="h-8 text-sm"
+                      />
+                      <span className="text-xs text-muted-foreground shrink-0">{unit}</span>
+                    </div>
+                  </div>
+                  <span className="text-gray-300 text-sm mt-4">—</span>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">最大</p>
+                    <div className="flex items-center gap-1">
+                      <Input
+                        type="number" step={step}
+                        value={form[key].max}
+                        onChange={e => setForm(prev => ({ ...prev, [key]: { ...prev[key], max: e.target.value } }))}
+                        className="h-8 text-sm"
+                      />
+                      <span className="text-xs text-muted-foreground shrink-0">{unit}</span>
+                    </div>
+                  </div>
+                  <div />
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {(Object.keys(THRESHOLD_LABELS) as ThresholdKey[]).map((key) => {
+              const { label, unit } = THRESHOLD_LABELS[key];
+              const { min, max } = effectiveThresholds[key];
+              return (
+                <div key={key} className="flex items-center justify-between py-2">
+                  <span className="text-sm text-gray-600">{label}</span>
+                  <span className="text-sm font-mono font-bold text-gray-800">
+                    {min} – {max} <span className="text-xs font-normal text-gray-400">{unit}</span>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -461,6 +642,9 @@ export default function ResidentDetail() {
                 )}
               </CardContent>
             </Card>
+
+            {/* ── バイタル基準値 ── */}
+            <VitalThresholdsCard residentId={id} />
 
             {/* ── 医療情報 ── */}
             <Card>

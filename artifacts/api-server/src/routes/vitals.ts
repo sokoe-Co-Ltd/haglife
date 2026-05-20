@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, desc, and, gte, lte } from "drizzle-orm";
-import { db, vitalsTable, residentsTable } from "@workspace/db";
+import { db, vitalsTable, residentsTable, facilitySettingsTable } from "@workspace/db";
 import {
   CreateVitalBody,
   UpdateVitalBody,
@@ -113,23 +113,68 @@ router.delete("/vitals/:id", async (req, res): Promise<void> => {
   res.sendStatus(204);
 });
 
+const DEFAULT_VITAL_THRESHOLDS = {
+  temperature: { min: 35.8, max: 37.4 },
+  bpSystolic:  { min: 90,   max: 159  },
+  bpDiastolic: { min: 60,   max: 99   },
+  pulse:       { min: 50,   max: 100  },
+  spo2:        { min: 95,   max: 100  },
+};
+
+type ThresholdRange = { min: number; max: number };
+type VitalThresholds = {
+  temperature: ThresholdRange;
+  bpSystolic: ThresholdRange;
+  bpDiastolic: ThresholdRange;
+  pulse: ThresholdRange;
+  spo2: ThresholdRange;
+};
+
+function isVitalOut(val: number | null | undefined, range: ThresholdRange): boolean {
+  if (val == null || isNaN(val)) return false;
+  return val < range.min || val > range.max;
+}
+
+function computeNeedsRecheck(
+  vital: { temperature?: string | null; bpSystolic?: number | null; bpDiastolic?: number | null; pulse?: number | null; spo2?: number | null },
+  thresholds: VitalThresholds
+): boolean {
+  const temp = vital.temperature ? parseFloat(String(vital.temperature)) : null;
+  return (
+    isVitalOut(temp, thresholds.temperature) ||
+    isVitalOut(vital.bpSystolic, thresholds.bpSystolic) ||
+    isVitalOut(vital.bpDiastolic, thresholds.bpDiastolic) ||
+    isVitalOut(vital.pulse, thresholds.pulse) ||
+    isVitalOut(vital.spo2, thresholds.spo2)
+  );
+}
+
+async function getGlobalThresholds(): Promise<VitalThresholds> {
+  try {
+    const [row] = await db.select().from(facilitySettingsTable).where(eq(facilitySettingsTable.key, "vital_thresholds"));
+    if (row) return JSON.parse(row.value) as VitalThresholds;
+  } catch { /* fall through */ }
+  return DEFAULT_VITAL_THRESHOLDS;
+}
+
 router.get("/vitals/today-status", async (req, res): Promise<void> => {
   const dateParam = typeof req.query.date === "string" ? req.query.date : undefined;
   const { start, end } = dateParam
     ? (() => { const d = new Date(dateParam); return { start: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0), end: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999) }; })()
     : todayRange();
-  const residents = await db
-    .select()
-    .from(residentsTable)
-    .where(eq(residentsTable.isVisible, true))
-    .orderBy(residentsTable.roomNumber);
-  const todayVitals = await db
-    .select()
-    .from(vitalsTable)
-    .where(and(gte(vitalsTable.recordedAt, start), lte(vitalsTable.recordedAt, end)));
+  const [residents, todayVitals, globalThresholds] = await Promise.all([
+    db.select().from(residentsTable).where(eq(residentsTable.isVisible, true)).orderBy(residentsTable.roomNumber),
+    db.select().from(vitalsTable).where(and(gte(vitalsTable.recordedAt, start), lte(vitalsTable.recordedAt, end))),
+    getGlobalThresholds(),
+  ]);
   const result = residents.map(r => {
     const resVitals = todayVitals.filter(v => v.residentId === r.id);
     const latest = resVitals.sort((a, b) => b.recordedAt.getTime() - a.recordedAt.getTime())[0];
+    let effectiveThresholds = globalThresholds;
+    if (r.vitalThresholdsJson) {
+      try { effectiveThresholds = JSON.parse(r.vitalThresholdsJson) as VitalThresholds; } catch { /* use global */ }
+    }
+    const needsRecheck = latest ? computeNeedsRecheck(latest, effectiveThresholds) : false;
     return {
       residentId: r.id,
       residentName: `${r.lastName}${r.firstName}`,
@@ -138,7 +183,7 @@ router.get("/vitals/today-status", async (req, res): Promise<void> => {
       birthMonth: r.birthMonth,
       birthDay: r.birthDay,
       latestVital: latest ? { ...latest, temperature: latest.temperature ? parseFloat(String(latest.temperature)) : null } : null,
-      needsRecheck: latest?.needsRecheck ?? false,
+      needsRecheck,
       recordedToday: resVitals.length > 0,
     };
   });

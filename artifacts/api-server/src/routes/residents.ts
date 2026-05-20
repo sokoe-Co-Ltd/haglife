@@ -132,6 +132,28 @@ router.delete("/residents/:id", async (req, res): Promise<void> => {
   res.sendStatus(204);
 });
 
+router.get("/residents/:id/vital-thresholds", async (req, res): Promise<void> => {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(rawId, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [resident] = await db.select({ id: residentsTable.id, vitalThresholdsJson: residentsTable.vitalThresholdsJson }).from(residentsTable).where(eq(residentsTable.id, id));
+  if (!resident) { res.status(404).json({ error: "利用者が見つかりません" }); return; }
+  if (!resident.vitalThresholdsJson) { res.json(null); return; }
+  try { res.json(JSON.parse(resident.vitalThresholdsJson)); } catch { res.json(null); }
+});
+
+router.put("/residents/:id/vital-thresholds", async (req, res): Promise<void> => {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(rawId, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [resident] = await db.select({ id: residentsTable.id }).from(residentsTable).where(eq(residentsTable.id, id));
+  if (!resident) { res.status(404).json({ error: "利用者が見つかりません" }); return; }
+  const body = req.body;
+  const vitalThresholdsJson = body === null || body === undefined ? null : JSON.stringify(body);
+  await db.update(residentsTable).set({ vitalThresholdsJson, updatedAt: new Date() }).where(eq(residentsTable.id, id));
+  res.json(body ?? null);
+});
+
 router.get("/residents/:id/health-summary", async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const params = GetResidentHealthSummaryParams.safeParse({ id: parseInt(rawId, 10) });
