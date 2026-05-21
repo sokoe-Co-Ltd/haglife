@@ -37,14 +37,15 @@ import {
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const SLOT_MIN = 15;
-const SLOT_W   = 28;            // px per 15-min slot
+const SLOT_W   = 36;            // px per 15-min slot
 const GRID_START = 60;          // 1:00 in minutes
 const GRID_END   = 1380;        // 23:00 in minutes
 const TOTAL_SLOTS = (GRID_END - GRID_START) / SLOT_MIN; // 88
-const TOTAL_W     = TOTAL_SLOTS * SLOT_W;               // 2464 px
-const NAME_W = 80;              // px — sticky name column
-const SHIFT_W = 48;             // px — sticky shift column
-const ROW_H = 40;               // px — row timeline height
+const TOTAL_W     = TOTAL_SLOTS * SLOT_W;               // 3168 px
+const NAME_W = 96;              // px — sticky name column
+const SHIFT_W = 56;             // px — sticky shift column
+const ROW_H = 56;               // px — row timeline height
+const HEADER_H = 32;            // px — time header height
 
 const HOURS = Array.from({ length: 22 }, (_, i) => i + 1); // 1–22
 
@@ -113,11 +114,14 @@ function HourBands() {
 // Renders the always-visible vertical grid lines as actual DOM nodes — one
 // per 15-min slot. Hour boundaries (every 4th line) are bolder so the eye
 // can chunk by hour while still seeing every 15-min tick.
-function GridLines() {
+// When `hourOnly` is true, only the hour boundaries are rendered — used in
+// the time header where the 15-min ticks would just look like noise.
+function GridLines({ hourOnly = false }: { hourOnly?: boolean } = {}) {
   return (
     <div className="absolute inset-0 pointer-events-none" aria-hidden>
       {Array.from({ length: TOTAL_SLOTS + 1 }).map((_, i) => {
         const isHour = i % 4 === 0;
+        if (hourOnly && !isHour) return null;
         return (
           <div
             key={i}
@@ -1241,10 +1245,11 @@ export default function RouteSheetPage() {
                         style={{ left: NAME_W, width: SHIFT_W, minWidth: SHIFT_W }}
                       >勤務</th>
                       <th className="p-0" style={{ width: TOTAL_W }}>
-                        <div className="relative" style={{ height: 20, width: TOTAL_W }}>
+                        <div className="relative" style={{ height: HEADER_H, width: TOTAL_W }}>
                           {/* Same color bands as gantt rows, so header and body align visually */}
                           <HourBands />
-                          <GridLines />
+                          {/* Header shows hour-only dividers ("merged" 15-min cells) */}
+                          <GridLines hourOnly />
                           {HOURS.map((h) => {
                             const left = (h * 60 - GRID_START) / SLOT_MIN * SLOT_W;
                             return (
@@ -1253,7 +1258,7 @@ export default function RouteSheetPage() {
                                 style={{ left }}
                                 className="absolute top-0 bottom-0 flex items-center z-10"
                               >
-                                <span className="text-[10px] text-gray-700 font-mono font-bold pl-0.5">
+                                <span className="text-[13px] text-gray-800 font-mono font-bold pl-1">
                                   {h}:00
                                 </span>
                               </div>
