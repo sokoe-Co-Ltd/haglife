@@ -32,7 +32,7 @@ router.get("/resident-services", async (req, res) => {
     .from(residentServicesTable)
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(asc(residentServicesTable.effectiveFrom));
-  res.json(rows);
+  return res.json(rows);
 });
 
 router.get("/residents/:id/services", async (req, res) => {
@@ -41,20 +41,20 @@ router.get("/residents/:id/services", async (req, res) => {
     .from(residentServicesTable)
     .where(eq(residentServicesTable.residentId, parseInt(req.params.id)))
     .orderBy(asc(residentServicesTable.effectiveFrom));
-  res.json(rows);
+  return res.json(rows);
 });
 
 router.get("/resident-services/:id", async (req, res) => {
   const [row] = await db.select().from(residentServicesTable).where(eq(residentServicesTable.id, req.params.id)).limit(1);
   if (!row) return res.status(404).json({ error: "Not found" });
-  res.json(row);
+  return res.json(row);
 });
 
 router.post("/resident-services", async (req, res) => {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.format() });
   const [created] = await db.insert(residentServicesTable).values(parsed.data as any).returning();
-  res.status(201).json(created);
+  return res.status(201).json(created);
 });
 
 router.patch("/resident-services/:id", async (req, res) => {
@@ -66,7 +66,7 @@ router.patch("/resident-services/:id", async (req, res) => {
     .where(eq(residentServicesTable.id, req.params.id))
     .returning();
   if (!updated) return res.status(404).json({ error: "Not found" });
-  res.json(updated);
+  return res.json(updated);
 });
 
 router.delete("/resident-services/:id", async (req, res) => {
@@ -77,7 +77,7 @@ router.delete("/resident-services/:id", async (req, res) => {
     .where(eq(residentServicesTable.id, req.params.id))
     .returning();
   if (!updated) return res.status(404).json({ error: "Not found" });
-  res.status(204).send();
+  return res.status(204).send();
 });
 
 export default router;

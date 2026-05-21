@@ -28,7 +28,7 @@ router.get("/shifts", async (req, res) => {
     .from(shiftsTable)
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(asc(shiftsTable.date), asc(shiftsTable.shiftTypeId));
-  res.json(rows);
+  return res.json(rows);
 });
 
 router.post("/shifts", async (req, res) => {
@@ -42,7 +42,7 @@ router.post("/shifts", async (req, res) => {
       set: { ...parsed.data, updatedAt: new Date() },
     })
     .returning();
-  res.status(201).json(created);
+  return res.status(201).json(created);
 });
 
 router.post("/shifts/bulk", async (req, res) => {
@@ -57,13 +57,13 @@ router.post("/shifts/bulk", async (req, res) => {
       });
     }
   });
-  res.json({ ok: true });
+  return res.json({ ok: true });
 });
 
 router.delete("/shifts/:id", async (req, res) => {
   const result = await db.delete(shiftsTable).where(eq(shiftsTable.id, req.params.id)).returning();
   if (result.length === 0) return res.status(404).json({ error: "Not found" });
-  res.status(204).send();
+  return res.status(204).send();
 });
 
 export default router;

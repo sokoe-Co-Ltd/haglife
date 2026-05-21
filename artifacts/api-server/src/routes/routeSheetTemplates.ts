@@ -41,7 +41,7 @@ const upsertSchema = z.object({
 
 router.get("/route-sheet-templates", async (_req, res) => {
   const templates = await db.select().from(routeSheetTemplatesTable).orderBy(asc(routeSheetTemplatesTable.weekday));
-  res.json(templates);
+  return res.json(templates);
 });
 
 router.get("/route-sheet-templates/:weekday", async (req, res) => {
@@ -66,7 +66,7 @@ router.get("/route-sheet-templates/:weekday", async (req, res) => {
         .where(inArray(routeSheetTemplateCellsTable.templateRowId, rowIds))
     : [];
 
-  res.json({ template, rows, cells });
+  return res.json({ template, rows, cells });
 });
 
 router.put("/route-sheet-templates/:weekday", async (req, res) => {
@@ -116,7 +116,7 @@ router.put("/route-sheet-templates/:weekday", async (req, res) => {
     }
   });
 
-  res.json({ ok: true });
+  return res.json({ ok: true });
 });
 
 // ── materialize: テンプレから当日シートを作成 ──
@@ -221,7 +221,7 @@ router.post("/route-sheets/:date/from-template", async (req, res) => {
     }
   });
 
-  res.status(201).json({ ok: true });
+  return res.status(201).json({ ok: true });
 });
 
 // ── save-as-template: 当日シートをテンプレとして保存 ──
@@ -313,7 +313,7 @@ router.post("/route-sheets/:date/save-as-template", async (req, res) => {
       .where(eq(routeSheetTemplatesTable.id, template.id));
   });
 
-  res.json({ ok: true });
+  return res.json({ ok: true });
 });
 
 export default router;

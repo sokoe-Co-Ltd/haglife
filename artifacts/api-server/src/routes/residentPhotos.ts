@@ -35,7 +35,7 @@ router.post(
   "/residents/:id/photo",
   upload.single("photo"),
   async (req, res) => {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
     if (!req.file) return res.status(400).json({ error: "ファイルが選択されていません" });
 

@@ -704,6 +704,9 @@ export const ListHandoverNotesQueryParams = zod.object({
   resident_id: zod.coerce.number().nullish(),
   is_doctor_report: zod.coerce.boolean().optional(),
   limit: zod.coerce.number().default(listHandoverNotesQueryLimitDefault),
+  today_only: zod.coerce.boolean().optional(),
+  year_month: zod.coerce.string().optional(),
+  date: zod.coerce.string().optional(),
 });
 
 export const ListHandoverNotesResponseItem = zod.object({
@@ -986,6 +989,7 @@ export const GetVitalsTodayStatusResponse = zod.array(
 export const ListMealsQueryParams = zod.object({
   resident_id: zod.coerce.number().nullish(),
   today_only: zod.coerce.boolean().optional(),
+  date: zod.coerce.string().optional(),
 });
 
 export const ListMealsResponseItem = zod.object({
@@ -1331,6 +1335,7 @@ export const ToggleDayServicePreparedResponse = zod.object({
 export const ListBathReportsQueryParams = zod.object({
   resident_id: zod.coerce.number().nullish(),
   today_only: zod.coerce.boolean().optional(),
+  date: zod.coerce.string().optional(),
 });
 
 export const ListBathReportsResponseItem = zod.object({

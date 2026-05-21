@@ -1203,6 +1203,12 @@ export type ListHandoverNotesParams = {
   resident_id?: number | null;
   is_doctor_report?: boolean;
   limit?: number;
+  today_only?: boolean;
+  /**
+   * YYYY-MM format
+   */
+  year_month?: string;
+  date?: string;
 };
 
 export type ListVitalsParams = {
@@ -1227,6 +1233,7 @@ export type ListMealsParams = {
    */
   resident_id?: number | null;
   today_only?: boolean;
+  date?: string;
 };
 
 export type ListWeightsParams = {
@@ -1273,6 +1280,7 @@ export type ListBathReportsParams = {
    */
   resident_id?: number | null;
   today_only?: boolean;
+  date?: string;
 };
 
 export type ListInsurancesParams = {

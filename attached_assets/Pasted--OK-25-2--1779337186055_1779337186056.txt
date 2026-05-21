@@ -1,0 +1,124 @@
+良いニュースと修正必要点が見えました。
+結論: 構造は完璧に揃ってます (テーブル/ビュー/ファイル/シード全部OK)。型エラー25件だけが障害物です。これを潰せば本番投入可能な状態。
+エラーを2種類に分類すると:
+
+TS7030 (16件): 新規ファイル4つで return 文漏れ。機械的修正で完了 (5分)
+TS2339 (9件): 既存ファイル4つでクエリパラメータ型不整合。OpenAPI改変の副作用の疑い (要調査)
+
+リプリットに以下をコピペで投げてください:
+
+型エラー25件があるので修正したい。2種類に分かれていて、それぞれ対処法が違う。
+
+## 修正1: TS7030 (16件) — 新規ファイルの return 漏れ
+
+対象ファイル:
+- artifacts/api-server/src/routes/residentServices.ts (4箇所: 47, 53, 60, 72行目あたり)
+- artifacts/api-server/src/routes/routeSheetTemplates.ts (4箇所: 47, 72, 123, 228行目あたり)
+- artifacts/api-server/src/routes/shiftTypes.ts (4箇所: 29, 35, 42, 54行目あたり)
+- artifacts/api-server/src/routes/shifts.ts (3箇所: 34, 48, 63行目あたり)
+
+エラー内容: 「Not all code paths return a value」
+
+原因: Express ルートハンドラ内で、`res.json(...)` の前に `return` がないため、TypeScriptが「常に値を返す」と認識できない。早期returnのパスでは `return res.status(404).json(...)` のように return しているが、正常パスの `res.json(...)` には return がないのが原因。
+
+### 修正方法
+各ハンドラ関数内で、すべての `res.json(...)`, `res.status(...).json(...)`, `res.status(204).send()`, `res.send(...)` の前に `return` を付ける。
+
+修正前の例:
+```typescript
+router.get('/:id', async (req, res) => {
+  const row = await db.select()...;
+  if (!row) return res.status(404).json({ error: 'Not found' });
+  res.json(row);  // ← ここに return がない
+});
+```
+
+修正後:
+```typescript
+router.get('/:id', async (req, res) => {
+  const row = await db.select()...;
+  if (!row) return res.status(404).json({ error: 'Not found' });
+  return res.json(row);  // ← return を追加
+});
+```
+
+上記4ファイル全ての res メソッド呼び出しを確認し、return が付いていないものすべてに return を追加する。各ファイル全体を見て、漏れがないこと。
+
+## 修正2: TS2339 (9件) — 既存ファイルのクエリパラメータ型不整合
+
+対象ファイル (既存):
+- artifacts/api-server/src/routes/bathReports.ts (2箇所: 46, 47行目, プロパティ `date`)
+- artifacts/api-server/src/routes/handoverNotes.ts (5箇所: 68, 72, 73, 78, 79行目, プロパティ `today_only`, `year_month`, `date`)
+- artifacts/api-server/src/routes/meals.ts (2箇所: 38, 39行目, プロパティ `date`)
+- artifacts/api-server/src/routes/residentPhotos.ts (1箇所: 38行目, 配列型問題)
+
+これらは新規実装ではなく既存ファイル。OpenAPI修正の副作用で、既存エンドポイントのクエリパラメータ定義が失われた可能性が高い。
+
+### 調査と修正
+まず原因特定のため、以下を実行:
+
+1. git で OpenAPI の変更履歴を確認
+```bash
+git log --oneline -10 lib/api-spec/openapi.yaml
+git diff HEAD~5 lib/api-spec/openapi.yaml | head -100
+```
+
+2. 該当エンドポイントが OpenAPI 仕様にどう定義されているか確認
+```bash
+grep -A 30 "bathReports\|/bath-reports" lib/api-spec/openapi.yaml | head -40
+grep -A 30 "handoverNotes\|/handover-notes" lib/api-spec/openapi.yaml | head -60
+grep -A 30 "/meals" lib/api-spec/openapi.yaml | head -40
+grep -A 30 "/residents/.*photos\|residentPhotos" lib/api-spec/openapi.yaml | head -40
+```
+
+3. 該当する .ts ファイルの該当行付近を確認
+```bash
+sed -n '40,50p' artifacts/api-server/src/routes/bathReports.ts
+sed -n '60,85p' artifacts/api-server/src/routes/handoverNotes.ts
+sed -n '30,45p' artifacts/api-server/src/routes/meals.ts
+sed -n '30,45p' artifacts/api-server/src/routes/residentPhotos.ts
+```
+
+### 修正方針
+
+調査結果から状況を判断:
+
+**ケースA: OpenAPI でクエリパラメータが定義されている場合**
+→ codegen 漏れの可能性。`pnpm --filter @workspace/api-spec run codegen` を再実行して解決するか確認。
+
+**ケースB: OpenAPI でクエリパラメータが定義されていない場合**
+→ 我々のOpenAPI修正中に既存定義が消失。各エンドポイントに以下のような形でパラメータ定義を復元:
+```yaml
+/bath-reports:
+  get:
+    operationId: listBathReports
+    parameters:
+      - in: query
+        name: date
+        schema: { type: string, format: date }
+    responses:
+      '200':
+        # ...
+```
+
+handoverNotes は `today_only` (boolean), `year_month` (string YYYY-MM), `date` (date) の3つ。
+meals は `date` (date) のみ。
+residentPhotos の TS2345 は配列型問題なので、`String(req.query.xxx)` のキャストで対処可能なケースが多い。
+
+具体的にどちらのケースか判断し、適切な修正を実施。
+
+### 修正後の確認
+```bash
+pnpm --filter @workspace/api-spec run codegen
+pnpm typecheck
+```
+
+エラー0になるまで繰り返す。途中で詰まったら、その時点での状況 (どんな修正をして、どんなエラーが残っているか) を報告してください。
+
+## 最終確認
+全部修正後、以下を実行して結果を報告:
+```bash
+pnpm typecheck
+```
+
+エラー0なら完了。何件か残るならエラー内容を全部貼ること。
