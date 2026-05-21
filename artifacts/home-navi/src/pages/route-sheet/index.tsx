@@ -138,6 +138,11 @@ type DragPayload =
 type DragState = {
   payload: DragPayload;
   duplicate: boolean;
+  // Constant during a drag — used to center the ghost on the cursor
+  ghostW: number;
+  ghostH: number;
+  ghostOffsetX: number; // ghost's left within DragOverlay container
+  ghostOffsetY: number;
   // Updated by onDragMove
   overRowIdx: number | null;
   overSlotIndex: number | null;
@@ -738,7 +743,20 @@ export default function RouteSheetPage() {
     }
     const ae = event.activatorEvent as any;
     const duplicate = !!(ae && (ae.ctrlKey || ae.metaKey));
-    setDragState({ payload, duplicate, overRowIdx: null, overSlotIndex: null, colliding: false });
+    // Compute the ghost's offset within the DragOverlay container so that
+    // the ghost is rendered centered on the cursor regardless of where on
+    // the source element the user grabbed.
+    const ghostW = (dragDurationMin(payload) / SLOT_MIN) * SLOT_W;
+    const ghostH = ROW_H - 4;
+    const srcRect = event.active.rect.current.initial;
+    const cursorX = ae?.clientX ?? 0;
+    const cursorY = ae?.clientY ?? 0;
+    const ghostOffsetX = srcRect ? cursorX - srcRect.left - ghostW / 2 : -ghostW / 2;
+    const ghostOffsetY = srcRect ? cursorY - srcRect.top - ghostH / 2 : -ghostH / 2;
+    setDragState({
+      payload, duplicate, ghostW, ghostH, ghostOffsetX, ghostOffsetY,
+      overRowIdx: null, overSlotIndex: null, colliding: false,
+    });
     setMoveMode(null);
   }
 
@@ -755,12 +773,10 @@ export default function RouteSheetPage() {
     const rowEl = rowRefs.current.get(rowIdx);
     if (!rowEl) return;
     const rect = rowEl.getBoundingClientRect();
-    // Use the dragged source's translated left edge so the snap target
-    // matches the visible ghost position (rather than the bare cursor X).
-    const activeRect = event.active.rect.current.translated;
-    const ghostLeft = activeRect
-      ? activeRect.left - rect.left
-      : ((event.activatorEvent as any)?.clientX ?? 0) + event.delta.x - rect.left;
+    // Ghost is rendered centered on the cursor, so its visual left edge is
+    // cursorX - ghostW/2. Snap the slot to that edge (relative to row).
+    const cursorX = ((event.activatorEvent as any)?.clientX ?? 0) + event.delta.x;
+    const ghostLeft = cursorX - dragState.ghostW / 2 - rect.left;
     const slotIndex = snapSlotIndex(ghostLeft / SLOT_W);
     const dur = dragDurationMin(dragState.payload);
     const startMin = GRID_START + slotIndex * SLOT_MIN;
@@ -1264,14 +1280,19 @@ export default function RouteSheetPage() {
 
       {/* ── Drag Overlay (Ghost) ── */}
       <DragOverlay dropAnimation={null}>
-        {ghost && (
+        {ghost && dragState && (
           <div
-            className={`pointer-events-none rounded border-2 border-dashed px-1 py-0.5 flex flex-col justify-center ${
+            className={`pointer-events-none rounded border-2 border-dashed px-1 py-0.5 flex flex-col justify-center absolute ${
               ghost.colliding
-                ? "bg-red-400/40 border-red-600 text-red-900"
-                : "bg-blue-400/40 border-blue-700 text-blue-900"
+                ? "bg-red-400/60 border-red-600 text-red-900"
+                : "bg-blue-400/60 border-blue-700 text-blue-900"
             }`}
-            style={{ width: ghost.width, height: ROW_H - 4 }}
+            style={{
+              width: ghost.width,
+              height: dragState.ghostH,
+              left: dragState.ghostOffsetX,
+              top: dragState.ghostOffsetY,
+            }}
           >
             <div className="flex items-center gap-1 text-[10px] font-bold leading-tight">
               {ghost.colliding && <AlertTriangle className="h-3 w-3 shrink-0" />}
