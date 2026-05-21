@@ -1,6 +1,10 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, inArray } from "drizzle-orm";
-import { db, routeSheetsTable, routeSheetRowsTable, routeSheetCellsTable, visitConflictsView } from "@workspace/db";
+import { eq, desc, inArray, asc } from "drizzle-orm";
+import {
+  db, routeSheetsTable, routeSheetRowsTable, routeSheetCellsTable, visitConflictsView,
+  routeSheetTemplatesTable, routeSheetTemplateRowsTable,
+  shiftTypesTable, shiftsTable, staffTable,
+} from "@workspace/db";
 import { z } from "zod";
 
 const router: IRouter = Router();
@@ -82,13 +86,60 @@ router.get("/route-sheets", async (req, res): Promise<void> => {
     const sheet = await db.query.routeSheetsTable.findFirst({
       where: eq(routeSheetsTable.date, date),
     });
-    if (!sheet) {
-      res.json(null);
+    if (sheet) {
+      res.json({ source: "instance", ...(await buildSheet(sheet.id)) });
       return;
     }
-    res.json(await buildSheet(sheet.id));
+
+    // No saved instance — try to synthesize from weekday template
+    const weekday = new Date(date + "T00:00:00").getDay();
+    const [template] = await db
+      .select()
+      .from(routeSheetTemplatesTable)
+      .where(eq(routeSheetTemplatesTable.weekday, weekday))
+      .limit(1);
+
+    if (!template) {
+      res.json({ source: "empty", rows: [], conflicts: [] });
+      return;
+    }
+
+    const tplRowsData = await db
+      .select({ row: routeSheetTemplateRowsTable, shiftType: shiftTypesTable })
+      .from(routeSheetTemplateRowsTable)
+      .leftJoin(shiftTypesTable, eq(routeSheetTemplateRowsTable.shiftTypeId, shiftTypesTable.id))
+      .where(eq(routeSheetTemplateRowsTable.templateId, template.id))
+      .orderBy(asc(routeSheetTemplateRowsTable.sortOrder));
+
+    const shiftsData = await db
+      .select({ shift: shiftsTable, staff: staffTable })
+      .from(shiftsTable)
+      .leftJoin(staffTable, eq(shiftsTable.staffId, staffTable.id))
+      .where(eq(shiftsTable.date, date));
+
+    const synthesizedRows = tplRowsData.map(({ row: tplRow, shiftType }) => {
+      const match = shiftsData.find(
+        (s) => s.shift.shiftTypeId === tplRow.shiftTypeId && s.shift.slotLabel === tplRow.slotLabel
+      );
+      return {
+        sortOrder: tplRow.sortOrder,
+        shiftType: shiftType?.code ?? "日",
+        staffId: match?.shift.staffId ?? null,
+        staffName: match?.staff ? `${match.staff.lastName} ${match.staff.firstName}` : "",
+        cells: [],
+      };
+    });
+
+    res.json({
+      source: "template",
+      templateId: template.id,
+      weekday: template.weekday,
+      rows: synthesizedRows,
+      conflicts: [],
+    });
     return;
   }
+
   const sheets = await db
     .select({ id: routeSheetsTable.id, date: routeSheetsTable.date })
     .from(routeSheetsTable)

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, and, ne } from "drizzle-orm";
-import { db, residentsTable, vitalsTable, mealsTable, weightsTable, eliminationsTable, handoverNotesTable } from "@workspace/db";
+import { eq, desc, and, ne, isNull } from "drizzle-orm";
+import { db, residentsTable, residentServicesTable, vitalsTable, mealsTable, weightsTable, eliminationsTable, handoverNotesTable } from "@workspace/db";
 import {
   CreateResidentBody,
   UpdateResidentBody,
@@ -109,11 +109,34 @@ router.patch("/residents/:id", async (req, res): Promise<void> => {
   for (const [k, v] of Object.entries(parsed.data)) {
     if (v !== null && v !== undefined) updateData[k] = v;
   }
-  const [resident] = await db
-    .update(residentsTable)
-    .set({ ...updateData, updatedAt: new Date() })
-    .where(eq(residentsTable.id, params.data.id))
-    .returning();
+
+  let resident: typeof residentsTable.$inferSelect | undefined;
+  await db.transaction(async (tx) => {
+    const [updated] = await tx
+      .update(residentsTable)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(residentsTable.id, params.data.id))
+      .returning();
+    resident = updated;
+
+    const anyData = parsed.data as any;
+    if (updated && anyData.movedOutAt) {
+      await tx
+        .update(residentServicesTable)
+        .set({
+          terminatedAt: anyData.movedOutAt as string,
+          terminationReason: anyData.movedOutReason ?? "退去",
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(residentServicesTable.residentId, params.data.id),
+            isNull(residentServicesTable.terminatedAt)
+          )
+        );
+    }
+  });
+
   if (!resident) {
     res.status(404).json({ error: "利用者が見つかりません" });
     return;

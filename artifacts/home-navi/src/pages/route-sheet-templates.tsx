@@ -8,10 +8,10 @@ import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useQueryClient } from "@tanstack/react-query";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Plus, GripVertical } from "lucide-react";
+import { Trash2, Plus, GripVertical, ChevronLeft } from "lucide-react";
+import { format } from "date-fns";
 
 const WEEKDAY_LABELS = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"];
 const WEEKDAY_SHORT = ["日", "月", "火", "水", "木", "金", "土"];
@@ -64,7 +64,7 @@ function WeekdayEditor({ weekday }: { weekday: number }) {
   const qc = useQueryClient();
   const { toast } = useToast();
   const { data: shiftTypes = [] } = useListShiftTypes();
-  const { data: detail, isLoading } = useGetRouteSheetTemplate(weekday, { query: { enabled: true } });
+  const { data: detail, isLoading } = useGetRouteSheetTemplate(weekday, { query: { enabled: true, queryKey: getGetRouteSheetTemplateQueryKey(weekday) } });
 
   const [draft, setDraft] = useState<Draft | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -261,35 +261,68 @@ function WeekdayEditor({ weekday }: { weekday: number }) {
   );
 }
 
+const WEEKDAY_COLOR_TEXT = ["text-red-600", "text-gray-800", "text-gray-800", "text-gray-800", "text-gray-800", "text-gray-800", "text-blue-600"];
+const WEEKDAY_CARD_CLS = [
+  "border-red-200 bg-red-50 hover:bg-red-100",
+  "border-gray-200 bg-white hover:bg-gray-50",
+  "border-gray-200 bg-white hover:bg-gray-50",
+  "border-gray-200 bg-white hover:bg-gray-50",
+  "border-gray-200 bg-white hover:bg-gray-50",
+  "border-gray-200 bg-white hover:bg-gray-50",
+  "border-blue-200 bg-blue-50 hover:bg-blue-100",
+];
+
 export default function RouteSheetTemplatesPage() {
-  const today = new Date().getDay();
+  const { data: templates = [] } = useListRouteSheetTemplates();
+  const [selectedWeekday, setSelectedWeekday] = useState<number | null>(null);
 
   return (
     <Layout>
-      <div className="space-y-4 max-w-4xl">
-        <div>
-          <h1 className="text-xl font-bold text-gray-800">ルート票テンプレート</h1>
-          <p className="text-xs text-gray-500 mt-0.5">曜日ごとの定型ルート票を設定します。当日のルート票生成に使用されます。</p>
+      <div className="space-y-5 max-w-4xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-gray-800">ルート票テンプレート</h1>
+            <p className="text-xs text-gray-500 mt-0.5">曜日ごとの定型ルート票を設定します。当日のルート票生成に使用されます。</p>
+          </div>
+          {selectedWeekday !== null && (
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setSelectedWeekday(null)}>
+              <ChevronLeft className="h-4 w-4" />一覧へ戻る
+            </Button>
+          )}
         </div>
 
-        <Tabs defaultValue={String(today)}>
-          <TabsList className="grid grid-cols-7 w-full">
-            {WEEKDAY_SHORT.map((label, i) => (
-              <TabsTrigger
-                key={i}
-                value={String(i)}
-                className={`text-xs ${i === 0 ? "data-[state=active]:text-red-600" : i === 6 ? "data-[state=active]:text-blue-600" : ""}`}
-              >
-                {label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          {WEEKDAY_SHORT.map((_, i) => (
-            <TabsContent key={i} value={String(i)} className="mt-4">
-              <WeekdayEditor weekday={i} />
-            </TabsContent>
-          ))}
-        </Tabs>
+        {selectedWeekday === null ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {WEEKDAY_SHORT.map((label, idx) => {
+              const tpl = (templates as any[]).find((t) => t.weekday === idx);
+              return (
+                <button
+                  key={idx}
+                  className={`border rounded-xl p-4 text-left cursor-pointer transition-colors ${WEEKDAY_CARD_CLS[idx]}`}
+                  onClick={() => setSelectedWeekday(idx)}
+                >
+                  <div className={`text-2xl font-bold ${WEEKDAY_COLOR_TEXT[idx]}`}>{label}曜</div>
+                  {tpl?.notes && (
+                    <div className="text-xs text-gray-600 mt-2 line-clamp-2">{tpl.notes}</div>
+                  )}
+                  <div className="text-[11px] text-gray-400 mt-2">
+                    最終更新: {tpl?.updatedAt ? format(new Date(tpl.updatedAt), "MM/dd HH:mm") : "未編集"}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <span className={`text-xl font-bold ${WEEKDAY_COLOR_TEXT[selectedWeekday]}`}>
+                {WEEKDAY_LABELS[selectedWeekday]}
+              </span>
+              <span className="text-sm text-gray-500">のテンプレートを編集</span>
+            </div>
+            <WeekdayEditor weekday={selectedWeekday} />
+          </div>
+        )}
       </div>
     </Layout>
   );

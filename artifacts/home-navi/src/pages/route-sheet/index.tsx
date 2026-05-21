@@ -118,6 +118,11 @@ interface CellModalState {
   cellIndex: number | null;
   cell: SheetCell;
 }
+type SheetApiResponse = RouteSheetData & {
+  source?: "instance" | "template" | "empty";
+  templateId?: string;
+  weekday?: number;
+};
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function timeToMin(t: string): number {
@@ -164,10 +169,12 @@ function addMinutes(hhmm: string, mins: number): string {
 }
 
 // ── API ────────────────────────────────────────────────────────────────────────
-async function fetchSheet(date: string): Promise<RouteSheetData | null> {
+async function fetchSheet(date: string): Promise<SheetApiResponse> {
   const r = await fetch(`/api/route-sheets?date=${date}`);
   if (!r.ok) throw new Error("Failed to fetch");
-  return r.json();
+  const data = await r.json();
+  if (data === null) return { source: "empty", date, rows: [] };
+  return data;
 }
 async function saveSheet(date: string, data: Omit<RouteSheetData, "id" | "date">): Promise<RouteSheetData> {
   const r = await fetch(`/api/route-sheets/${date}`, {
@@ -341,7 +348,7 @@ export default function RouteSheetPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: loaded, isLoading } = useQuery({
+  const { data: loaded, isLoading } = useQuery<SheetApiResponse>({
     queryKey: ["/api/route-sheets", dateStr],
     queryFn: () => fetchSheet(dateStr),
   });
@@ -389,6 +396,9 @@ export default function RouteSheetPage() {
     rows: rawSheet.rows.length > 0 ? rawSheet.rows : defaultRows(),
   };
 
+  // source: drives banner display
+  const source = dirty ? "instance" : (loaded?.source ?? "empty");
+
   // Conflicts come from the last server response (loaded), not from local edits
   const conflicts: VisitConflictItem[] = (loaded as any)?.conflicts ?? [];
   const conflictCellIds = new Set<number>();
@@ -426,6 +436,44 @@ export default function RouteSheetPage() {
       toast({ title: "ルート票を保存しました" });
     },
     onError: () => toast({ title: "保存に失敗しました", variant: "destructive" }),
+  });
+
+  // ── Template actions ──────────────────────────────────────────────────────
+  const fromTemplateMut = useMutation({
+    mutationFn: async () => {
+      const r = await fetch(`/api/route-sheets/${dateStr}/from-template`, { method: "POST" });
+      if (!r.ok) throw new Error("Failed");
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/route-sheets", dateStr] });
+      toast({ title: "テンプレートから当日シートを生成しました" });
+    },
+    onError: () => toast({ title: "生成に失敗しました", variant: "destructive" }),
+  });
+
+  const saveAsTemplateMut = useMutation({
+    mutationFn: async () => {
+      const r = await fetch(`/api/route-sheets/${dateStr}/save-as-template`, { method: "POST" });
+      if (!r.ok) throw new Error("Failed");
+      return r.json();
+    },
+    onSuccess: () => toast({ title: `${DOW_JP[appDate.getDay()]}曜テンプレートとして保存しました` }),
+    onError: () => toast({ title: "保存に失敗しました", variant: "destructive" }),
+  });
+
+  const resetMut = useMutation({
+    mutationFn: async () => {
+      const r = await fetch(`/api/route-sheets/${dateStr}`, { method: "DELETE" });
+      if (!r.ok && r.status !== 404) throw new Error("Failed");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/route-sheets", dateStr] });
+      setLocalSheet(null);
+      setDirty(false);
+      toast({ title: "テンプレートに戻しました" });
+    },
+    onError: () => toast({ title: "リセットに失敗しました", variant: "destructive" }),
   });
 
   // ── Staff name edit (inline) ─────────────────────────────────────────────
@@ -517,6 +565,47 @@ export default function RouteSheetPage() {
             </Button>
           </div>
         </div>
+
+        {/* ── Template source banner ── */}
+        {!isLoading && source === "template" && (
+          <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-3 flex items-center justify-between gap-3 flex-wrap">
+            <span className="text-sm text-blue-800">
+              📋 テンプレート表示中（{DOW_JP[appDate.getDay()]}曜テンプレ）— 編集すると当日シートが作成されます
+            </span>
+            <Button
+              size="sm"
+              onClick={() => fromTemplateMut.mutate()}
+              disabled={fromTemplateMut.isPending}
+              className="shrink-0"
+            >
+              {fromTemplateMut.isPending ? "生成中..." : "この日を編集する"}
+            </Button>
+          </div>
+        )}
+
+        {/* ── Instance action bar ── */}
+        {!isLoading && source === "instance" && !dirty && (
+          <div className="flex justify-end gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => saveAsTemplateMut.mutate()}
+              disabled={saveAsTemplateMut.isPending}
+            >
+              {DOW_JP[appDate.getDay()]}曜テンプレとして保存
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (window.confirm("当日シートを削除してテンプレートに戻しますか？")) resetMut.mutate();
+              }}
+              disabled={resetMut.isPending}
+            >
+              テンプレに戻す
+            </Button>
+          </div>
+        )}
 
         {/* ── Header note ── */}
         <div className="bg-white rounded-xl border border-gray-200 p-3">
