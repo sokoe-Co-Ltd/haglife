@@ -74,13 +74,57 @@ const CARD_CLS: Record<string, string> = {
   amber: "bg-amber-50 border-amber-200 text-amber-800",
 };
 
-// CSS grid lines via background-image (efficient — no DOM nodes)
-const gridBg = {
+// Hours displayed (1:00 .. 22:00, each spans 4 * SLOT_W = 112px)
+const HOURS_LIST: number[] = Array.from(
+  { length: (GRID_END - GRID_START) / 60 },
+  (_, i) => 1 + i,
+);
+
+// Distinct pale color per hour band so users can tell which hour they're in.
+function hourBandColor(h: number): string {
+  // Spread hue across the day; very light so text/cards stay readable.
+  return `hsl(${(h * 32) % 360}, 70%, 95%)`;
+}
+
+// Always-visible 15-min and 60-min vertical grid lines, painted as a layer.
+const gridLinesStyle: React.CSSProperties = {
   backgroundImage: [
-    `repeating-linear-gradient(to right, #f3f4f6 0, #f3f4f6 1px, transparent 1px, transparent ${SLOT_W}px)`,
-    `repeating-linear-gradient(to right, #e5e7eb 0, #e5e7eb 1px, transparent 1px, transparent ${SLOT_W * 4}px)`,
+    // 15-min thin lines (always visible)
+    `repeating-linear-gradient(to right, #cbd5e1 0, #cbd5e1 1px, transparent 1px, transparent ${SLOT_W}px)`,
+    // 60-min stronger lines
+    `repeating-linear-gradient(to right, #64748b 0, #64748b 1.5px, transparent 1.5px, transparent ${SLOT_W * 4}px)`,
   ].join(", "),
 };
+
+// Renders alternating colored bands behind every hour (1 div per hour).
+function HourBands() {
+  return (
+    <div className="absolute inset-0 pointer-events-none" aria-hidden>
+      {HOURS_LIST.map((h, i) => (
+        <div
+          key={h}
+          className="absolute top-0 bottom-0"
+          style={{
+            left: i * SLOT_W * 4,
+            width: SLOT_W * 4,
+            background: hourBandColor(h),
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// Renders the always-visible 15-min & 60-min vertical grid lines.
+function GridLines() {
+  return (
+    <div
+      className="absolute inset-0 pointer-events-none"
+      aria-hidden
+      style={gridLinesStyle}
+    />
+  );
+}
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type VisitConflictItem = {
@@ -318,8 +362,8 @@ function RowTimeline({
         setNodeRef(node);
         registerRef(rowIdx, node);
       }}
-      className={`relative ${isOver ? "bg-blue-50/40" : ""}`}
-      style={{ height: ROW_H, width: TOTAL_W, ...gridBg }}
+      className={`relative ${isOver ? "ring-2 ring-inset ring-blue-300" : ""}`}
+      style={{ height: ROW_H, width: TOTAL_W }}
       onClick={(e) => {
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -327,17 +371,19 @@ function RowTimeline({
         onTrackClick(rowIdx, slotIndex, e);
       }}
     >
-      {/* 15-min grid overlay (visible during drag) */}
+      {/* Hour-band colored backgrounds (always visible) */}
+      <HourBands />
+      {/* 15-min and 60-min vertical grid lines (always visible) */}
+      <GridLines />
+      {/* Extra darker 15-min grid during drag for precision */}
       {isDragActive && (
-        <div className="absolute inset-0 pointer-events-none" aria-hidden>
-          {Array.from({ length: TOTAL_SLOTS }).map((_, i) => (
-            <div
-              key={i}
-              className="absolute top-0 bottom-0 border-l border-blue-300/40"
-              style={{ left: i * SLOT_W }}
-            />
-          ))}
-        </div>
+        <div
+          className="absolute inset-0 pointer-events-none"
+          aria-hidden
+          style={{
+            backgroundImage: `repeating-linear-gradient(to right, rgba(37,99,235,0.35) 0, rgba(37,99,235,0.35) 1px, transparent 1px, transparent ${SLOT_W}px)`,
+          }}
+        />
       )}
       {/* Snapped drop-zone indicator (on the over row only) */}
       {dropIndicator && (
@@ -1066,12 +1112,21 @@ export default function RouteSheetPage() {
                         style={{ left: NAME_W, width: SHIFT_W, minWidth: SHIFT_W }}
                       >勤務</th>
                       <th className="p-0" style={{ width: TOTAL_W }}>
-                        <div className="relative bg-gray-50" style={{ height: 20, width: TOTAL_W }}>
+                        <div className="relative" style={{ height: 20, width: TOTAL_W }}>
+                          {/* Same color bands as gantt rows, so header and body align visually */}
+                          <HourBands />
+                          <GridLines />
                           {HOURS.map((h) => {
                             const left = (h * 60 - GRID_START) / SLOT_MIN * SLOT_W;
                             return (
-                              <div key={h} style={{ left }} className="absolute top-0 bottom-0 flex items-center">
-                                <span className="text-[9px] text-gray-400 font-mono pl-0.5">{h}:00</span>
+                              <div
+                                key={h}
+                                style={{ left }}
+                                className="absolute top-0 bottom-0 flex items-center z-10"
+                              >
+                                <span className="text-[10px] text-gray-700 font-mono font-bold pl-0.5">
+                                  {h}:00
+                                </span>
                               </div>
                             );
                           })}
