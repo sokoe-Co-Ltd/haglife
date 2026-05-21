@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useSearch } from "wouter";
 import { Layout } from "@/components/layout";
 import { useAppDate } from "@/contexts/AppDateContext";
@@ -24,8 +24,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Save, Printer, CheckCircle2, Circle, ExternalLink, Pencil, Trash2, Coffee,
-  UserRound, X,
+  UserRound, X, AlertTriangle,
 } from "lucide-react";
+import {
+  DndContext, DragOverlay, useDraggable, useDroppable, useSensor, useSensors,
+  PointerSensor, KeyboardSensor,
+  type DragStartEvent, type DragMoveEvent, type DragEndEvent,
+} from "@dnd-kit/core";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const SLOT_MIN = 15;
@@ -36,6 +41,7 @@ const TOTAL_SLOTS = (GRID_END - GRID_START) / SLOT_MIN; // 88
 const TOTAL_W     = TOTAL_SLOTS * SLOT_W;               // 2464 px
 const NAME_W = 80;              // px — sticky name column
 const SHIFT_W = 48;             // px — sticky shift column
+const ROW_H = 40;               // px — row timeline height
 
 const HOURS = Array.from({ length: 22 }, (_, i) => i + 1); // 1–22
 
@@ -125,6 +131,21 @@ type SheetApiResponse = RouteSheetData & {
   weekday?: number;
 };
 
+type DragPayload =
+  | { kind: "palette"; card: ServiceCard }
+  | { kind: "placed"; rowIdx: number; cellIdx: number; cell: SheetCell };
+
+type DragState = {
+  payload: DragPayload;
+  duplicate: boolean;
+  // Updated by onDragMove
+  overRowIdx: number | null;
+  overSlotIndex: number | null;
+  colliding: boolean;
+};
+
+type MoveMode = { rowIdx: number; cellIdx: number } | null;
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function timeToMin(t: string): number {
   const [h, m] = t.split(":").map(Number);
@@ -168,6 +189,29 @@ function addMinutes(hhmm: string, mins: number): string {
   const nm = total % 60;
   return `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
 }
+function durationOf(cell: SheetCell): number {
+  return Math.max(SLOT_MIN, timeToMin(cell.endTime) - timeToMin(cell.startTime));
+}
+function snapSlotIndex(slotIndex: number): number {
+  return Math.max(0, Math.min(TOTAL_SLOTS - 1, Math.round(slotIndex)));
+}
+function dragDurationMin(payload: DragPayload): number {
+  return payload.kind === "palette" ? payload.card.durationMin : durationOf(payload.cell);
+}
+function isOverlap(aStart: number, aEnd: number, bStart: number, bEnd: number) {
+  return aStart < bEnd && bStart < aEnd;
+}
+function detectCollision(
+  rows: SheetRow[], rowIdx: number, startMin: number, endMin: number,
+  excludeRowIdx?: number, excludeCellIdx?: number,
+): boolean {
+  const row = rows[rowIdx];
+  if (!row) return false;
+  return row.cells.some((c, ci) => {
+    if (excludeRowIdx === rowIdx && excludeCellIdx === ci) return false;
+    return isOverlap(startMin, endMin, timeToMin(c.startTime), timeToMin(c.endTime));
+  });
+}
 
 // ── API ────────────────────────────────────────────────────────────────────────
 async function fetchSheet(date: string): Promise<SheetApiResponse> {
@@ -187,13 +231,29 @@ async function saveSheet(date: string, data: Omit<RouteSheetData, "id" | "date">
   return r.json();
 }
 
-// ── CellBlock ──────────────────────────────────────────────────────────────────
-function CellBlock({ cell, onClick, isConflict }: { cell: SheetCell; onClick: () => void; isConflict?: boolean }) {
+// ── DraggableCell ─────────────────────────────────────────────────────────────
+function DraggableCell({
+  cell, rowIdx, cellIdx, isConflict, isMoveTarget, disabled, onClick,
+}: {
+  cell: SheetCell; rowIdx: number; cellIdx: number;
+  isConflict?: boolean; isMoveTarget?: boolean; disabled?: boolean;
+  onClick: () => void;
+}) {
+  const id = `placed:${rowIdx}:${cellIdx}`;
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id,
+    disabled,
+    data: { kind: "placed", rowIdx, cellIdx, cell } satisfies DragPayload,
+  });
+
   return (
     <button
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       style={{ left: cellLeft(cell.startTime), width: cellWidth(cell.startTime, cell.endTime) }}
-      className={`absolute top-0.5 bottom-0.5 border rounded text-left overflow-hidden px-1 hover:opacity-80 transition-opacity cursor-pointer z-10 ${cellBg(cell)} ${isConflict ? "ring-2 ring-red-500 ring-offset-1 z-20" : ""}`}
+      className={`absolute top-0.5 bottom-0.5 border rounded text-left overflow-hidden px-1 hover:opacity-80 transition-opacity cursor-grab active:cursor-grabbing z-10 touch-none ${cellBg(cell)} ${isConflict ? "ring-2 ring-red-500 ring-offset-1 z-20" : ""} ${isDragging ? "opacity-30" : ""} ${isMoveTarget ? "animate-pulse ring-2 ring-blue-500 ring-offset-1 z-20" : ""}`}
     >
       {cell.isBreak ? (
         <span className="flex items-center gap-0.5 text-[9px] font-bold h-full">
@@ -209,6 +269,71 @@ function CellBlock({ cell, onClick, isConflict }: { cell: SheetCell; onClick: ()
         </div>
       )}
     </button>
+  );
+}
+
+// ── PaletteCard ───────────────────────────────────────────────────────────────
+function PaletteCard({ card, hasResident }: { card: ServiceCard; hasResident: boolean }) {
+  const id = `palette:${card.id}`;
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id,
+    data: { kind: "palette", card } satisfies DragPayload,
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className={`cursor-grab active:cursor-grabbing border rounded-lg px-3 py-2 select-none text-center min-w-[76px] transition-transform hover:scale-105 active:scale-95 shadow-sm touch-none ${CARD_CLS[card.color]} ${hasResident && !card.isBreak ? "ring-2 ring-primary/40 ring-offset-1" : ""} ${isDragging ? "opacity-30" : ""}`}
+    >
+      <div className="text-xs font-bold leading-tight">{card.label}</div>
+      <div className="text-[10px] opacity-60 mt-0.5">{card.durationMin}分</div>
+    </div>
+  );
+}
+
+// ── RowTimeline (Droppable) ───────────────────────────────────────────────────
+function RowTimeline({
+  rowIdx, children, isDragActive, isOver, registerRef, onTrackClick,
+}: {
+  rowIdx: number;
+  children: React.ReactNode;
+  isDragActive: boolean;
+  isOver: boolean;
+  registerRef: (rowIdx: number, el: HTMLDivElement | null) => void;
+  onTrackClick: (rowIdx: number, slotIndex: number, evt: React.MouseEvent) => void;
+}) {
+  const { setNodeRef } = useDroppable({ id: `row:${rowIdx}`, data: { rowIdx } });
+
+  return (
+    <div
+      ref={(node) => {
+        setNodeRef(node);
+        registerRef(rowIdx, node);
+      }}
+      className={`relative ${isOver ? "bg-blue-50/40" : ""}`}
+      style={{ height: ROW_H, width: TOTAL_W, ...gridBg }}
+      onClick={(e) => {
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const slotIndex = snapSlotIndex(x / SLOT_W);
+        onTrackClick(rowIdx, slotIndex, e);
+      }}
+    >
+      {/* 15-min grid overlay (visible during drag) */}
+      {isDragActive && (
+        <div className="absolute inset-0 pointer-events-none" aria-hidden>
+          {Array.from({ length: TOTAL_SLOTS }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute top-0 bottom-0 border-l border-blue-300/40"
+              style={{ left: i * SLOT_W }}
+            />
+          ))}
+        </div>
+      )}
+      {children}
+    </div>
   );
 }
 
@@ -247,7 +372,6 @@ function CellModal({ state, residents, onSave, onDelete, onClose }: {
           </div>
           {!form.isBreak && (
             <>
-              {/* 利用者選択 — マスタ選択 or フリーテキスト */}
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">利用者</label>
                 <select
@@ -278,7 +402,6 @@ function CellModal({ state, residents, onSave, onDelete, onClose }: {
                   />
                 )}
               </div>
-              {/* サービス種別 — マスタ選択 or フリーテキスト */}
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">サービス種別</label>
                 <select
@@ -388,10 +511,18 @@ export default function RouteSheetPage() {
   const [localSheet, setLocalSheet] = useState<RouteSheetData | null>(null);
   const [dirty, setDirty] = useState(false);
   const [cellModal, setCellModal] = useState<CellModalState | null>(null);
-  const [dragOverRow, setDragOverRow] = useState<number | null>(null);
   const [editingName, setEditingName] = useState<number | null>(null);
   const [nameInput, setNameInput] = useState("");
   const [selectedResident, setSelectedResident] = useState<{ id: number; name: string } | null>(null);
+
+  // DnD + tap state
+  const [dragState, setDragState] = useState<DragState | null>(null);
+  const [moveMode, setMoveMode] = useState<MoveMode>(null);
+  const rowRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const registerRowRef = useCallback((rowIdx: number, el: HTMLDivElement | null) => {
+    if (el) rowRefs.current.set(rowIdx, el);
+    else rowRefs.current.delete(rowIdx);
+  }, []);
 
   // Reset local state on date change
   const prevDate = useRef(dateStr);
@@ -399,6 +530,7 @@ export default function RouteSheetPage() {
     prevDate.current = dateStr;
     setLocalSheet(null);
     setDirty(false);
+    setMoveMode(null);
   }
 
   const rawSheet = localSheet ?? loaded ?? emptySheet(dateStr);
@@ -409,6 +541,7 @@ export default function RouteSheetPage() {
 
   // source: drives banner display
   const source = dirty ? "instance" : (loaded?.source ?? "empty");
+  const isTemplateView = source === "template";
 
   // Conflicts come from the last server response (loaded), not from local edits
   const conflicts: VisitConflictItem[] = (loaded as any)?.conflicts ?? [];
@@ -520,394 +653,615 @@ export default function RouteSheetPage() {
     mark({ ...sheet, rows });
   }
 
-  // ── Drag & Drop ──────────────────────────────────────────────────────────
-  function handleDragOver(e: React.DragEvent) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "copy";
-  }
-  function handleDrop(e: React.DragEvent, ri: number) {
-    e.preventDefault();
-    setDragOverRow(null);
-    const raw = e.dataTransfer.getData("application/json");
-    if (!raw) return;
-    let card: ServiceCard;
-    try { card = JSON.parse(raw); } catch { return; }
-
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const slotIndex = Math.max(0, Math.min(TOTAL_SLOTS - 1, Math.floor(x / SLOT_W)));
+  // ── Move placed cell (used by drag-move and tap-move) ────────────────────
+  function performMove(srcRowIdx: number, srcCellIdx: number, dstRowIdx: number, slotIndex: number, duplicate: boolean) {
+    if (isTemplateView) {
+      window.alert("テンプレート表示中は移動できません。先に『この日を編集する』ボタンを押してください。");
+      return;
+    }
+    const srcCell = sheet.rows[srcRowIdx]?.cells[srcCellIdx];
+    if (!srcCell) return;
+    const dur = durationOf(srcCell);
     const startMin = GRID_START + slotIndex * SLOT_MIN;
-    const endMin = Math.min(GRID_END, startMin + card.durationMin);
-
-    setCellModal({
-      rowIndex: ri,
-      cellIndex: null,
-      cell: {
-        startTime: minToTime(startMin),
-        endTime: minToTime(endMin),
-        isBreak: card.isBreak,
-        residentName: card.isBreak ? "" : (selectedResident?.name ?? ""),
-        serviceLabel: card.fullLabel,
-      },
+    const endMin = Math.min(GRID_END, startMin + dur);
+    const newCell: SheetCell = {
+      ...srcCell,
+      // Duplicates get a fresh id (undefined → server creates new row)
+      id: duplicate ? undefined : srcCell.id,
+      startTime: minToTime(startMin),
+      endTime: minToTime(endMin),
+    };
+    const rows = sheet.rows.map((r, ri) => {
+      let cells = r.cells;
+      // Remove source unless duplicate
+      if (!duplicate && ri === srcRowIdx) {
+        cells = cells.filter((_, ci) => ci !== srcCellIdx);
+      }
+      // Add to target row
+      if (ri === dstRowIdx) {
+        cells = [...cells, newCell].sort((a, b) => timeToMin(a.startTime) - timeToMin(b.startTime));
+      }
+      return cells === r.cells ? r : { ...r, cells };
     });
+    mark({ ...sheet, rows });
   }
+
+  // ── DnD handlers ─────────────────────────────────────────────────────────
+  const sensors = useSensors(
+    // Pointer: small distance constraint so cell click still opens the modal,
+    // and touch users can long-press without accidentally dragging.
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor),
+  );
+
+  // Track Ctrl/Meta during drag so the user can press the modifier mid-drag.
+  useEffect(() => {
+    if (!dragState) return;
+    const sync = (e: KeyboardEvent | MouseEvent) => {
+      const dup = (e as any).ctrlKey || (e as any).metaKey;
+      setDragState((s) => (s && s.duplicate !== dup ? { ...s, duplicate: dup } : s));
+    };
+    window.addEventListener("keydown", sync as any);
+    window.addEventListener("keyup", sync as any);
+    window.addEventListener("mousemove", sync as any);
+    return () => {
+      window.removeEventListener("keydown", sync as any);
+      window.removeEventListener("keyup", sync as any);
+      window.removeEventListener("mousemove", sync as any);
+    };
+  }, [dragState?.payload]);
+
+  function handleDragStart(event: DragStartEvent) {
+    const payload = event.active.data.current as DragPayload | undefined;
+    if (!payload) return;
+    // Clear any pending single-click timeout so the edit modal doesn't pop up after a drag.
+    if (pendingClickTimer.current) {
+      clearTimeout(pendingClickTimer.current);
+      pendingClickTimer.current = null;
+      lastClickRef.current = null;
+    }
+    const ae = event.activatorEvent as any;
+    const duplicate = !!(ae && (ae.ctrlKey || ae.metaKey));
+    setDragState({ payload, duplicate, overRowIdx: null, overSlotIndex: null, colliding: false });
+    setMoveMode(null);
+  }
+
+  function handleDragMove(event: DragMoveEvent) {
+    if (!dragState) return;
+    const overId = event.over?.id;
+    if (!overId || typeof overId !== "string" || !overId.startsWith("row:")) {
+      if (dragState.overRowIdx !== null) {
+        setDragState({ ...dragState, overRowIdx: null, overSlotIndex: null, colliding: false });
+      }
+      return;
+    }
+    const rowIdx = parseInt(overId.slice(4));
+    const rowEl = rowRefs.current.get(rowIdx);
+    if (!rowEl) return;
+    const rect = rowEl.getBoundingClientRect();
+    // Pointer X = initial activator X + delta.x
+    const initialX = (event.activatorEvent as any)?.clientX ?? 0;
+    const pointerX = initialX + event.delta.x;
+    const slotIndex = snapSlotIndex((pointerX - rect.left) / SLOT_W);
+    const dur = dragDurationMin(dragState.payload);
+    const startMin = GRID_START + slotIndex * SLOT_MIN;
+    const endMin = Math.min(GRID_END, startMin + dur);
+    const excludeRow = dragState.payload.kind === "placed" && !dragState.duplicate ? dragState.payload.rowIdx : undefined;
+    const excludeCell = dragState.payload.kind === "placed" && !dragState.duplicate ? dragState.payload.cellIdx : undefined;
+    const colliding = detectCollision(sheet.rows, rowIdx, startMin, endMin, excludeRow, excludeCell);
+    if (
+      dragState.overRowIdx !== rowIdx ||
+      dragState.overSlotIndex !== slotIndex ||
+      dragState.colliding !== colliding
+    ) {
+      setDragState({ ...dragState, overRowIdx: rowIdx, overSlotIndex: slotIndex, colliding });
+    }
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const ds = dragState;
+    setDragState(null);
+    if (!ds) return;
+    const overId = event.over?.id;
+    if (!overId || typeof overId !== "string" || !overId.startsWith("row:")) return;
+    const dstRowIdx = parseInt(overId.slice(4));
+    const slotIndex = ds.overSlotIndex ?? 0;
+
+    if (ds.payload.kind === "palette") {
+      const card = ds.payload.card;
+      const startMin = GRID_START + slotIndex * SLOT_MIN;
+      const endMin = Math.min(GRID_END, startMin + card.durationMin);
+      setCellModal({
+        rowIndex: dstRowIdx,
+        cellIndex: null,
+        cell: {
+          startTime: minToTime(startMin),
+          endTime: minToTime(endMin),
+          isBreak: card.isBreak,
+          residentName: card.isBreak ? "" : (selectedResident?.name ?? ""),
+          serviceLabel: card.fullLabel,
+          residentId: card.isBreak ? null : (selectedResident?.id ?? null),
+        },
+      });
+    } else {
+      // placed-cell: move or duplicate
+      if (isTemplateView) return;
+      performMove(ds.payload.rowIdx, ds.payload.cellIdx, dstRowIdx, slotIndex, ds.duplicate);
+    }
+  }
+
+  function handleDragCancel() {
+    setDragState(null);
+  }
+
+  // ── Tap / move-mode handlers ─────────────────────────────────────────────
+  const lastClickRef = useRef<{ key: string; t: number } | null>(null);
+  const pendingClickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const DOUBLE_TAP_MS = 350;
+
+  function cancelPendingClick() {
+    if (pendingClickTimer.current) {
+      clearTimeout(pendingClickTimer.current);
+      pendingClickTimer.current = null;
+    }
+    lastClickRef.current = null;
+  }
+
+  function handleCellClick(rowIdx: number, cellIdx: number) {
+    if (isTemplateView) {
+      // template view: just open editor (no double-tap-to-move while in template view)
+      openEditCell(rowIdx, cellIdx);
+      return;
+    }
+    const key = `${rowIdx}:${cellIdx}`;
+    const now = Date.now();
+    const last = lastClickRef.current;
+    if (last && last.key === key && now - last.t < DOUBLE_TAP_MS) {
+      // Double tap → enter move mode
+      cancelPendingClick();
+      setMoveMode({ rowIdx, cellIdx });
+      return;
+    }
+    cancelPendingClick();
+    lastClickRef.current = { key, t: now };
+    pendingClickTimer.current = setTimeout(() => {
+      pendingClickTimer.current = null;
+      if (lastClickRef.current?.key === key && lastClickRef.current.t === now) {
+        lastClickRef.current = null;
+        openEditCell(rowIdx, cellIdx);
+      }
+    }, DOUBLE_TAP_MS);
+  }
+
+  function handleTrackClick(rowIdx: number, slotIndex: number, _evt: React.MouseEvent) {
+    if (!moveMode) return;
+    const duplicate = false;
+    performMove(moveMode.rowIdx, moveMode.cellIdx, rowIdx, slotIndex, duplicate);
+    setMoveMode(null);
+  }
+
+  // ESC cancels move mode
+  useEffect(() => {
+    if (!moveMode) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMoveMode(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [moveMode]);
+
+  // Ghost preview helpers (for DragOverlay)
+  const ghost = useMemo(() => {
+    if (!dragState || dragState.overRowIdx === null || dragState.overSlotIndex === null) return null;
+    const dur = dragDurationMin(dragState.payload);
+    const startMin = GRID_START + dragState.overSlotIndex * SLOT_MIN;
+    const endMin = Math.min(GRID_END, startMin + dur);
+    const startTime = minToTime(startMin);
+    const endTime = minToTime(endMin);
+    const label = dragState.payload.kind === "palette"
+      ? dragState.payload.card.fullLabel
+      : (dragState.payload.cell.serviceLabel ?? "");
+    const name = dragState.payload.kind === "palette"
+      ? (selectedResident?.name ?? "—")
+      : (dragState.payload.cell.residentName ?? "—");
+    return {
+      width: (dur / SLOT_MIN) * SLOT_W,
+      startTime, endTime, label, name,
+      colliding: dragState.colliding,
+      duplicate: dragState.duplicate,
+    };
+  }, [dragState, selectedResident]);
 
   const eraYear = appDate.getFullYear() - 2018;
 
   return (
-    <Layout>
-      <div className="space-y-3">
-        {/* ── Header ── */}
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <h1 className="text-xl font-bold text-gray-800">ルート票</h1>
-          <div className="flex items-center gap-2 flex-wrap">
-            <DayNav date={appDate} onChange={setAppDate} />
-            <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-1.5">
-              <Printer className="h-4 w-4" />印刷
-            </Button>
-            <Button
-              size="sm"
-              disabled={!dirty || saveMutation.isPending}
-              onClick={() => saveMutation.mutate()}
-              className="gap-1.5"
-            >
-              <Save className="h-4 w-4" />
-              {saveMutation.isPending ? "保存中..." : dirty ? "保存（変更あり）" : "保存済み"}
-            </Button>
-          </div>
-        </div>
-
-        {/* ── Template source banner ── */}
-        {!isLoading && source === "template" && (
-          <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-3 flex items-center justify-between gap-3 flex-wrap">
-            <span className="text-sm text-blue-800">
-              📋 テンプレート表示中（{DOW_JP[appDate.getDay()]}曜テンプレ）— 編集すると当日シートが作成されます
-            </span>
-            <Button
-              size="sm"
-              onClick={() => fromTemplateMut.mutate()}
-              disabled={fromTemplateMut.isPending}
-              className="shrink-0"
-            >
-              {fromTemplateMut.isPending ? "生成中..." : "この日を編集する"}
-            </Button>
-          </div>
-        )}
-
-        {/* ── Instance action bar ── */}
-        {!isLoading && source === "instance" && !dirty && (
-          <div className="flex justify-end gap-2 flex-wrap">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => saveAsTemplateMut.mutate()}
-              disabled={saveAsTemplateMut.isPending}
-            >
-              {DOW_JP[appDate.getDay()]}曜テンプレとして保存
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (window.confirm("当日シートを削除してテンプレートに戻しますか？")) resetMut.mutate();
-              }}
-              disabled={resetMut.isPending}
-            >
-              テンプレに戻す
-            </Button>
-          </div>
-        )}
-
-        {/* ── Header note ── */}
-        <div className="bg-white rounded-xl border border-gray-200 p-3">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="text-sm font-semibold text-gray-600 shrink-0">
-              令和{eraYear}年 {format(appDate, "M月d日（E）", { locale: ja })}
-            </div>
-            <Input
-              value={sheet.headerNote ?? ""}
-              onChange={(e) => mark({ ...sheet, headerNote: e.target.value })}
-              placeholder="備考（例：第１・３ 亀岡内科往診（10:00〜）...）"
-              className="flex-1 h-8 text-sm"
-            />
-          </div>
-        </div>
-
-        {/* ── Service card palette ── */}
-        <div className="bg-white rounded-xl border border-gray-200 p-3 space-y-3">
-          {/* ① 利用者選択 */}
-          <div>
-            <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
-              ① 訪問先の利用者を選択
-            </div>
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragMove={handleDragMove}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+      <Layout>
+        <div className="space-y-3">
+          {/* ── Header ── */}
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h1 className="text-xl font-bold text-gray-800">ルート票</h1>
             <div className="flex items-center gap-2 flex-wrap">
-              <div className="relative">
-                <UserRound className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
-                <select
-                  value={selectedResident?.id.toString() ?? ""}
-                  onChange={(e) => {
-                    if (!e.target.value) { setSelectedResident(null); return; }
-                    const id = parseInt(e.target.value);
-                    const r = residents.find((x) => x.id === id);
-                    if (r) setSelectedResident({ id: r.id, name: r.name });
-                  }}
-                  className="h-9 pl-8 pr-3 text-sm border border-input rounded-md bg-background appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30 min-w-[160px]"
-                >
-                  <option value="">利用者を選択...</option>
-                  {residents.map((r) => (
-                    <option key={r.id} value={r.id}>{r.name}</option>
-                  ))}
-                </select>
-              </div>
-              {selectedResident && (
-                <div className="flex items-center gap-1.5 bg-primary/10 text-primary border border-primary/20 rounded-full px-3 py-1">
-                  <span className="text-xs font-bold">{selectedResident.name}様</span>
-                  <button
-                    onClick={() => setSelectedResident(null)}
-                    className="text-primary/60 hover:text-primary ml-0.5"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              )}
+              <DayNav date={appDate} onChange={setAppDate} />
+              <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-1.5">
+                <Printer className="h-4 w-4" />印刷
+              </Button>
+              <Button
+                size="sm"
+                disabled={!dirty || saveMutation.isPending}
+                onClick={() => saveMutation.mutate()}
+                className="gap-1.5"
+              >
+                <Save className="h-4 w-4" />
+                {saveMutation.isPending ? "保存中..." : dirty ? "保存（変更あり）" : "保存済み"}
+              </Button>
             </div>
           </div>
 
-          {/* ② サービスカード */}
-          <div>
-            <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
-              ② サービスカードをドラッグしてスタッフ行へ配置
-              {!selectedResident && (
-                <span className="ml-1.5 text-amber-500 normal-case">（利用者を先に選択するとスムーズです）</span>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {SERVICE_CARDS.map((card) => (
-                <div
-                  key={card.id}
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData("application/json", JSON.stringify(card));
-                    e.dataTransfer.effectAllowed = "copy";
-                  }}
-                  className={`cursor-grab active:cursor-grabbing border rounded-lg px-3 py-2 select-none text-center min-w-[76px] transition-transform hover:scale-105 active:scale-95 shadow-sm ${CARD_CLS[card.color]} ${selectedResident && !card.isBreak ? "ring-2 ring-primary/40 ring-offset-1" : ""}`}
-                >
-                  <div className="text-xs font-bold leading-tight">{card.label}</div>
-                  <div className="text-[10px] opacity-60 mt-0.5">{card.durationMin}分</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* ── Conflict banner ── */}
-        <ConflictBanner conflicts={conflicts} cellsById={cellsById} rowsByCellId={rowsByCellId} />
-
-        {/* ── Time grid ── */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          {isLoading ? (
-            <div className="p-8 text-center text-gray-400 text-sm">読み込み中...</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="border-collapse" style={{ width: NAME_W + SHIFT_W + TOTAL_W }}>
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200">
-                    <th
-                      className="sticky z-30 bg-gray-50 border-r border-gray-200 text-xs font-semibold text-gray-500 text-center px-1 py-1.5"
-                      style={{ left: 0, width: NAME_W, minWidth: NAME_W }}
-                    >名前</th>
-                    <th
-                      className="sticky z-30 bg-gray-50 border-r border-gray-200 text-xs font-semibold text-gray-500 text-center px-1 py-1.5"
-                      style={{ left: NAME_W, width: SHIFT_W, minWidth: SHIFT_W }}
-                    >勤務</th>
-                    <th className="p-0" style={{ width: TOTAL_W }}>
-                      {/* Hour labels */}
-                      <div className="relative bg-gray-50" style={{ height: 20, width: TOTAL_W }}>
-                        {HOURS.map((h) => {
-                          const left = (h * 60 - GRID_START) / SLOT_MIN * SLOT_W;
-                          return (
-                            <div key={h} style={{ left }} className="absolute top-0 bottom-0 flex items-center">
-                              <span className="text-[9px] text-gray-400 font-mono pl-0.5">{h}:00</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sheet.rows.map((row, ri) => (
-                    <tr
-                      key={ri}
-                      className={`border-b border-gray-100 transition-colors ${
-                        dragOverRow === ri ? "bg-primary/5" : ""
-                      }`}
-                    >
-                      {/* Staff name — sticky, inline-edit on click */}
-                      <td
-                        className="sticky z-20 bg-white border-r border-gray-200 px-2 py-0"
-                        style={{ left: 0, width: NAME_W, minWidth: NAME_W }}
-                      >
-                        {editingName === ri ? (
-                          <input
-                            autoFocus
-                            value={nameInput}
-                            onChange={(e) => setNameInput(e.target.value)}
-                            onBlur={() => commitName(ri)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") commitName(ri);
-                              if (e.key === "Escape") setEditingName(null);
-                            }}
-                            className="w-full text-xs border-b border-primary outline-none bg-transparent py-2"
-                          />
-                        ) : (
-                          <button
-                            onClick={() => startEditName(ri)}
-                            className="flex items-center gap-1 w-full text-left py-2 hover:text-primary group"
-                          >
-                            <Pencil className="h-2.5 w-2.5 text-gray-200 group-hover:text-primary shrink-0" />
-                            <span className="text-xs font-medium text-gray-700 truncate">
-                              {row.staffName || "─"}
-                            </span>
-                          </button>
-                        )}
-                      </td>
-
-                      {/* Shift badge — sticky */}
-                      <td
-                        className="sticky z-20 bg-white border-r border-gray-200 px-1 text-center"
-                        style={{ left: NAME_W, width: SHIFT_W, minWidth: SHIFT_W }}
-                      >
-                        <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${shiftBg(row.shiftType)}`}>
-                          {row.shiftType}
-                        </span>
-                      </td>
-
-                      {/* Timeline — drop target */}
-                      <td
-                        className="p-0 cursor-crosshair"
-                        style={{ width: TOTAL_W }}
-                        onDragOver={handleDragOver}
-                        onDragEnter={() => setDragOverRow(ri)}
-                        onDragLeave={(e) => {
-                          if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) {
-                            setDragOverRow(null);
-                          }
-                        }}
-                        onDrop={(e) => handleDrop(e, ri)}
-                      >
-                        <div
-                          className="relative"
-                          style={{ height: 40, width: TOTAL_W, ...gridBg }}
-                        >
-                          {row.cells.map((cell, ci) => (
-                            <CellBlock
-                              key={ci}
-                              cell={cell}
-                              onClick={() => openEditCell(ri, ci)}
-                              isConflict={cell.id !== undefined && conflictCellIds.has(cell.id)}
-                            />
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {/* ── Template source banner ── */}
+          {!isLoading && source === "template" && (
+            <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-3 flex items-center justify-between gap-3 flex-wrap">
+              <span className="text-sm text-blue-800">
+                📋 テンプレート表示中（{DOW_JP[appDate.getDay()]}曜テンプレ）— 編集すると当日シートが作成されます
+              </span>
+              <Button
+                size="sm"
+                onClick={() => fromTemplateMut.mutate()}
+                disabled={fromTemplateMut.isPending}
+                className="shrink-0"
+              >
+                {fromTemplateMut.isPending ? "生成中..." : "この日を編集する"}
+              </Button>
             </div>
           )}
-        </div>
 
-        {/* ── Day service + special notes ── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {/* デイサービス — linked */}
-          <div className="bg-white rounded-xl border border-gray-200 p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-500">
-                デイサービス
-                {todayServices.length > 0 && (
-                  <span className="ml-1.5 text-primary font-bold">{todayServices.length}名</span>
+          {/* ── Instance action bar ── */}
+          {!isLoading && source === "instance" && !dirty && (
+            <div className="flex justify-end gap-2 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => saveAsTemplateMut.mutate()}
+                disabled={saveAsTemplateMut.isPending}
+              >
+                {DOW_JP[appDate.getDay()]}曜テンプレとして保存
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (window.confirm("当日シートを削除してテンプレートに戻しますか？")) resetMut.mutate();
+                }}
+                disabled={resetMut.isPending}
+              >
+                テンプレに戻す
+              </Button>
+            </div>
+          )}
+
+          {/* ── Header note ── */}
+          <div className="bg-white rounded-xl border border-gray-200 p-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="text-sm font-semibold text-gray-600 shrink-0">
+                令和{eraYear}年 {format(appDate, "M月d日（E）", { locale: ja })}
+              </div>
+              <Input
+                value={sheet.headerNote ?? ""}
+                onChange={(e) => mark({ ...sheet, headerNote: e.target.value })}
+                placeholder="備考（例：第１・３ 亀岡内科往診（10:00〜）...）"
+                className="flex-1 h-8 text-sm"
+              />
+            </div>
+          </div>
+
+          {/* ── Service card palette ── */}
+          <div className="bg-white rounded-xl border border-gray-200 p-3 space-y-3">
+            <div>
+              <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
+                ① 訪問先の利用者を選択
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="relative">
+                  <UserRound className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+                  <select
+                    value={selectedResident?.id.toString() ?? ""}
+                    onChange={(e) => {
+                      if (!e.target.value) { setSelectedResident(null); return; }
+                      const id = parseInt(e.target.value);
+                      const r = residents.find((x) => x.id === id);
+                      if (r) setSelectedResident({ id: r.id, name: r.name });
+                    }}
+                    className="h-9 pl-8 pr-3 text-sm border border-input rounded-md bg-background appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30 min-w-[160px]"
+                  >
+                    <option value="">利用者を選択...</option>
+                    {residents.map((r) => (
+                      <option key={r.id} value={r.id}>{r.name}</option>
+                    ))}
+                  </select>
+                </div>
+                {selectedResident && (
+                  <div className="flex items-center gap-1.5 bg-primary/10 text-primary border border-primary/20 rounded-full px-3 py-1">
+                    <span className="text-xs font-bold">{selectedResident.name}様</span>
+                    <button
+                      onClick={() => setSelectedResident(null)}
+                      className="text-primary/60 hover:text-primary ml-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
                 )}
-              </span>
-              <a href="/day-services" className="flex items-center gap-1 text-xs text-primary hover:underline">
-                <ExternalLink className="h-3 w-3" />詳細管理
-              </a>
+              </div>
             </div>
 
-            {todayServices.length === 0 ? (
-              <p className="text-xs text-gray-400 py-1">本日のデイサービス予定はありません</p>
-            ) : (
-              <div className="space-y-1.5">
-                {todayServices.map((svc) => (
-                  <div
-                    key={svc.id}
-                    className={`flex items-start gap-2 rounded-lg p-2 border transition-colors ${
-                      svc.isPrepared ? "border-green-200 bg-green-50/60" : "border-gray-100 bg-gray-50/50"
-                    }`}
-                  >
-                    <button
-                      onClick={() => handleTogglePrepared(svc.id)}
-                      className={`mt-0.5 shrink-0 transition-colors ${
-                        svc.isPrepared ? "text-green-500 hover:text-green-600" : "text-gray-300 hover:text-primary/60"
-                      }`}
-                    >
-                      {svc.isPrepared ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline gap-1.5 flex-wrap">
-                        <span className="text-xs font-bold text-gray-800">{svc.residentName}様</span>
-                        {svc.facilityName && (
-                          <span className="text-[10px] text-gray-400">{svc.facilityName}</span>
-                        )}
-                      </div>
-                      {svc.itemsToBring && (
-                        <p className="text-[10px] text-gray-500 mt-0.5">
-                          <span className="font-semibold">持参物：</span>{svc.itemsToBring}
-                        </p>
-                      )}
-                      {svc.itemLocations && (
-                        <p className="text-[10px] text-gray-400 mt-0.5">
-                          <span className="font-semibold">置き場所：</span>{svc.itemLocations}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+            <div>
+              <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
+                ② サービスカードをドラッグしてスタッフ行へ配置
+                <span className="ml-1.5 text-gray-400 normal-case">
+                  ／ 配置済みコマはドラッグで移動、Cmd/Ctrl+ドラッグで複製、ダブルクリックでタップ移動
+                </span>
+                {!selectedResident && (
+                  <span className="ml-1.5 text-amber-500 normal-case">（利用者を先に選択するとスムーズです）</span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {SERVICE_CARDS.map((card) => (
+                  <PaletteCard key={card.id} card={card} hasResident={!!selectedResident} />
                 ))}
               </div>
-            )}
-
-            <Input
-              value={sheet.dayServiceNote ?? ""}
-              onChange={(e) => mark({ ...sheet, dayServiceNote: e.target.value })}
-              placeholder="担当者名・補足メモ"
-              className="h-7 text-xs"
-            />
+            </div>
           </div>
 
-          {/* 特記事項 */}
-          <div className="bg-white rounded-xl border border-gray-200 p-3">
-            <div className="text-xs font-semibold text-gray-500 mb-1.5">特記事項</div>
-            <Textarea
-              value={sheet.specialNote ?? ""}
-              onChange={(e) => mark({ ...sheet, specialNote: e.target.value })}
-              placeholder="特記事項を入力..."
-              className="text-sm resize-none"
-              rows={3}
-            />
+          {/* ── Conflict banner ── */}
+          <ConflictBanner conflicts={conflicts} cellsById={cellsById} rowsByCellId={rowsByCellId} />
+
+          {/* ── Time grid ── */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            {isLoading ? (
+              <div className="p-8 text-center text-gray-400 text-sm">読み込み中...</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="border-collapse" style={{ width: NAME_W + SHIFT_W + TOTAL_W }}>
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-200">
+                      <th
+                        className="sticky z-30 bg-gray-50 border-r border-gray-200 text-xs font-semibold text-gray-500 text-center px-1 py-1.5"
+                        style={{ left: 0, width: NAME_W, minWidth: NAME_W }}
+                      >名前</th>
+                      <th
+                        className="sticky z-30 bg-gray-50 border-r border-gray-200 text-xs font-semibold text-gray-500 text-center px-1 py-1.5"
+                        style={{ left: NAME_W, width: SHIFT_W, minWidth: SHIFT_W }}
+                      >勤務</th>
+                      <th className="p-0" style={{ width: TOTAL_W }}>
+                        <div className="relative bg-gray-50" style={{ height: 20, width: TOTAL_W }}>
+                          {HOURS.map((h) => {
+                            const left = (h * 60 - GRID_START) / SLOT_MIN * SLOT_W;
+                            return (
+                              <div key={h} style={{ left }} className="absolute top-0 bottom-0 flex items-center">
+                                <span className="text-[9px] text-gray-400 font-mono pl-0.5">{h}:00</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sheet.rows.map((row, ri) => {
+                      const isOver = dragState?.overRowIdx === ri;
+                      return (
+                        <tr
+                          key={ri}
+                          className={`border-b border-gray-100 transition-colors ${isOver ? "bg-primary/5" : ""}`}
+                        >
+                          <td
+                            className="sticky z-20 bg-white border-r border-gray-200 px-2 py-0"
+                            style={{ left: 0, width: NAME_W, minWidth: NAME_W }}
+                          >
+                            {editingName === ri ? (
+                              <input
+                                autoFocus
+                                value={nameInput}
+                                onChange={(e) => setNameInput(e.target.value)}
+                                onBlur={() => commitName(ri)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") commitName(ri);
+                                  if (e.key === "Escape") setEditingName(null);
+                                }}
+                                className="w-full text-xs border-b border-primary outline-none bg-transparent py-2"
+                              />
+                            ) : (
+                              <button
+                                onClick={() => startEditName(ri)}
+                                className="flex items-center gap-1 w-full text-left py-2 hover:text-primary group"
+                              >
+                                <Pencil className="h-2.5 w-2.5 text-gray-200 group-hover:text-primary shrink-0" />
+                                <span className="text-xs font-medium text-gray-700 truncate">
+                                  {row.staffName || "─"}
+                                </span>
+                              </button>
+                            )}
+                          </td>
+
+                          <td
+                            className="sticky z-20 bg-white border-r border-gray-200 px-1 text-center"
+                            style={{ left: NAME_W, width: SHIFT_W, minWidth: SHIFT_W }}
+                          >
+                            <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${shiftBg(row.shiftType)}`}>
+                              {row.shiftType}
+                            </span>
+                          </td>
+
+                          <td className="p-0" style={{ width: TOTAL_W }}>
+                            <RowTimeline
+                              rowIdx={ri}
+                              isDragActive={!!dragState}
+                              isOver={isOver}
+                              registerRef={registerRowRef}
+                              onTrackClick={handleTrackClick}
+                            >
+                              {row.cells.map((cell, ci) => (
+                                <DraggableCell
+                                  key={ci}
+                                  cell={cell}
+                                  rowIdx={ri}
+                                  cellIdx={ci}
+                                  onClick={() => handleCellClick(ri, ci)}
+                                  isConflict={cell.id !== undefined && conflictCellIds.has(cell.id)}
+                                  isMoveTarget={moveMode?.rowIdx === ri && moveMode?.cellIdx === ci}
+                                />
+                              ))}
+                            </RowTimeline>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* ── Day service + special notes ── */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="bg-white rounded-xl border border-gray-200 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-gray-500">
+                  デイサービス
+                  {todayServices.length > 0 && (
+                    <span className="ml-1.5 text-primary font-bold">{todayServices.length}名</span>
+                  )}
+                </span>
+                <a href="/day-services" className="flex items-center gap-1 text-xs text-primary hover:underline">
+                  <ExternalLink className="h-3 w-3" />詳細管理
+                </a>
+              </div>
+
+              {todayServices.length === 0 ? (
+                <p className="text-xs text-gray-400 py-1">本日のデイサービス予定はありません</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {todayServices.map((svc) => (
+                    <div
+                      key={svc.id}
+                      className={`flex items-start gap-2 rounded-lg p-2 border transition-colors ${
+                        svc.isPrepared ? "border-green-200 bg-green-50/60" : "border-gray-100 bg-gray-50/50"
+                      }`}
+                    >
+                      <button
+                        onClick={() => handleTogglePrepared(svc.id)}
+                        className={`mt-0.5 shrink-0 transition-colors ${
+                          svc.isPrepared ? "text-green-500 hover:text-green-600" : "text-gray-300 hover:text-primary/60"
+                        }`}
+                      >
+                        {svc.isPrepared ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-1.5 flex-wrap">
+                          <span className="text-xs font-bold text-gray-800">{svc.residentName}様</span>
+                          {svc.facilityName && (
+                            <span className="text-[10px] text-gray-400">{svc.facilityName}</span>
+                          )}
+                        </div>
+                        {svc.itemsToBring && (
+                          <p className="text-[10px] text-gray-500 mt-0.5">
+                            <span className="font-semibold">持参物：</span>{svc.itemsToBring}
+                          </p>
+                        )}
+                        {svc.itemLocations && (
+                          <p className="text-[10px] text-gray-400 mt-0.5">
+                            <span className="font-semibold">置き場所：</span>{svc.itemLocations}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <Input
+                value={sheet.dayServiceNote ?? ""}
+                onChange={(e) => mark({ ...sheet, dayServiceNote: e.target.value })}
+                placeholder="担当者名・補足メモ"
+                className="h-7 text-xs"
+              />
+            </div>
+
+            <div className="bg-white rounded-xl border border-gray-200 p-3">
+              <div className="text-xs font-semibold text-gray-500 mb-1.5">特記事項</div>
+              <Textarea
+                value={sheet.specialNote ?? ""}
+                onChange={(e) => mark({ ...sheet, specialNote: e.target.value })}
+                placeholder="特記事項を入力..."
+                className="text-sm resize-none"
+                rows={3}
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* ── Modal ── */}
-      {cellModal && (
-        <CellModal
-          state={cellModal}
-          residents={residents}
-          onSave={saveCell}
-          onDelete={deleteCell}
-          onClose={() => setCellModal(null)}
-        />
-      )}
-    </Layout>
+        {/* ── Move-mode guide banner ── */}
+        {moveMode && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="fixed top-16 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded shadow-lg z-50 flex items-center gap-3 text-sm"
+          >
+            <span>移動先のスタッフ行・時刻をタップしてください</span>
+            <button
+              onClick={() => setMoveMode(null)}
+              className="underline text-xs hover:opacity-80"
+            >
+              中止（ESC）
+            </button>
+          </div>
+        )}
+
+        {/* ── Modal ── */}
+        {cellModal && (
+          <CellModal
+            state={cellModal}
+            residents={residents}
+            onSave={saveCell}
+            onDelete={deleteCell}
+            onClose={() => setCellModal(null)}
+          />
+        )}
+      </Layout>
+
+      {/* ── Drag Overlay (Ghost) ── */}
+      <DragOverlay dropAnimation={null}>
+        {ghost && (
+          <div
+            className={`pointer-events-none rounded border-2 border-dashed px-1 py-0.5 flex flex-col justify-center ${
+              ghost.colliding
+                ? "bg-red-400/40 border-red-600 text-red-900"
+                : "bg-blue-400/40 border-blue-700 text-blue-900"
+            }`}
+            style={{ width: ghost.width, height: ROW_H - 4 }}
+          >
+            <div className="flex items-center gap-1 text-[10px] font-bold leading-tight">
+              {ghost.colliding && <AlertTriangle className="h-3 w-3 shrink-0" />}
+              <span className="truncate">{ghost.name}</span>
+              {ghost.duplicate && <span className="ml-1 text-[9px] bg-white/40 px-1 rounded">複製</span>}
+            </div>
+            <div className="text-[9px] leading-tight opacity-80 truncate whitespace-pre-line">
+              {ghost.label}
+            </div>
+            <div className="text-[9px] leading-tight font-mono opacity-80">
+              {ghost.startTime}–{ghost.endTime}
+            </div>
+            {ghost.colliding && (
+              <div className="text-[9px] font-bold">⚠️ 既存と重複</div>
+            )}
+          </div>
+        )}
+      </DragOverlay>
+    </DndContext>
   );
 }
