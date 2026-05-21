@@ -1,0 +1,281 @@
+3件のバグを修正したい。優先度順に進めてください。各修正後に typecheck と該当機能の動作確認を行うこと。
+
+## 修正B2: Resident スキーマに退去・入院フィールドを追加 (最重要)
+
+### Step 1: OpenAPI 仕様の修正
+
+`lib/api-spec/openapi.yaml` を開き、`Resident` および `UpdateResidentBody` (または相当するUpdate系スキーマ) を探す。
+
+両方のプロパティに以下を追加 (既にあればスキップ、なければ追加):
+
+```yaml
+Resident:
+  type: object
+  properties:
+    # 既存プロパティはそのまま残す
+    # ...
+    # 追加
+    movedOutAt:
+      type: string
+      format: date
+      nullable: true
+    movedOutReason:
+      type: string
+      nullable: true
+    hospitalizedAt:
+      type: string
+      format: date
+      nullable: true
+    hospitalizedReason:
+      type: string
+      nullable: true
+
+UpdateResidentBody:  # (実際のスキーマ名は要確認)
+  type: object
+  properties:
+    # 既存プロパティはそのまま残す
+    # ...
+    # 追加
+    movedOutAt:
+      type: string
+      format: date
+      nullable: true
+    movedOutReason:
+      type: string
+      nullable: true
+    hospitalizedAt:
+      type: string
+      format: date
+      nullable: true
+    hospitalizedReason:
+      type: string
+      nullable: true
+```
+
+注意: `format: date` を指定すると Orval が Date 型を生成してクエリパラメータで問題を起こした前例がある。
+今回は **request body** のフィールドなので Date 型生成でも問題ないはずだが、もし frontend 側で型エラーが新たに発生したら、`format: date` を外して `type: string` のみにする。
+
+### Step 2: codegen 再実行
+
+```bash
+pnpm --filter @workspace/api-spec run codegen
+```
+
+### Step 3: api-server 側の確認
+
+`artifacts/api-server/src/routes/residents.ts` で、以前 `as any` キャストで対応していた箇所があれば削除して正しい型を効かせる:
+
+```bash
+grep -n "as any" artifacts/api-server/src/routes/residents.ts
+```
+
+### Step 4: 動作確認
+
+```bash
+# サーバ再起動 (もしくは hot reload で十分なら待つ)
+# PATCH を再送して永続化を確認
+curl -X PATCH "http://localhost:8080/api/residents/1" \
+  -H "Content-Type: application/json" \
+  -d '{"movedOutAt": "2026-07-01", "movedOutReason": "テスト退去"}'
+
+# DB で確認
+psql "$DATABASE_URL" -c "SELECT id, moved_out_at, moved_out_reason FROM residents WHERE id = 1;"
+
+# resident_services の自動終了確認
+psql "$DATABASE_URL" -c "SELECT id, resident_id, terminated_at, termination_reason FROM resident_services WHERE resident_id = 1;"
+```
+
+期待:
+- residents.moved_out_at = 2026-07-01
+- residents.moved_out_reason = テスト退去
+- resident_services.terminated_at = 2026-07-01 (アクティブだった契約のみ)
+- resident_services.termination_reason = テスト退去
+
+### Step 5: home-navi 側の影響確認
+
+```bash
+pnpm typecheck 2>&1 | grep -E "error TS" | wc -l
+```
+
+修正前は74件だったエラーが大幅減少しているはず (推定25件以上が解消)。
+減少幅を報告すること。
+
+## 修正B1: テンプレ合成 cells 埋め込み
+
+### 該当ファイル
+`artifacts/api-server/src/routes/routeSheets.ts` の合成パス (122-130行付近)
+
+### 修正内容
+
+現在の実装:
+```typescript
+const synthesizedRows = tplRowsData.map(({ row: tplRow, shiftType }) => {
+  // ...
+  return { sortOrder, shiftType, staffId, staffName, cells: [] };  // ← 空配列
+});
+```
+
+これを、各 tplRow に対応する template cells を取得して埋め込む形に修正する。
+
+修正方針:
+1. ループ前に `routeSheetTemplateCellsTable` から、対象テンプレートの全 cells を一括取得 (N+1問題回避)
+2. 取得時に `residentServiceId` で `residentServices` テーブルを JOIN して、利用者情報・サービス種別情報を取得
+3. `residents.movedOutAt`, `residents.hospitalizedAt`, `residentServices.terminatedAt` でフィルタ (active のみ)
+4. tplRow.id ごとに cells をグループ化したマップを作成
+5. synthesizedRows の構築時に、各 row の cells に対応するセルデータを埋め込む
+
+具体的な実装イメージ (実コードに合わせて調整すること):
+
+```typescript
+// 1. 一括取得 + JOIN
+const tplRowIds = tplRowsData.map(({ row }) => row.id);
+const tplCellsWithDetails = tplRowIds.length === 0 ? [] : await db
+  .select({
+    cell: routeSheetTemplateCellsTable,
+    residentService: residentServicesTable,
+    resident: residentsTable,
+    serviceType: serviceTypesTable,
+  })
+  .from(routeSheetTemplateCellsTable)
+  .leftJoin(residentServicesTable, eq(routeSheetTemplateCellsTable.residentServiceId, residentServicesTable.id))
+  .leftJoin(residentsTable, eq(residentServicesTable.residentId, residentsTable.id))
+  .leftJoin(serviceTypesTable, eq(residentServicesTable.serviceTypeId, serviceTypesTable.id))
+  .where(inArray(routeSheetTemplateCellsTable.templateRowId, tplRowIds));
+
+// 2. 行ごとにグループ化、active のみフィルタ
+const cellsByRowId = new Map<string, any[]>();
+for (const { cell, residentService, resident, serviceType } of tplCellsWithDetails) {
+  // resident_service があるが、利用者が退去/入院/契約終了なら除外
+  if (residentService) {
+    if (resident?.movedOutAt) continue;
+    if (resident?.hospitalizedAt) continue;
+    if (residentService.terminatedAt) continue;
+  }
+  
+  const cellData = {
+    id: `tpl-${cell.id}`,
+    routeSheetRowId: cell.templateRowId,
+    startTime: cell.startTime,
+    endTime: cell.endTime,
+    isBreak: cell.isBreak,
+    residentId: residentService?.residentId ?? null,
+    residentName: resident ? `${resident.lastName} ${resident.firstName}` : null,
+    serviceTypeId: residentService?.serviceTypeId ?? null,
+    serviceLabel: serviceType?.shortLabel ?? null,
+    notes: cell.notes,
+  };
+  
+  if (!cellsByRowId.has(cell.templateRowId)) {
+    cellsByRowId.set(cell.templateRowId, []);
+  }
+  cellsByRowId.get(cell.templateRowId)!.push(cellData);
+}
+
+// 3. synthesizedRows に埋め込み
+const synthesizedRows = tplRowsData.map(({ row: tplRow, shiftType }) => {
+  // ... 既存処理
+  return {
+    sortOrder: tplRow.sortOrder,
+    shiftType,
+    staffId,
+    staffName,
+    cells: cellsByRowId.get(tplRow.id) ?? [],  // ← 取得したセルを埋め込み
+  };
+});
+```
+
+### 動作確認
+```bash
+# 修正B2でセットアップしたデータがあれば、再度退去を取り消してから確認
+psql "$DATABASE_URL" -c "UPDATE residents SET moved_out_at = NULL, moved_out_reason = NULL WHERE id = 1;"
+psql "$DATABASE_URL" -c "UPDATE resident_services SET terminated_at = NULL, termination_reason = NULL WHERE resident_id = 1;"
+
+# テンプレを再保存 (必要なら)、その後合成APIを叩く
+curl "http://localhost:8080/api/route-sheets?date=2026-06-29" | jq '.cells'
+```
+
+期待: cells が空配列ではなく、テンプレに登録した訪問コマが含まれる。
+
+## 修正UI3: フロント `?date=` クエリパラメータの反映
+
+### 該当ファイル
+`artifacts/home-navi/src/pages/route-sheet/index.tsx`
+
+### 調査と修正
+
+まず現状確認:
+```bash
+grep -n "date\|useSearch\|useLocation\|useParams" artifacts/home-navi/src/pages/route-sheet/index.tsx | head -30
+```
+
+Wouter は `useSearch` で query string にアクセスする。または `useLocation` で URL 全体を取得して自前パース。
+
+修正方針:
+1. Wouter の `useSearch` を import
+2. URL の `?date=YYYY-MM-DD` をパースして state の初期値に使う
+3. date が無ければ今日 (新規実装時のデフォルト)
+4. date 変更時に URL も同期 (オプション)
+
+実装例:
+```typescript
+import { useSearch } from 'wouter';
+import { format } from 'date-fns';
+
+export default function RouteSheetPage() {
+  const search = useSearch();
+  const searchParams = new URLSearchParams(search);
+  const initialDate = searchParams.get('date') ?? format(new Date(), 'yyyy-MM-dd');
+  
+  const [date, setDate] = useState(initialDate);
+  
+  // URL 変更検知 (オプション)
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const urlDate = params.get('date');
+    if (urlDate && urlDate !== date) {
+      setDate(urlDate);
+    }
+  }, [search]);
+  
+  // ... 残りの実装
+}
+```
+
+### 動作確認
+ブラウザで `/route-sheet?date=2026-06-29` を開いた時に、画面の日付選択が 2026-06-29 になっているか確認。
+スクリーンショットを取って報告。
+
+## 最終確認
+
+3件の修正完了後、以下を実行:
+
+```bash
+# 型エラー件数
+pnpm typecheck 2>&1 | grep -E "error TS" | wc -l
+
+# Step A〜E動作確認シナリオを再実行 (簡易版)
+# 1. テンプレに登録した訪問コマが /route-sheet?date=XXX で表示される
+# 2. 利用者の退去をPATCHすると DB に永続化される
+# 3. 退去日が resident_services に伝播する
+```
+
+## 報告フォーマット
+
+### B2 (OpenAPI Resident スキーマ拡張)
+- 修正前 typecheck エラー件数: 74
+- 修正後 typecheck エラー件数: ?
+- 退去PATCH の動作: OK/NG
+- DB永続化: OK/NG
+- resident_services への伝播: OK/NG
+
+### B1 (テンプレ合成 cells)
+- 修正後の cells 配列: 空でない/まだ空
+- 訪問コマが画面に表示されるか: OK/NG
+
+### UI3 (?date= 反映)
+- URLパラメータが画面に反映されるか: OK/NG
+- スクリーンショット: 添付
+
+### 総合
+- Step A〜E 全機能エンドツーエンド動作: OK/NG
+- 残課題: あれば列挙
