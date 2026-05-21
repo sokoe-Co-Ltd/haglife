@@ -13,6 +13,9 @@ import {
   useToggleDayServicePrepared,
   getListDayServicesQueryKey,
   useListServiceTypes,
+  useListShifts,
+  useListStaff,
+  useListShiftTypes,
 } from "@workspace/api-client-react";
 import { ConflictBanner } from "@/components/route-sheet/ConflictBanner";
 import {
@@ -411,16 +414,41 @@ function RowTimeline({
 }
 
 // ── CellModal ──────────────────────────────────────────────────────────────────
-function CellModal({ state, residents, onSave, onDelete, onClose }: {
+type StaffOption = { staffId: number; name: string; shiftCode: string | null };
+
+function CellModal({
+  state, residents, staffOptions, currentStaffId, isTemplateView,
+  onSave, onDelete, onClose,
+}: {
   state: CellModalState;
   residents: { id: number; name: string }[];
-  onSave: (ri: number, ci: number | null, cell: SheetCell) => void;
+  staffOptions: StaffOption[];
+  currentStaffId: number | null;
+  isTemplateView: boolean;
+  onSave: (ri: number, ci: number | null, cell: SheetCell, newStaffId: number | null | undefined) => void;
   onDelete: (ri: number, ci: number) => void;
   onClose: () => void;
 }) {
   const [form, setForm] = useState<SheetCell>(state.cell);
+  const [staffId, setStaffId] = useState<number | null>(currentStaffId);
+  const [errors, setErrors] = useState<{ resident?: string; serviceType?: string }>({});
   const set = (k: keyof SheetCell, v: any) => setForm((p) => ({ ...p, [k]: v }));
   const { data: serviceTypes = [] } = useListServiceTypes({ isActive: true } as any);
+
+  function handleSave() {
+    const errs: typeof errors = {};
+    if (!form.isBreak) {
+      if (!form.residentId) errs.resident = "利用者を選択してください";
+      if (!form.serviceTypeId) errs.serviceType = "サービス種別を選択してください";
+    }
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return;
+    }
+    const newStaffId = isTemplateView ? undefined : staffId;
+    onSave(state.rowIndex, state.cellIndex, form, newStaffId);
+    onClose();
+  }
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -443,10 +471,29 @@ function CellModal({ state, residents, onSave, onDelete, onClose }: {
               <Input type="time" value={form.endTime} onChange={(e) => set("endTime", e.target.value)} className="h-8 text-sm" step={900} />
             </div>
           </div>
+          {!isTemplateView && (
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">担当者</label>
+              <select
+                value={staffId?.toString() ?? ""}
+                onChange={(e) => setStaffId(e.target.value ? parseInt(e.target.value) : null)}
+                className="w-full h-8 px-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <option value="">（未割当）</option>
+                {staffOptions.map((s) => (
+                  <option key={s.staffId} value={s.staffId}>
+                    {s.name}{s.shiftCode ? `（${s.shiftCode}）` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           {!form.isBreak && (
             <>
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">利用者</label>
+                <label className="text-xs text-gray-500 mb-1 block">
+                  利用者 <span className="text-red-500">*</span>
+                </label>
                 <select
                   autoFocus
                   value={form.residentId?.toString() ?? ""}
@@ -456,27 +503,25 @@ function CellModal({ state, residents, onSave, onDelete, onClose }: {
                     setForm((p) => ({
                       ...p,
                       residentId: id,
-                      residentName: resident ? resident.name : p.residentName,
+                      residentName: resident ? resident.name : null,
                     }));
+                    if (id) setErrors((p) => ({ ...p, resident: undefined }));
                   }}
-                  className="w-full h-8 px-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className={`w-full h-8 px-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 ${errors.resident ? "border-red-500" : "border-input"}`}
                 >
-                  <option value="">— 手入力 —</option>
+                  <option value="">（未選択）</option>
                   {residents.map((r) => (
                     <option key={r.id} value={r.id}>{r.name}</option>
                   ))}
                 </select>
-                {!form.residentId && (
-                  <Input
-                    value={form.residentName ?? ""}
-                    onChange={(e) => set("residentName", e.target.value)}
-                    placeholder="利用者名（フリーテキスト）"
-                    className="h-8 text-sm mt-1"
-                  />
+                {errors.resident && (
+                  <p className="text-[10px] text-red-600 mt-0.5">{errors.resident}</p>
                 )}
               </div>
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">サービス種別</label>
+                <label className="text-xs text-gray-500 mb-1 block">
+                  サービス種別 <span className="text-red-500">*</span>
+                </label>
                 <select
                   value={form.serviceTypeId ?? ""}
                   onChange={(e) => {
@@ -485,26 +530,22 @@ function CellModal({ state, residents, onSave, onDelete, onClose }: {
                     setForm((p) => ({
                       ...p,
                       serviceTypeId: id,
-                      serviceLabel: st ? st.shortLabel : p.serviceLabel,
+                      serviceLabel: st ? st.shortLabel : null,
                       endTime: (st && p.startTime) ? addMinutes(p.startTime, st.durationMinutes) : p.endTime,
                     }));
+                    if (id) setErrors((p) => ({ ...p, serviceType: undefined }));
                   }}
-                  className="w-full h-8 px-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className={`w-full h-8 px-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 ${errors.serviceType ? "border-red-500" : "border-input"}`}
                 >
-                  <option value="">— 手入力 —</option>
+                  <option value="">（未選択）</option>
                   {(serviceTypes as any[]).map((st) => (
                     <option key={st.id} value={st.id}>
                       {st.name}（{st.durationMinutes}分）
                     </option>
                   ))}
                 </select>
-                {!form.serviceTypeId && (
-                  <Input
-                    value={form.serviceLabel ?? ""}
-                    onChange={(e) => set("serviceLabel", e.target.value)}
-                    placeholder="身０ など"
-                    className="h-8 text-sm mt-1"
-                  />
+                {errors.serviceType && (
+                  <p className="text-[10px] text-red-600 mt-0.5">{errors.serviceType}</p>
                 )}
                 {form.serviceTypeId && (
                   <p className="text-[10px] text-gray-400 mt-0.5">
@@ -531,7 +572,7 @@ function CellModal({ state, residents, onSave, onDelete, onClose }: {
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={onClose}>キャンセル</Button>
-          <Button size="sm" onClick={() => { onSave(state.rowIndex, state.cellIndex, form); onClose(); }}>保存</Button>
+          <Button size="sm" onClick={handleSave}>保存</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -577,8 +618,31 @@ export default function RouteSheetPage() {
   // ── Residents list ────────────────────────────────────────────────────────
   const { data: allResidents = [] } = useListResidents();
   const residents: { id: number; name: string }[] = (allResidents as any[])
-    .filter((r) => !r.movedOutAt)
+    .filter((r) => !r.movedOutAt && r.isVisible !== false)
     .map((r) => ({ id: r.id as number, name: `${r.lastName} ${r.firstName}` }));
+
+  // ── Staff options for assignee dropdown (today's shift workers only) ─────
+  const { data: shiftsToday = [] } = useListShifts({ date: dateStr } as any);
+  const { data: allStaff = [] } = useListStaff();
+  const { data: allShiftTypes = [] } = useListShiftTypes();
+  const staffOptions: StaffOption[] = useMemo(() => {
+    const seen = new Set<number>();
+    const opts: StaffOption[] = [];
+    for (const s of (shiftsToday as any[])) {
+      const sid = s.staffId as number;
+      if (seen.has(sid)) continue;
+      seen.add(sid);
+      const staff = (allStaff as any[]).find((x) => x.id === sid);
+      if (!staff) continue;
+      const st = (allShiftTypes as any[]).find((x) => x.id === s.shiftTypeId);
+      opts.push({
+        staffId: sid,
+        name: `${staff.lastName} ${staff.firstName}`,
+        shiftCode: st?.code ?? null,
+      });
+    }
+    return opts;
+  }, [shiftsToday, allStaff, allShiftTypes]);
 
   // ── Local state ──────────────────────────────────────────────────────────
   const [localSheet, setLocalSheet] = useState<RouteSheetData | null>(null);
@@ -708,16 +772,67 @@ export default function RouteSheetPage() {
   function openEditCell(ri: number, ci: number) {
     setCellModal({ rowIndex: ri, cellIndex: ci, cell: { ...sheet.rows[ri].cells[ci] } });
   }
-  function saveCell(ri: number, ci: number | null, cell: SheetCell) {
-    const rows = sheet.rows.map((r, i) => {
-      if (i !== ri) return r;
-      let cells = [...r.cells];
-      if (ci === null) cells = [...cells, cell];
-      else cells[ci] = cell;
-      cells.sort((a, b) => timeToMin(a.startTime) - timeToMin(b.startTime));
-      return { ...r, cells };
+  function saveCell(srcRowIdx: number, ci: number | null, cell: SheetCell, newStaffId: number | null | undefined) {
+    const srcRow = sheet.rows[srcRowIdx];
+    const currentStaffId = (srcRow?.staffId ?? null) as number | null;
+    // undefined means "do not change staff" (template mode)
+    const targetStaffId: number | null = newStaffId === undefined ? currentStaffId : newStaffId;
+
+    let rows: SheetRow[] = sheet.rows;
+    let dstRowIdx = srcRowIdx;
+
+    if (targetStaffId !== currentStaffId) {
+      // Locate destination row by staffId
+      let foundIdx = -1;
+      if (targetStaffId === null) {
+        // Prefer an existing unassigned row that isn't the source
+        foundIdx = rows.findIndex((r, i) => i !== srcRowIdx && (r.staffId ?? null) === null);
+      } else {
+        foundIdx = rows.findIndex((r) => r.staffId === targetStaffId);
+      }
+      if (foundIdx === -1) {
+        // Create a new row for the target staff
+        const staffMatch = targetStaffId !== null
+          ? (allStaff as any[]).find((x) => x.id === targetStaffId)
+          : null;
+        const shiftMatch = targetStaffId !== null
+          ? (shiftsToday as any[]).find((x) => x.staffId === targetStaffId)
+          : null;
+        const shiftTypeMatch = shiftMatch
+          ? (allShiftTypes as any[]).find((x) => x.id === shiftMatch.shiftTypeId)
+          : null;
+        const newRow: SheetRow = {
+          staffName: staffMatch ? `${staffMatch.lastName} ${staffMatch.firstName}` : "",
+          shiftType: shiftTypeMatch?.code ?? "日",
+          sortOrder: rows.length,
+          staffId: targetStaffId,
+          cells: [],
+        };
+        rows = [...rows, newRow];
+        foundIdx = rows.length - 1;
+      }
+      dstRowIdx = foundIdx;
+    }
+
+    const finalRows = rows.map((r, i) => {
+      if (i === srcRowIdx && i === dstRowIdx) {
+        let cells = [...r.cells];
+        if (ci === null) cells = [...cells, cell];
+        else cells[ci] = cell;
+        cells.sort((a, b) => timeToMin(a.startTime) - timeToMin(b.startTime));
+        return { ...r, cells };
+      }
+      if (i === srcRowIdx) {
+        if (ci === null) return r;
+        return { ...r, cells: r.cells.filter((_, j) => j !== ci) };
+      }
+      if (i === dstRowIdx) {
+        const cells = [...r.cells, cell].sort((a, b) => timeToMin(a.startTime) - timeToMin(b.startTime));
+        return { ...r, cells };
+      }
+      return r;
     });
-    mark({ ...sheet, rows });
+    mark({ ...sheet, rows: finalRows });
   }
   function deleteCell(ri: number, ci: number) {
     const rows = sheet.rows.map((r, i) =>
@@ -1324,6 +1439,9 @@ export default function RouteSheetPage() {
           <CellModal
             state={cellModal}
             residents={residents}
+            staffOptions={staffOptions}
+            currentStaffId={(sheet.rows[cellModal.rowIndex]?.staffId ?? null) as number | null}
+            isTemplateView={isTemplateView}
             onSave={saveCell}
             onDelete={deleteCell}
             onClose={() => setCellModal(null)}
