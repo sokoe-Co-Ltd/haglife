@@ -1,0 +1,326 @@
+ルート票ガント画面 (/route-sheet) の操作性を向上させたい。
+
+## 前提
+- 既存実装: react-dnd または @dnd-kit でドラッグ&ドロップ実装済み (どちらか調査して使用継続)
+- 対象ファイル: artifacts/home-navi/src/pages/route-sheet/index.tsx および配下のコンポーネント群
+- 現状の動作: パレットからガントへドラッグして配置。配置済みセルは時刻表示のみで、移動不可
+
+## 実装する機能
+
+### 機能1: ドラッグ中の視覚フィードバック強化
+
+ドラッグ開始から確定までの間、ドロップ先がわかりやすいUIを実装する。
+
+#### 1-1. ドラッグ開始時の全体ハイライト
+ドラッグ開始 (パレットから or 配置済みセルから) すると同時に、全スタッフ行のタイムラインに15分単位の格子線をうっすら表示する。
+
+```tsx
+// 例: ガントトラック内に薄い縦線を描画
+<div className="absolute inset-0 pointer-events-none">
+  {Array.from({ length: totalSlots }).map((_, i) => (
+    <div
+      key={i}
+      className="absolute top-0 bottom-0 border-l border-blue-200/40"
+      style={{ left: `${(i / totalSlots) * 100}%` }}
+    />
+  ))}
+</div>
+```
+
+CSSクラス例 (isDragging が true の時だけ表示):
+```css
+.gantt-track.is-dragging .grid-overlay { opacity: 1; }
+.gantt-track:not(.is-dragging) .grid-overlay { opacity: 0; }
+```
+
+#### 1-2. カーソル直下セルのハイライト
+マウス/タッチがホバー中の15分セルを青ハイライト。
+
+#### 1-3. ゴーストブロックのプレビュー
+ドラッグ中のアイテムの所要時間 (例: 身体介護20分なら20分幅) を反映した「ゴーストブロック」をカーソル位置に追従表示。
+
+```tsx
+{isDragging && pointerPosition && (
+  <div
+    className="absolute bg-blue-400/40 border-2 border-blue-600 border-dashed rounded pointer-events-none z-50"
+    style={{
+      left: `${ghostLeft}%`,
+      width: `${ghostWidth}%`,
+      top: ghostTop,
+      height: ghostHeight,
+    }}
+  >
+    <span className="text-xs text-blue-900 px-1">
+      {residentName} / {startTimePreview}-{endTimePreview}
+    </span>
+  </div>
+)}
+```
+
+#### 1-4. 衝突警告 (既存セルと重なる場合)
+重なる位置にカーソルが来ると、ゴーストブロックを**赤色**に変更 + 禁止アイコンではなく**警告アイコン (⚠️)** を表示。
+ただしドロップ自体は許可する (現状動作維持)。落とした後は赤枠表示 (visit_conflicts ビュー検出による既存の動作)。
+
+```tsx
+<div className={cn(
+  "absolute border-2 border-dashed rounded",
+  isColliding ? "bg-red-400/30 border-red-600" : "bg-blue-400/30 border-blue-600"
+)}>
+  {isColliding && (
+    <span className="text-xs text-red-900">⚠️ 既存と重複</span>
+  )}
+</div>
+```
+
+### 機能2: 配置済みセルの移動 (ドラッグ操作)
+
+配置済みのガントセルを掴んで、別の時刻 or 別のスタッフ行に移動できるようにする。
+
+#### 2-1. 配置済みセルを useDraggable 対応に
+既存のセルレンダリングコンポーネントに `useDraggable` (もしくは react-dnd の useDrag) を適用。
+
+```tsx
+// @dnd-kit の場合
+const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+  id: `cell-${cell.id}`,
+  data: {
+    type: 'placed-cell',
+    cell,
+    sourceRowId: rowId,
+  },
+});
+```
+
+#### 2-2. ドロップハンドラの拡張
+既存のドロップ処理に「移動」モードを追加。
+- ソースが「パレット」 → 新規追加 (既存動作)
+- ソースが「placed-cell」 → 既存セルの routeSheetRowId / startTime / endTime を更新
+
+```tsx
+const handleDrop = (event: DragEndEvent) => {
+  const { active, over } = event;
+  if (!over) return;
+  
+  if (active.data.current?.type === 'palette-item') {
+    // 新規追加
+    addCell({ ... });
+  } else if (active.data.current?.type === 'placed-cell') {
+    // 既存セル移動
+    const sourceCell = active.data.current.cell;
+    const targetRowId = over.data.current?.rowId;
+    const targetStartTime = calculateStartTimeFromPosition(over.data.current?.slotIndex);
+    const newEndTime = addMinutes(targetStartTime, durationMinutes(sourceCell));
+    
+    moveCell({
+      cellId: sourceCell.id,
+      newRowId: targetRowId,
+      newStartTime: targetStartTime,
+      newEndTime: newEndTime,
+    });
+  }
+};
+```
+
+#### 2-3. 横スライド (時刻変更) と縦移動 (スタッフ変更) の両対応
+セルを横にドラッグ → 同じ行内で時刻だけ変更
+セルを縦にドラッグ → 別スタッフ行に移動
+斜めドラッグ → 両方変更
+
+15分単位にスナップさせる:
+```typescript
+function snapToFifteenMinutes(time: string): string {
+  const [h, m] = time.split(':').map(Number);
+  const totalMin = h * 60 + m;
+  const snapped = Math.round(totalMin / 15) * 15;
+  const nh = Math.floor(snapped / 60);
+  const nm = snapped % 60;
+  return `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`;
+}
+```
+
+#### 2-4. サーバ保存
+移動完了時、既存の PUT /api/route-sheets/:date upsert に丸ごと投げる (現状の保存フローと同じ)。
+楽観的更新で UI を即座に反映し、サーバ応答で確定。
+
+### 機能3: 配置済みセルの複製
+
+セルを Ctrl/Cmd キーを押しながらドラッグ → 元の場所にもセルが残ったまま、新しい場所にコピーが配置される。
+
+```typescript
+const isDuplicateMode = event.activatorEvent instanceof KeyboardEvent
+  ? event.activatorEvent.ctrlKey || event.activatorEvent.metaKey
+  : event.active.data.current?.duplicateMode;
+
+if (isDuplicateMode && active.data.current?.type === 'placed-cell') {
+  duplicateCell({ ... });
+} else if (active.data.current?.type === 'placed-cell') {
+  moveCell({ ... });
+}
+```
+
+タッチデバイス用には、長押し中に表示されるツールバーに「複製モードに切替」トグルボタンを追加。
+
+### 機能4: タップ/クリック操作モード
+
+タッチデバイスや「ドラッグが疲れる」ケース用に、タップ操作を実装。
+
+#### 4-1. 動作モード
+| 操作 | 動作 |
+|---|---|
+| シングルタップ (or クリック) | セル詳細パネルを開く (既存動作) |
+| ダブルタップ (or ダブルクリック) | **移動モード**開始 → セルが点滅、次にタップした場所に移動 |
+| 長押し (500ms以上) | **ドラッグモード**開始 (既存動作の拡張) |
+
+#### 4-2. 移動モード実装
+
+```tsx
+const [moveMode, setMoveMode] = useState<{ cellId: string } | null>(null);
+
+const handleCellDoubleTap = (cellId: string) => {
+  setMoveMode({ cellId });
+  // セルを点滅させる CSS クラスを付与
+};
+
+const handleTrackTap = (rowId: string, slotIndex: number) => {
+  if (moveMode) {
+    const targetStartTime = calculateStartTimeFromSlot(slotIndex);
+    moveCell({
+      cellId: moveMode.cellId,
+      newRowId: rowId,
+      newStartTime: targetStartTime,
+    });
+    setMoveMode(null);
+  } else {
+    // 通常の新規追加 UI 起動など
+  }
+};
+
+// 移動モード中のセル
+<div className={cn(
+  "gantt-cell",
+  moveMode?.cellId === cell.id && "animate-pulse ring-2 ring-blue-500"
+)}>
+```
+
+#### 4-3. 移動モード中の視覚誘導
+- 対象セルに点滅エフェクト
+- 画面上部に「移動先をタップしてください (ESCで中止)」というガイドバナー表示
+- ESC キーまたは画面の外をタップで移動モード解除
+
+```tsx
+{moveMode && (
+  <div className="fixed top-16 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded shadow-lg z-50">
+    移動先をタップしてください
+    <button onClick={() => setMoveMode(null)} className="ml-3 underline">中止</button>
+  </div>
+)}
+```
+
+#### 4-4. 長押し検知
+タッチデバイスでドラッグモードに入るための長押し:
+```tsx
+const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+
+const handleTouchStart = (e: TouchEvent) => {
+  longPressTimer.current = setTimeout(() => {
+    setDragMode(true);
+    // ハプティックフィードバック (対応端末のみ)
+    if (navigator.vibrate) navigator.vibrate(50);
+  }, 500);
+};
+
+const handleTouchEnd = () => {
+  if (longPressTimer.current) clearTimeout(longPressTimer.current);
+};
+```
+
+## 実装注意事項
+
+### A. 既存ロジックの保護
+- 既存のドラッグ&ドロップによる新規追加機能は壊さない
+- 既存の競合検出表示 (赤枠) は維持
+- 既存の PUT /api/route-sheets/:date エンドポイントを引き続き使用 (新規APIは不要)
+
+### B. テンプレート表示モード時の挙動
+source: 'template' のときは、配置済みセルを移動しようとしたら以下のいずれかの動作にする:
+
+選択肢: 「移動操作時に、テンプレート編集モードに自動的に切替えるか確認ダイアログを出す」
+```tsx
+if (sourceData?.source === 'template' && moveOperation) {
+  const confirmed = await confirm('テンプレートを編集しますか? それともこの日を編集しますか?');
+  if (confirmed === 'template') {
+    navigateToTemplateEdit();
+  } else if (confirmed === 'instance') {
+    materializeAndEdit();
+  }
+}
+```
+
+実装が複雑なら、シンプルに「テンプレート表示中は移動できません。先にこの日を編集モードにしてください」と alert を出すだけでも可。
+
+### C. パフォーマンス
+- 大量のセル (50件以上) でもドラッグがカクつかないよう、レンダリング最適化
+- ドラッグ中のゴーストブロック描画は requestAnimationFrame でスロットル
+- 確定時のみサーバ保存 (途中の中間状態は保存しない)
+
+### D. アクセシビリティ
+- キーボードでもセル移動できるようにする (TabキーでセルにフォーカスSpace/Enterで選択、矢印キーで移動)
+- 移動モード中の状態を aria-live でスクリーンリーダーに通知
+
+## 動作確認シナリオ
+
+1. パレットからガントに「身体介護20分」をドラッグ
+   → 15分グリッドが薄く見える
+   → カーソル位置に青いゴーストブロック (20分幅) が追従
+   → 任意の場所にドロップ → 配置完了
+
+2. 既存セルに重なる位置にドラッグ
+   → ゴーストブロックが赤色になり警告アイコン表示
+   → ドロップ可能 → 配置後は赤枠 (競合検出)
+
+3. 配置済みセルを掴んで横にドラッグ
+   → 同じ行内で時刻が15分単位で変わる
+   → ドロップで確定
+
+4. 配置済みセルを掴んで別の行にドラッグ
+   → 別スタッフに担当が変わる
+
+5. 配置済みセルを Cmd/Ctrl 押しながらドラッグ
+   → 元のセルが残り、新しい場所にコピーが配置される
+
+6. 配置済みセルをダブルタップ
+   → セルが点滅、移動モード開始
+   → 別の場所をタップ → そこに移動
+
+7. 配置済みセルを長押し (タッチ)
+   → ドラッグモード開始 (ハプティックフィードバック)
+   → そのまま指を動かして移動
+
+8. PUT /api/route-sheets/:date が正しく呼ばれて永続化される
+
+## 報告フォーマット
+
+各機能ごとに以下のフォーマットで:
+
+### 機能1: ドラッグ中の視覚フィードバック
+- 実装ファイル: 列挙
+- スクリーンショット: 添付 (ドラッグ中、衝突中)
+- 動作確認: OK/NG
+
+### 機能2: 配置済みセル移動
+- 実装内容のサマリ
+- 横スライド: OK/NG (スクリーンショットor動画)
+- 縦移動: OK/NG
+- サーバ保存: OK/NG
+
+### 機能3: 複製
+- 実装方法: Cmd/Ctrl 検知 / トグルボタン / 両方
+- 動作確認: OK/NG
+
+### 機能4: タップ操作
+- ダブルタップ→移動モード: OK/NG
+- 長押し→ドラッグモード: OK/NG (タッチデバイスでテスト)
+- ガイドバナー表示: OK/NG
+
+### 残課題
+- ある場合は列挙
