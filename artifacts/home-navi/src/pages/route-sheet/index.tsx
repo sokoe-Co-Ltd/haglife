@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import {
   DndContext, DragOverlay, useDraggable, useDroppable, useSensor, useSensors,
-  PointerSensor, KeyboardSensor,
+  MouseSensor, TouchSensor, KeyboardSensor,
   type DragStartEvent, type DragMoveEvent, type DragEndEvent,
 } from "@dnd-kit/core";
 
@@ -876,9 +876,11 @@ export default function RouteSheetPage() {
 
   // ── DnD handlers ─────────────────────────────────────────────────────────
   const sensors = useSensors(
-    // Pointer: small distance constraint so cell click still opens the modal,
-    // and touch users can long-press without accidentally dragging.
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    // Mouse: small distance constraint so cell click still opens the modal.
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    // Touch: long-press to start a drag so vertical page scroll still works.
+    // 200ms is short enough to feel responsive but distinguishes from a tap.
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
     useSensor(KeyboardSensor),
   );
 
@@ -899,6 +901,15 @@ export default function RouteSheetPage() {
     };
   }, [dragState?.payload]);
 
+  // Extract clientX/clientY from either MouseEvent/PointerEvent or TouchEvent.
+  function getActivatorCoords(ae: any): { x: number; y: number } {
+    if (!ae) return { x: 0, y: 0 };
+    if (typeof ae.clientX === "number") return { x: ae.clientX, y: ae.clientY };
+    const t = ae.touches?.[0] ?? ae.changedTouches?.[0];
+    if (t) return { x: t.clientX, y: t.clientY };
+    return { x: 0, y: 0 };
+  }
+
   function handleDragStart(event: DragStartEvent) {
     const payload = event.active.data.current as DragPayload | undefined;
     if (!payload) return;
@@ -912,8 +923,7 @@ export default function RouteSheetPage() {
     const duplicate = !!(ae && (ae.ctrlKey || ae.metaKey));
     const ghostW = (dragDurationMin(payload) / SLOT_MIN) * SLOT_W;
     const ghostH = ROW_H - 4;
-    const cursorX = ae?.clientX ?? 0;
-    const cursorY = ae?.clientY ?? 0;
+    const { x: cursorX, y: cursorY } = getActivatorCoords(ae);
     setDragState({
       payload, duplicate, ghostW, ghostH, cursorX, cursorY,
       overRowIdx: null, overSlotIndex: null, colliding: false,
@@ -925,8 +935,9 @@ export default function RouteSheetPage() {
     if (!dragState) return;
     // Track cursor position in viewport for fixed-position ghost rendering.
     const ae = event.activatorEvent as any;
-    const cursorX = (ae?.clientX ?? 0) + event.delta.x;
-    const cursorY = (ae?.clientY ?? 0) + event.delta.y;
+    const { x: ax, y: ay } = getActivatorCoords(ae);
+    const cursorX = ax + event.delta.x;
+    const cursorY = ay + event.delta.y;
     const overId = event.over?.id;
     if (!overId || typeof overId !== "string" || !overId.startsWith("row:")) {
       setDragState({ ...dragState, cursorX, cursorY, overRowIdx: null, overSlotIndex: null, colliding: false });
