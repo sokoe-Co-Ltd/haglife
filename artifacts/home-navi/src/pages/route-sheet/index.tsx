@@ -138,11 +138,12 @@ type DragPayload =
 type DragState = {
   payload: DragPayload;
   duplicate: boolean;
-  // Constant during a drag — used to center the ghost on the cursor
+  // Constant during a drag — used for snap math and ghost rendering
   ghostW: number;
   ghostH: number;
-  ghostOffsetX: number; // ghost's left within DragOverlay container
-  ghostOffsetY: number;
+  // Cursor position in viewport (updated each onDragMove) — drives ghost rendering
+  cursorX: number;
+  cursorY: number;
   // Updated by onDragMove
   overRowIdx: number | null;
   overSlotIndex: number | null;
@@ -743,18 +744,12 @@ export default function RouteSheetPage() {
     }
     const ae = event.activatorEvent as any;
     const duplicate = !!(ae && (ae.ctrlKey || ae.metaKey));
-    // Compute the ghost's offset within the DragOverlay container so that
-    // the ghost is rendered centered on the cursor regardless of where on
-    // the source element the user grabbed.
     const ghostW = (dragDurationMin(payload) / SLOT_MIN) * SLOT_W;
     const ghostH = ROW_H - 4;
-    const srcRect = event.active.rect.current.initial;
     const cursorX = ae?.clientX ?? 0;
     const cursorY = ae?.clientY ?? 0;
-    const ghostOffsetX = srcRect ? cursorX - srcRect.left - ghostW / 2 : -ghostW / 2;
-    const ghostOffsetY = srcRect ? cursorY - srcRect.top - ghostH / 2 : -ghostH / 2;
     setDragState({
-      payload, duplicate, ghostW, ghostH, ghostOffsetX, ghostOffsetY,
+      payload, duplicate, ghostW, ghostH, cursorX, cursorY,
       overRowIdx: null, overSlotIndex: null, colliding: false,
     });
     setMoveMode(null);
@@ -762,20 +757,24 @@ export default function RouteSheetPage() {
 
   function handleDragMove(event: DragMoveEvent) {
     if (!dragState) return;
+    // Track cursor position in viewport for fixed-position ghost rendering.
+    const ae = event.activatorEvent as any;
+    const cursorX = (ae?.clientX ?? 0) + event.delta.x;
+    const cursorY = (ae?.clientY ?? 0) + event.delta.y;
     const overId = event.over?.id;
     if (!overId || typeof overId !== "string" || !overId.startsWith("row:")) {
-      if (dragState.overRowIdx !== null) {
-        setDragState({ ...dragState, overRowIdx: null, overSlotIndex: null, colliding: false });
-      }
+      setDragState({ ...dragState, cursorX, cursorY, overRowIdx: null, overSlotIndex: null, colliding: false });
       return;
     }
     const rowIdx = parseInt(overId.slice(4));
     const rowEl = rowRefs.current.get(rowIdx);
-    if (!rowEl) return;
+    if (!rowEl) {
+      setDragState({ ...dragState, cursorX, cursorY });
+      return;
+    }
     const rect = rowEl.getBoundingClientRect();
     // Ghost is rendered centered on the cursor, so its visual left edge is
     // cursorX - ghostW/2. Snap the slot to that edge (relative to row).
-    const cursorX = ((event.activatorEvent as any)?.clientX ?? 0) + event.delta.x;
     const ghostLeft = cursorX - dragState.ghostW / 2 - rect.left;
     const slotIndex = snapSlotIndex(ghostLeft / SLOT_W);
     const dur = dragDurationMin(dragState.payload);
@@ -784,13 +783,7 @@ export default function RouteSheetPage() {
     const excludeRow = dragState.payload.kind === "placed" && !dragState.duplicate ? dragState.payload.rowIdx : undefined;
     const excludeCell = dragState.payload.kind === "placed" && !dragState.duplicate ? dragState.payload.cellIdx : undefined;
     const colliding = detectCollision(sheet.rows, rowIdx, startMin, endMin, excludeRow, excludeCell);
-    if (
-      dragState.overRowIdx !== rowIdx ||
-      dragState.overSlotIndex !== slotIndex ||
-      dragState.colliding !== colliding
-    ) {
-      setDragState({ ...dragState, overRowIdx: rowIdx, overSlotIndex: slotIndex, colliding });
-    }
+    setDragState({ ...dragState, cursorX, cursorY, overRowIdx: rowIdx, overSlotIndex: slotIndex, colliding });
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -1278,22 +1271,24 @@ export default function RouteSheetPage() {
         )}
       </Layout>
 
-      {/* ── Drag Overlay (Ghost) ── */}
-      <DragOverlay dropAnimation={null}>
-        {ghost && dragState && (
-          <div
-            className={`pointer-events-none rounded border-2 border-dashed px-1 py-0.5 flex flex-col justify-center absolute ${
-              ghost.colliding
-                ? "bg-red-400/60 border-red-600 text-red-900"
-                : "bg-blue-400/60 border-blue-700 text-blue-900"
-            }`}
-            style={{
-              width: ghost.width,
-              height: dragState.ghostH,
-              left: dragState.ghostOffsetX,
-              top: dragState.ghostOffsetY,
-            }}
-          >
+      {/* ── Drag Overlay (empty — ghost is rendered as fixed div below) ── */}
+      <DragOverlay dropAnimation={null}>{null}</DragOverlay>
+
+      {/* ── Cursor-following Ghost (fixed position, pattern B) ── */}
+      {ghost && dragState && (
+        <div
+          className={`fixed pointer-events-none z-50 rounded border-2 border-dashed px-1 py-0.5 flex flex-col justify-center shadow-lg ${
+            ghost.colliding
+              ? "bg-red-400/70 border-red-600 text-red-900"
+              : "bg-blue-400/70 border-blue-700 text-blue-900"
+          }`}
+          style={{
+            width: ghost.width,
+            height: dragState.ghostH,
+            left: dragState.cursorX - ghost.width / 2,
+            top: dragState.cursorY - dragState.ghostH / 2,
+          }}
+        >
             <div className="flex items-center gap-1 text-[10px] font-bold leading-tight">
               {ghost.colliding && <AlertTriangle className="h-3 w-3 shrink-0" />}
               <span className="truncate">{ghost.name}</span>
@@ -1308,9 +1303,8 @@ export default function RouteSheetPage() {
             {ghost.colliding && (
               <div className="text-[9px] font-bold">⚠️ 既存と重複</div>
             )}
-          </div>
-        )}
-      </DragOverlay>
+        </div>
+      )}
     </DndContext>
   );
 }

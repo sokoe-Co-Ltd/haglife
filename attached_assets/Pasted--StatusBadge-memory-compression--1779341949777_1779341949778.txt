@@ -1,0 +1,246 @@
+## ⚠️ タスク優先度宣言
+
+過去に「申し送り詳細ページに StatusBadge を統一表示する」というゾンビタスクが memory compression 後に再注入される現象が確認されています。そのタスクは既にマージ済みであり無視してください。
+このタスク本文 (ルート票ガントUIのオフセットずれ修正) のみが現在実行すべきタスクです。
+
+## 問題
+
+ルート票ガント画面 (/route-sheet) で、@dnd-kit を使ったドラッグ&ドロップ実装で、ドラッグ中のカード (ゴーストブロック / DragOverlay) とマウスカーソルの位置が**ずれている**。
+ユーザーがどこに落ちるのかわかりにくく、操作性を損なっている。
+
+## 原因調査
+
+まず以下を実行して、現在の実装方法を確認:
+
+```bash
+grep -n "DragOverlay\|useDraggable\|useDroppable\|transform\|translate\|ghost\|preview" \
+  artifacts/home-navi/src/pages/route-sheet/index.tsx \
+  artifacts/home-navi/src/pages/route-sheet/*.tsx \
+  artifacts/home-navi/src/components/route-sheet/*.tsx 2>/dev/null
+```
+
+調査ポイント:
+1. **DragOverlay コンポーネントを使っているか?** @dnd-kit の標準推奨方法
+2. **カスタム描画でゴースト表示しているか?** その場合の座標計算ロジック
+3. **transform プロパティで CSS.Transform.toString() を使っているか?** 
+
+## 修正方針 (パターン別)
+
+### パターンA: DragOverlay を使っていない場合 → 導入する
+
+@dnd-kit の推奨方法は DragOverlay。これを使うとカーソル直下にカードが追従する。
+
+```tsx
+import { DndContext, DragOverlay } from '@dnd-kit/core';
+import { createPortal } from 'react-dom';
+
+function RouteSheetPage() {
+  const [activeDragItem, setActiveDragItem] = useState<DragItem | null>(null);
+
+  return (
+    <DndContext
+      onDragStart={(event) => {
+        setActiveDragItem(event.active.data.current);
+      }}
+      onDragEnd={(event) => {
+        setActiveDragItem(null);
+        // 既存のドロップハンドラ
+      }}
+      onDragCancel={() => setActiveDragItem(null)}
+    >
+      {/* 既存のガント描画 */}
+      
+      {/* DragOverlay は portal で body 直下に */}
+      {createPortal(
+        <DragOverlay dropAnimation={null}>
+          {activeDragItem && <DragPreview item={activeDragItem} />}
+        </DragOverlay>,
+        document.body
+      )}
+    </DndContext>
+  );
+}
+
+function DragPreview({ item }: { item: DragItem }) {
+  return (
+    <div className="bg-blue-500/80 border-2 border-blue-700 rounded px-2 py-1 shadow-lg cursor-grabbing text-white text-sm">
+      {item.residentName ?? '訪問'} / {item.serviceLabel ?? ''}
+    </div>
+  );
+}
+```
+
+重要: DragOverlay 内のコンポーネントは @dnd-kit が自動でカーソル位置に追従する。位置計算は不要。
+
+### パターンB: カスタムゴーストでカーソル座標を使っていない場合
+
+useDndMonitor や onDragMove で event.activatorEvent.clientX / clientY を直接使う:
+
+```tsx
+const [pointerPosition, setPointerPosition] = useState<{ x: number; y: number } | null>(null);
+
+<DndContext
+  onDragMove={(event) => {
+    if (event.activatorEvent instanceof PointerEvent) {
+      // delta は activation 時点からのオフセット
+      const baseX = (event.activatorEvent as PointerEvent).clientX;
+      const baseY = (event.activatorEvent as PointerEvent).clientY;
+      setPointerPosition({
+        x: baseX + event.delta.x,
+        y: baseY + event.delta.y,
+      });
+    }
+  }}
+>
+  {/* 既存のガント */}
+  
+  {pointerPosition && (
+    <div
+      className="fixed pointer-events-none z-50"
+      style={{
+        left: pointerPosition.x,
+        top: pointerPosition.y,
+        transform: 'translate(-50%, -50%)', // カーソル中心に表示
+      }}
+    >
+      <DragPreview />
+    </div>
+  )}
+</DndContext>
+```
+
+### パターンC: useDraggable で transform を使うがずれている
+
+useDraggable の transform を要素に当てる際に、CSS.Transform.toString() を必ず使う:
+
+```tsx
+import { CSS } from '@dnd-kit/utilities';
+
+function PlacedCell({ cell }: Props) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `cell-${cell.id}`,
+    data: { type: 'placed-cell', cell },
+  });
+
+  const style = {
+    transform: CSS.Translate.toString(transform), // ← これが重要
+    opacity: isDragging ? 0.5 : 1,
+    // 既存のスタイル (位置・サイズ)
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      {/* セルの中身 */}
+    </div>
+  );
+}
+```
+
+## 推奨アプローチ
+
+**DragOverlay の導入が最も安定** なので、まずパターンA を試す。
+既にカスタムゴーストを実装している場合も、DragOverlay に置き換えたほうがコードがシンプルになる。
+
+ただし以下に注意:
+- **元の要素は isDragging 時に opacity: 0.3 など薄く表示** (掴んでる感を出す)
+- **DragOverlay のスタイルは元の要素と一致させる** (色、形、サイズ、テキスト)
+- **dropAnimation={null}** にしてアニメーション無効化 (ドロップ後の位置を即反映)
+
+```tsx
+// 元の配置済みセル (isDragging 時は薄く)
+const style = {
+  opacity: isDragging ? 0.3 : 1,
+  // 既存スタイル
+};
+
+// DragOverlay 内のプレビュー (元のセルと見た目を合わせる)
+<DragOverlay dropAnimation={null}>
+  {activeDragItem?.type === 'placed-cell' && (
+    <div
+      className="bg-blue-500 border-2 border-blue-700 rounded px-2 py-1 shadow-2xl cursor-grabbing text-white text-sm whitespace-nowrap"
+      style={{
+        width: activeDragItem.originalWidth,  // 元のセル幅を保持
+        height: activeDragItem.originalHeight,
+      }}
+    >
+      {activeDragItem.residentName} / {activeDragItem.serviceLabel}
+    </div>
+  )}
+</DragOverlay>
+```
+
+## ゴーストブロックのプレビュー位置 (ドロップターゲット側)
+
+ドラッグ中の「どこに落ちるか」を示すゴーストブロック (機能1-3) は、DragOverlay とは別物。
+こちらは useDroppable の over 情報から計算してドロップ先のスタッフ行にレンダリングする:
+
+```tsx
+function StaffRow({ row, isDragging, overSlotIndex, draggedDurationMinutes }: Props) {
+  return (
+    <div className="relative">
+      {/* 既存セル群 */}
+      
+      {/* ホバー中のゴースト */}
+      {isDragging && overSlotIndex !== null && (
+        <div
+          className="absolute bg-blue-400/30 border-2 border-blue-600 border-dashed rounded pointer-events-none"
+          style={{
+            left: `${(overSlotIndex / totalSlots) * 100}%`,
+            width: `${(draggedDurationMinutes / 15 / totalSlots) * 100}%`,
+            top: 4,
+            height: 'calc(100% - 8px)',
+          }}
+        />
+      )}
+    </div>
+  );
+}
+```
+
+これは「カーソル追従カード」ではなく「ドロップ予定位置のプレビュー」なので、別ロジック。
+
+## 動作確認
+
+修正後、以下のシナリオで確認:
+
+1. **パレットからドラッグ**
+   - カードがカーソルにピタッと追従するか (中心がカーソル直下、or オフセットが自然)
+   - PCマウス操作で滑らかか
+
+2. **配置済みセルをドラッグ**
+   - 元のセルが薄くなり、DragOverlay のカードがカーソルに追従
+   - カードのテキストと元のセルのテキストが一致
+
+3. **タッチ操作 (iPad可能なら)**
+   - 長押しでドラッグ開始時、指の位置にカードが来るか
+   - スクロール中の指ずれが起きないか
+
+4. **画面端での挙動**
+   - 画面の左端・右端・上端・下端付近でドラッグした時に、カードが画面外に飛ばないか
+
+## スクリーンショット撮影
+
+修正前後の比較スクショを取って報告:
+- 修正前: ドラッグ中のカードとカーソルがずれている状態
+- 修正後: ピタッと一致している状態
+
+可能なら **動画キャプチャ** も推奨 (静止画ではオフセットずれが分かりにくい)。
+
+## 報告フォーマット
+
+### 原因分析
+- 確認した結果、どのパターンに該当したか (A/B/C/その他)
+- 具体的にどのコードがずれの原因だったか
+
+### 修正内容
+- 修正したファイル一覧
+- 主要な変更内容
+
+### 動作確認
+- パレットからのドラッグ: OK/NG (スクショ)
+- 配置済みセル移動: OK/NG (スクショ)
+- タッチ操作: 確認したか / できなかったか
+- 画面端での挙動: OK/NG
+
+### 残課題
+- あれば列挙
