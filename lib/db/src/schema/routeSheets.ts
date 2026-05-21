@@ -13,6 +13,8 @@ export const routeSheetsTable = pgTable("route_sheets", {
   headerNote: text("header_note"),
   dayServiceNote: text("day_service_note"),
   specialNote: text("special_note"),
+  materializedFromTemplateId: text("materialized_from_template_id"),
+  materializedAt: timestamp("materialized_at"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });

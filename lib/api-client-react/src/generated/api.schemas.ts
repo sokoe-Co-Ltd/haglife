@@ -1008,14 +1008,184 @@ export interface RouteSheetRowData {
   cells?: RouteSheetCellData[];
 }
 
+export type RouteSheetResponseSource =
+  (typeof RouteSheetResponseSource)[keyof typeof RouteSheetResponseSource];
+
+export const RouteSheetResponseSource = {
+  instance: "instance",
+  empty: "empty",
+  template: "template",
+} as const;
+
 export interface RouteSheetResponse {
-  id?: number;
-  date?: string;
+  source?: RouteSheetResponseSource;
+  id?: number | null;
+  date?: string | null;
   headerNote?: string | null;
   dayServiceNote?: string | null;
   specialNote?: string | null;
   rows?: RouteSheetRowData[];
   conflicts?: VisitConflict[];
+}
+
+export interface ShiftType {
+  id: string;
+  code: string;
+  name: string;
+  defaultStartTime?: string | null;
+  defaultEndTime?: string | null;
+  sortOrder: number;
+  color?: string | null;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ShiftTypeCreate {
+  code: string;
+  name: string;
+  defaultStartTime?: string | null;
+  defaultEndTime?: string | null;
+  sortOrder?: number;
+  color?: string | null;
+  isActive?: boolean;
+}
+
+export interface ShiftTypeUpdate {
+  code?: string;
+  name?: string;
+  defaultStartTime?: string | null;
+  defaultEndTime?: string | null;
+  sortOrder?: number;
+  color?: string | null;
+  isActive?: boolean;
+}
+
+export interface Shift {
+  id: string;
+  staffId: number;
+  date: string;
+  shiftTypeId: string;
+  slotLabel: string;
+  startTime?: string | null;
+  endTime?: string | null;
+  notes?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ShiftCreate {
+  staffId: number;
+  date: string;
+  shiftTypeId: string;
+  slotLabel?: string;
+  startTime?: string | null;
+  endTime?: string | null;
+  notes?: string | null;
+}
+
+export interface ResidentService {
+  id: string;
+  residentId: number;
+  serviceTypeId: string;
+  defaultStartTime: string;
+  defaultDurationMinutes: number;
+  weekdays: number[];
+  preferredShiftTypeId?: string | null;
+  notes?: string | null;
+  effectiveFrom: string;
+  terminatedAt?: string | null;
+  terminationReason?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ResidentServiceCreate {
+  residentId: number;
+  serviceTypeId: string;
+  defaultStartTime: string;
+  /**
+   * @minimum 15
+   * @maximum 480
+   */
+  defaultDurationMinutes: number;
+  weekdays: number[];
+  preferredShiftTypeId?: string | null;
+  notes?: string | null;
+  effectiveFrom: string;
+}
+
+export interface ResidentServiceUpdate {
+  serviceTypeId?: string;
+  defaultStartTime?: string;
+  /**
+   * @minimum 15
+   * @maximum 480
+   */
+  defaultDurationMinutes?: number;
+  weekdays?: number[];
+  preferredShiftTypeId?: string | null;
+  notes?: string | null;
+  effectiveFrom?: string;
+  terminatedAt?: string | null;
+  terminationReason?: string | null;
+}
+
+export interface RouteSheetTemplate {
+  id: string;
+  /**
+   * @minimum 0
+   * @maximum 6
+   */
+  weekday: number;
+  notes?: string | null;
+  updatedAt?: string;
+}
+
+export interface RouteSheetTemplateRow {
+  id: string;
+  templateId: string;
+  shiftTypeId: string;
+  slotLabel: string;
+  sortOrder: number;
+}
+
+export interface RouteSheetTemplateCell {
+  id: string;
+  templateRowId: string;
+  residentServiceId?: string | null;
+  startTime: string;
+  endTime: string;
+  isBreak: boolean;
+  notes?: string | null;
+}
+
+export interface RouteSheetTemplateDetail {
+  template: RouteSheetTemplate;
+  rows: RouteSheetTemplateRow[];
+  cells: RouteSheetTemplateCell[];
+}
+
+export type RouteSheetTemplateUpsertRowsItemCellsItem = {
+  id?: string;
+  residentServiceId?: string | null;
+  startTime: string;
+  endTime: string;
+  isBreak?: boolean;
+  notes?: string | null;
+};
+
+export type RouteSheetTemplateUpsertRowsItem = {
+  id?: string;
+  shiftTypeId: string;
+  slotLabel?: string;
+  sortOrder?: number;
+  cells?: RouteSheetTemplateUpsertRowsItemCellsItem[];
+};
+
+export interface RouteSheetTemplateUpsert {
+  notes?: string | null;
+  rows?: RouteSheetTemplateUpsertRowsItem[];
 }
 
 export type ListResidentsParams = {
@@ -1115,4 +1285,24 @@ export type ListServiceTypesParams = {
 
 export type GetRouteSheetParams = {
   date: string;
+};
+
+export type ListShiftTypesParams = {
+  isActive?: boolean;
+};
+
+export type ListShiftsParams = {
+  date?: string;
+  from?: string;
+  to?: string;
+  staffId?: number;
+};
+
+export type BulkUpsertShiftsBody = {
+  shifts?: ShiftCreate[];
+};
+
+export type ListResidentServicesParams = {
+  residentId?: number;
+  activeOnly?: boolean;
 };

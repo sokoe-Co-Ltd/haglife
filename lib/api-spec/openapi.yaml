@@ -37,6 +37,14 @@ tags:
     description: Visit service type master
   - name: route-sheets
     description: Route sheet (visit schedule)
+  - name: shift-types
+    description: Shift type master
+  - name: shifts
+    description: Staff shifts
+  - name: resident-services
+    description: Resident service contracts
+  - name: route-sheet-templates
+    description: Weekly route sheet templates
 
 paths:
   /healthz:
@@ -1229,6 +1237,300 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RouteSheetResponse"
+
+  # ── Shift Types ────────────────────────────────────────────────
+  /shift-types:
+    get:
+      operationId: listShiftTypes
+      tags: [shift-types]
+      parameters:
+        - in: query
+          name: isActive
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ShiftType" }
+    post:
+      operationId: createShiftType
+      tags: [shift-types]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShiftTypeCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShiftType" }
+  /shift-types/{id}:
+    get:
+      operationId: getShiftType
+      tags: [shift-types]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ShiftType" } } } }
+        "404": { description: Not Found }
+    patch:
+      operationId: updateShiftType
+      tags: [shift-types]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShiftTypeUpdate" }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ShiftType" } } } }
+    delete:
+      operationId: deleteShiftType
+      tags: [shift-types]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: No Content }
+
+  # ── Shifts ──────────────────────────────────────────────────────
+  /shifts:
+    get:
+      operationId: listShifts
+      tags: [shifts]
+      parameters:
+        - in: query
+          name: date
+          schema: { type: string, format: date }
+        - in: query
+          name: from
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          schema: { type: string, format: date }
+        - in: query
+          name: staffId
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Shift" }
+    post:
+      operationId: createShift
+      tags: [shifts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShiftCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Shift" }
+  /shifts/bulk:
+    post:
+      operationId: bulkUpsertShifts
+      tags: [shifts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                shifts:
+                  type: array
+                  items: { $ref: "#/components/schemas/ShiftCreate" }
+      responses:
+        "200": { description: OK }
+  /shifts/{id}:
+    delete:
+      operationId: deleteShift
+      tags: [shifts]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: No Content }
+
+  # ── Resident Services ───────────────────────────────────────────
+  /resident-services:
+    get:
+      operationId: listResidentServices
+      tags: [resident-services]
+      parameters:
+        - in: query
+          name: residentId
+          schema: { type: integer }
+        - in: query
+          name: activeOnly
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ResidentService" }
+    post:
+      operationId: createResidentService
+      tags: [resident-services]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ResidentServiceCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ResidentService" }
+  /resident-services/{id}:
+    get:
+      operationId: getResidentService
+      tags: [resident-services]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ResidentService" } } } }
+        "404": { description: Not Found }
+    patch:
+      operationId: updateResidentService
+      tags: [resident-services]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ResidentServiceUpdate" }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ResidentService" } } } }
+    delete:
+      operationId: deleteResidentService
+      tags: [resident-services]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: No Content }
+  /residents/{id}/services:
+    get:
+      operationId: listServicesByResident
+      tags: [resident-services]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ResidentService" }
+
+  # ── Route Sheet Templates ───────────────────────────────────────
+  /route-sheet-templates:
+    get:
+      operationId: listRouteSheetTemplates
+      tags: [route-sheet-templates]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/RouteSheetTemplate" }
+  /route-sheet-templates/{weekday}:
+    get:
+      operationId: getRouteSheetTemplate
+      tags: [route-sheet-templates]
+      parameters:
+        - in: path
+          name: weekday
+          required: true
+          schema: { type: integer, minimum: 0, maximum: 6 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RouteSheetTemplateDetail" }
+        "404": { description: Not Found }
+    put:
+      operationId: upsertRouteSheetTemplate
+      tags: [route-sheet-templates]
+      parameters:
+        - in: path
+          name: weekday
+          required: true
+          schema: { type: integer, minimum: 0, maximum: 6 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RouteSheetTemplateUpsert" }
+      responses:
+        "200": { description: OK }
+  /route-sheets/{date}/from-template:
+    post:
+      operationId: materializeFromTemplate
+      tags: [route-sheets]
+      parameters:
+        - in: path
+          name: date
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        "201": { description: Created }
+        "400": { description: Already exists }
+  /route-sheets/{date}/save-as-template:
+    post:
+      operationId: saveAsTemplate
+      tags: [route-sheets]
+      parameters:
+        - in: path
+          name: date
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        "200": { description: OK }
 
 components:
   schemas:
@@ -2539,11 +2841,16 @@ components:
     RouteSheetResponse:
       type: object
       properties:
+        source:
+          type: string
+          enum: [instance, empty, template]
         id:
           type: integer
+          nullable: true
         date:
           type: string
           format: date
+          nullable: true
         headerNote:
           type: string
           nullable: true
@@ -2561,3 +2868,173 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/VisitConflict"
+
+    ShiftType:
+      type: object
+      required: [id, code, name, isActive, sortOrder]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        defaultStartTime: { type: string, nullable: true }
+        defaultEndTime: { type: string, nullable: true }
+        sortOrder: { type: integer }
+        color: { type: string, nullable: true }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ShiftTypeCreate:
+      type: object
+      required: [code, name]
+      properties:
+        code: { type: string }
+        name: { type: string }
+        defaultStartTime: { type: string, nullable: true }
+        defaultEndTime: { type: string, nullable: true }
+        sortOrder: { type: integer, default: 0 }
+        color: { type: string, nullable: true }
+        isActive: { type: boolean, default: true }
+    ShiftTypeUpdate:
+      type: object
+      properties:
+        code: { type: string }
+        name: { type: string }
+        defaultStartTime: { type: string, nullable: true }
+        defaultEndTime: { type: string, nullable: true }
+        sortOrder: { type: integer }
+        color: { type: string, nullable: true }
+        isActive: { type: boolean }
+
+    Shift:
+      type: object
+      required: [id, staffId, date, shiftTypeId, slotLabel]
+      properties:
+        id: { type: string, format: uuid }
+        staffId: { type: integer }
+        date: { type: string, format: date }
+        shiftTypeId: { type: string, format: uuid }
+        slotLabel: { type: string }
+        startTime: { type: string, nullable: true }
+        endTime: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ShiftCreate:
+      type: object
+      required: [staffId, date, shiftTypeId]
+      properties:
+        staffId: { type: integer }
+        date: { type: string, format: date }
+        shiftTypeId: { type: string, format: uuid }
+        slotLabel: { type: string, default: "" }
+        startTime: { type: string, nullable: true }
+        endTime: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+
+    ResidentService:
+      type: object
+      required: [id, residentId, serviceTypeId, defaultStartTime, defaultDurationMinutes, weekdays, effectiveFrom]
+      properties:
+        id: { type: string, format: uuid }
+        residentId: { type: integer }
+        serviceTypeId: { type: string, format: uuid }
+        defaultStartTime: { type: string }
+        defaultDurationMinutes: { type: integer }
+        weekdays: { type: array, items: { type: integer } }
+        preferredShiftTypeId: { type: string, format: uuid, nullable: true }
+        notes: { type: string, nullable: true }
+        effectiveFrom: { type: string, format: date }
+        terminatedAt: { type: string, format: date, nullable: true }
+        terminationReason: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ResidentServiceCreate:
+      type: object
+      required: [residentId, serviceTypeId, defaultStartTime, defaultDurationMinutes, weekdays, effectiveFrom]
+      properties:
+        residentId: { type: integer }
+        serviceTypeId: { type: string, format: uuid }
+        defaultStartTime: { type: string }
+        defaultDurationMinutes: { type: integer, minimum: 15, maximum: 480 }
+        weekdays: { type: array, items: { type: integer, minimum: 0, maximum: 6 } }
+        preferredShiftTypeId: { type: string, format: uuid, nullable: true }
+        notes: { type: string, nullable: true }
+        effectiveFrom: { type: string, format: date }
+    ResidentServiceUpdate:
+      type: object
+      properties:
+        serviceTypeId: { type: string, format: uuid }
+        defaultStartTime: { type: string }
+        defaultDurationMinutes: { type: integer, minimum: 15, maximum: 480 }
+        weekdays: { type: array, items: { type: integer, minimum: 0, maximum: 6 } }
+        preferredShiftTypeId: { type: string, format: uuid, nullable: true }
+        notes: { type: string, nullable: true }
+        effectiveFrom: { type: string, format: date }
+        terminatedAt: { type: string, format: date, nullable: true }
+        terminationReason: { type: string, nullable: true }
+
+    RouteSheetTemplate:
+      type: object
+      required: [id, weekday]
+      properties:
+        id: { type: string, format: uuid }
+        weekday: { type: integer, minimum: 0, maximum: 6 }
+        notes: { type: string, nullable: true }
+        updatedAt: { type: string, format: date-time }
+    RouteSheetTemplateRow:
+      type: object
+      required: [id, templateId, shiftTypeId, slotLabel, sortOrder]
+      properties:
+        id: { type: string, format: uuid }
+        templateId: { type: string, format: uuid }
+        shiftTypeId: { type: string, format: uuid }
+        slotLabel: { type: string }
+        sortOrder: { type: integer }
+    RouteSheetTemplateCell:
+      type: object
+      required: [id, templateRowId, startTime, endTime, isBreak]
+      properties:
+        id: { type: string, format: uuid }
+        templateRowId: { type: string, format: uuid }
+        residentServiceId: { type: string, format: uuid, nullable: true }
+        startTime: { type: string }
+        endTime: { type: string }
+        isBreak: { type: boolean }
+        notes: { type: string, nullable: true }
+    RouteSheetTemplateDetail:
+      type: object
+      required: [template, rows, cells]
+      properties:
+        template: { $ref: "#/components/schemas/RouteSheetTemplate" }
+        rows:
+          type: array
+          items: { $ref: "#/components/schemas/RouteSheetTemplateRow" }
+        cells:
+          type: array
+          items: { $ref: "#/components/schemas/RouteSheetTemplateCell" }
+    RouteSheetTemplateUpsert:
+      type: object
+      properties:
+        notes: { type: string, nullable: true }
+        rows:
+          type: array
+          items:
+            type: object
+            required: [shiftTypeId]
+            properties:
+              id: { type: string, format: uuid }
+              shiftTypeId: { type: string, format: uuid }
+              slotLabel: { type: string, default: "" }
+              sortOrder: { type: integer, default: 0 }
+              cells:
+                type: array
+                items:
+                  type: object
+                  required: [startTime, endTime]
+                  properties:
+                    id: { type: string, format: uuid }
+                    residentServiceId: { type: string, format: uuid, nullable: true }
+                    startTime: { type: string }
+                    endTime: { type: string }
+                    isBreak: { type: boolean, default: false }
+                    notes: { type: string, nullable: true }

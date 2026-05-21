@@ -1694,8 +1694,9 @@ export const GetRouteSheetQueryParams = zod.object({
 });
 
 export const GetRouteSheetResponse = zod.object({
-  id: zod.number().optional(),
-  date: zod.coerce.date().optional(),
+  source: zod.enum(["instance", "empty", "template"]).optional(),
+  id: zod.number().nullish(),
+  date: zod.coerce.date().nullish(),
   headerNote: zod.string().nullish(),
   dayServiceNote: zod.string().nullish(),
   specialNote: zod.string().nullish(),
@@ -1740,4 +1741,402 @@ export const GetRouteSheetResponse = zod.object({
       }),
     )
     .optional(),
+});
+
+export const ListShiftTypesQueryParams = zod.object({
+  isActive: zod.coerce.boolean().optional(),
+});
+
+export const ListShiftTypesResponseItem = zod.object({
+  id: zod.string().uuid(),
+  code: zod.string(),
+  name: zod.string(),
+  defaultStartTime: zod.string().nullish(),
+  defaultEndTime: zod.string().nullish(),
+  sortOrder: zod.number(),
+  color: zod.string().nullish(),
+  isActive: zod.boolean(),
+  createdAt: zod.coerce.date().optional(),
+  updatedAt: zod.coerce.date().optional(),
+});
+export const ListShiftTypesResponse = zod.array(ListShiftTypesResponseItem);
+
+export const createShiftTypeBodySortOrderDefault = 0;
+export const createShiftTypeBodyIsActiveDefault = true;
+
+export const CreateShiftTypeBody = zod.object({
+  code: zod.string(),
+  name: zod.string(),
+  defaultStartTime: zod.string().nullish(),
+  defaultEndTime: zod.string().nullish(),
+  sortOrder: zod.number().default(createShiftTypeBodySortOrderDefault),
+  color: zod.string().nullish(),
+  isActive: zod.boolean().default(createShiftTypeBodyIsActiveDefault),
+});
+
+export const GetShiftTypeParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const GetShiftTypeResponse = zod.object({
+  id: zod.string().uuid(),
+  code: zod.string(),
+  name: zod.string(),
+  defaultStartTime: zod.string().nullish(),
+  defaultEndTime: zod.string().nullish(),
+  sortOrder: zod.number(),
+  color: zod.string().nullish(),
+  isActive: zod.boolean(),
+  createdAt: zod.coerce.date().optional(),
+  updatedAt: zod.coerce.date().optional(),
+});
+
+export const UpdateShiftTypeParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const UpdateShiftTypeBody = zod.object({
+  code: zod.string().optional(),
+  name: zod.string().optional(),
+  defaultStartTime: zod.string().nullish(),
+  defaultEndTime: zod.string().nullish(),
+  sortOrder: zod.number().optional(),
+  color: zod.string().nullish(),
+  isActive: zod.boolean().optional(),
+});
+
+export const UpdateShiftTypeResponse = zod.object({
+  id: zod.string().uuid(),
+  code: zod.string(),
+  name: zod.string(),
+  defaultStartTime: zod.string().nullish(),
+  defaultEndTime: zod.string().nullish(),
+  sortOrder: zod.number(),
+  color: zod.string().nullish(),
+  isActive: zod.boolean(),
+  createdAt: zod.coerce.date().optional(),
+  updatedAt: zod.coerce.date().optional(),
+});
+
+export const DeleteShiftTypeParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const ListShiftsQueryParams = zod.object({
+  date: zod.date().optional(),
+  from: zod.date().optional(),
+  to: zod.date().optional(),
+  staffId: zod.coerce.number().optional(),
+});
+
+export const ListShiftsResponseItem = zod.object({
+  id: zod.string().uuid(),
+  staffId: zod.number(),
+  date: zod.coerce.date(),
+  shiftTypeId: zod.string().uuid(),
+  slotLabel: zod.string(),
+  startTime: zod.string().nullish(),
+  endTime: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  createdAt: zod.coerce.date().optional(),
+  updatedAt: zod.coerce.date().optional(),
+});
+export const ListShiftsResponse = zod.array(ListShiftsResponseItem);
+
+export const createShiftBodySlotLabelDefault = ``;
+
+export const CreateShiftBody = zod.object({
+  staffId: zod.number(),
+  date: zod.coerce.date(),
+  shiftTypeId: zod.string().uuid(),
+  slotLabel: zod.string().default(createShiftBodySlotLabelDefault),
+  startTime: zod.string().nullish(),
+  endTime: zod.string().nullish(),
+  notes: zod.string().nullish(),
+});
+
+export const bulkUpsertShiftsBodyShiftsItemSlotLabelDefault = ``;
+
+export const BulkUpsertShiftsBody = zod.object({
+  shifts: zod
+    .array(
+      zod.object({
+        staffId: zod.number(),
+        date: zod.coerce.date(),
+        shiftTypeId: zod.string().uuid(),
+        slotLabel: zod
+          .string()
+          .default(bulkUpsertShiftsBodyShiftsItemSlotLabelDefault),
+        startTime: zod.string().nullish(),
+        endTime: zod.string().nullish(),
+        notes: zod.string().nullish(),
+      }),
+    )
+    .optional(),
+});
+
+export const DeleteShiftParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const ListResidentServicesQueryParams = zod.object({
+  residentId: zod.coerce.number().optional(),
+  activeOnly: zod.coerce.boolean().optional(),
+});
+
+export const ListResidentServicesResponseItem = zod.object({
+  id: zod.string().uuid(),
+  residentId: zod.number(),
+  serviceTypeId: zod.string().uuid(),
+  defaultStartTime: zod.string(),
+  defaultDurationMinutes: zod.number(),
+  weekdays: zod.array(zod.number()),
+  preferredShiftTypeId: zod.string().uuid().nullish(),
+  notes: zod.string().nullish(),
+  effectiveFrom: zod.coerce.date(),
+  terminatedAt: zod.coerce.date().nullish(),
+  terminationReason: zod.string().nullish(),
+  createdAt: zod.coerce.date().optional(),
+  updatedAt: zod.coerce.date().optional(),
+});
+export const ListResidentServicesResponse = zod.array(
+  ListResidentServicesResponseItem,
+);
+
+export const createResidentServiceBodyDefaultDurationMinutesMin = 15;
+export const createResidentServiceBodyDefaultDurationMinutesMax = 480;
+
+export const createResidentServiceBodyWeekdaysItemMin = 0;
+export const createResidentServiceBodyWeekdaysItemMax = 6;
+
+export const CreateResidentServiceBody = zod.object({
+  residentId: zod.number(),
+  serviceTypeId: zod.string().uuid(),
+  defaultStartTime: zod.string(),
+  defaultDurationMinutes: zod
+    .number()
+    .min(createResidentServiceBodyDefaultDurationMinutesMin)
+    .max(createResidentServiceBodyDefaultDurationMinutesMax),
+  weekdays: zod.array(
+    zod
+      .number()
+      .min(createResidentServiceBodyWeekdaysItemMin)
+      .max(createResidentServiceBodyWeekdaysItemMax),
+  ),
+  preferredShiftTypeId: zod.string().uuid().nullish(),
+  notes: zod.string().nullish(),
+  effectiveFrom: zod.coerce.date(),
+});
+
+export const GetResidentServiceParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const GetResidentServiceResponse = zod.object({
+  id: zod.string().uuid(),
+  residentId: zod.number(),
+  serviceTypeId: zod.string().uuid(),
+  defaultStartTime: zod.string(),
+  defaultDurationMinutes: zod.number(),
+  weekdays: zod.array(zod.number()),
+  preferredShiftTypeId: zod.string().uuid().nullish(),
+  notes: zod.string().nullish(),
+  effectiveFrom: zod.coerce.date(),
+  terminatedAt: zod.coerce.date().nullish(),
+  terminationReason: zod.string().nullish(),
+  createdAt: zod.coerce.date().optional(),
+  updatedAt: zod.coerce.date().optional(),
+});
+
+export const UpdateResidentServiceParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const updateResidentServiceBodyDefaultDurationMinutesMin = 15;
+export const updateResidentServiceBodyDefaultDurationMinutesMax = 480;
+
+export const updateResidentServiceBodyWeekdaysItemMin = 0;
+export const updateResidentServiceBodyWeekdaysItemMax = 6;
+
+export const UpdateResidentServiceBody = zod.object({
+  serviceTypeId: zod.string().uuid().optional(),
+  defaultStartTime: zod.string().optional(),
+  defaultDurationMinutes: zod
+    .number()
+    .min(updateResidentServiceBodyDefaultDurationMinutesMin)
+    .max(updateResidentServiceBodyDefaultDurationMinutesMax)
+    .optional(),
+  weekdays: zod
+    .array(
+      zod
+        .number()
+        .min(updateResidentServiceBodyWeekdaysItemMin)
+        .max(updateResidentServiceBodyWeekdaysItemMax),
+    )
+    .optional(),
+  preferredShiftTypeId: zod.string().uuid().nullish(),
+  notes: zod.string().nullish(),
+  effectiveFrom: zod.coerce.date().optional(),
+  terminatedAt: zod.coerce.date().nullish(),
+  terminationReason: zod.string().nullish(),
+});
+
+export const UpdateResidentServiceResponse = zod.object({
+  id: zod.string().uuid(),
+  residentId: zod.number(),
+  serviceTypeId: zod.string().uuid(),
+  defaultStartTime: zod.string(),
+  defaultDurationMinutes: zod.number(),
+  weekdays: zod.array(zod.number()),
+  preferredShiftTypeId: zod.string().uuid().nullish(),
+  notes: zod.string().nullish(),
+  effectiveFrom: zod.coerce.date(),
+  terminatedAt: zod.coerce.date().nullish(),
+  terminationReason: zod.string().nullish(),
+  createdAt: zod.coerce.date().optional(),
+  updatedAt: zod.coerce.date().optional(),
+});
+
+export const DeleteResidentServiceParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const ListServicesByResidentParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ListServicesByResidentResponseItem = zod.object({
+  id: zod.string().uuid(),
+  residentId: zod.number(),
+  serviceTypeId: zod.string().uuid(),
+  defaultStartTime: zod.string(),
+  defaultDurationMinutes: zod.number(),
+  weekdays: zod.array(zod.number()),
+  preferredShiftTypeId: zod.string().uuid().nullish(),
+  notes: zod.string().nullish(),
+  effectiveFrom: zod.coerce.date(),
+  terminatedAt: zod.coerce.date().nullish(),
+  terminationReason: zod.string().nullish(),
+  createdAt: zod.coerce.date().optional(),
+  updatedAt: zod.coerce.date().optional(),
+});
+export const ListServicesByResidentResponse = zod.array(
+  ListServicesByResidentResponseItem,
+);
+
+export const listRouteSheetTemplatesResponseWeekdayMin = 0;
+export const listRouteSheetTemplatesResponseWeekdayMax = 6;
+
+export const ListRouteSheetTemplatesResponseItem = zod.object({
+  id: zod.string().uuid(),
+  weekday: zod
+    .number()
+    .min(listRouteSheetTemplatesResponseWeekdayMin)
+    .max(listRouteSheetTemplatesResponseWeekdayMax),
+  notes: zod.string().nullish(),
+  updatedAt: zod.coerce.date().optional(),
+});
+export const ListRouteSheetTemplatesResponse = zod.array(
+  ListRouteSheetTemplatesResponseItem,
+);
+
+export const getRouteSheetTemplatePathWeekdayMin = 0;
+export const getRouteSheetTemplatePathWeekdayMax = 6;
+
+export const GetRouteSheetTemplateParams = zod.object({
+  weekday: zod.coerce
+    .number()
+    .min(getRouteSheetTemplatePathWeekdayMin)
+    .max(getRouteSheetTemplatePathWeekdayMax),
+});
+
+export const getRouteSheetTemplateResponseTemplateWeekdayMin = 0;
+export const getRouteSheetTemplateResponseTemplateWeekdayMax = 6;
+
+export const GetRouteSheetTemplateResponse = zod.object({
+  template: zod.object({
+    id: zod.string().uuid(),
+    weekday: zod
+      .number()
+      .min(getRouteSheetTemplateResponseTemplateWeekdayMin)
+      .max(getRouteSheetTemplateResponseTemplateWeekdayMax),
+    notes: zod.string().nullish(),
+    updatedAt: zod.coerce.date().optional(),
+  }),
+  rows: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      templateId: zod.string().uuid(),
+      shiftTypeId: zod.string().uuid(),
+      slotLabel: zod.string(),
+      sortOrder: zod.number(),
+    }),
+  ),
+  cells: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      templateRowId: zod.string().uuid(),
+      residentServiceId: zod.string().uuid().nullish(),
+      startTime: zod.string(),
+      endTime: zod.string(),
+      isBreak: zod.boolean(),
+      notes: zod.string().nullish(),
+    }),
+  ),
+});
+
+export const upsertRouteSheetTemplatePathWeekdayMin = 0;
+export const upsertRouteSheetTemplatePathWeekdayMax = 6;
+
+export const UpsertRouteSheetTemplateParams = zod.object({
+  weekday: zod.coerce
+    .number()
+    .min(upsertRouteSheetTemplatePathWeekdayMin)
+    .max(upsertRouteSheetTemplatePathWeekdayMax),
+});
+
+export const upsertRouteSheetTemplateBodyRowsItemSlotLabelDefault = ``;
+export const upsertRouteSheetTemplateBodyRowsItemSortOrderDefault = 0;
+export const upsertRouteSheetTemplateBodyRowsItemCellsItemIsBreakDefault = false;
+
+export const UpsertRouteSheetTemplateBody = zod.object({
+  notes: zod.string().nullish(),
+  rows: zod
+    .array(
+      zod.object({
+        id: zod.string().uuid().optional(),
+        shiftTypeId: zod.string().uuid(),
+        slotLabel: zod
+          .string()
+          .default(upsertRouteSheetTemplateBodyRowsItemSlotLabelDefault),
+        sortOrder: zod
+          .number()
+          .default(upsertRouteSheetTemplateBodyRowsItemSortOrderDefault),
+        cells: zod
+          .array(
+            zod.object({
+              id: zod.string().uuid().optional(),
+              residentServiceId: zod.string().uuid().nullish(),
+              startTime: zod.string(),
+              endTime: zod.string(),
+              isBreak: zod
+                .boolean()
+                .default(
+                  upsertRouteSheetTemplateBodyRowsItemCellsItemIsBreakDefault,
+                ),
+              notes: zod.string().nullish(),
+            }),
+          )
+          .optional(),
+      }),
+    )
+    .optional(),
+});
+
+export const MaterializeFromTemplateParams = zod.object({
+  date: zod.date(),
+});
+
+export const SaveAsTemplateParams = zod.object({
+  date: zod.date(),
 });

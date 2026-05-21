@@ -18,6 +18,7 @@ import type {
 
 import type {
   BathReport,
+  BulkUpsertShiftsBody,
   CheckEliminationRound200,
   CheckEliminationRoundBody,
   CreateBathReportBody,
@@ -44,8 +45,11 @@ import type {
   ListHandoverNotesParams,
   ListInsurancesParams,
   ListMealsParams,
+  ListResidentServicesParams,
   ListResidentsParams,
   ListServiceTypesParams,
+  ListShiftTypesParams,
+  ListShiftsParams,
   ListStaffParams,
   ListVitalsParams,
   ListWeightsParams,
@@ -54,12 +58,23 @@ import type {
   Resident,
   ResidentEliminationStatus,
   ResidentHealthSummary,
+  ResidentService,
+  ResidentServiceCreate,
+  ResidentServiceUpdate,
   ResidentVitalStatus,
   ResidentWeightStatus,
   RouteSheetResponse,
+  RouteSheetTemplate,
+  RouteSheetTemplateDetail,
+  RouteSheetTemplateUpsert,
   ServiceType,
   ServiceTypeCreate,
   ServiceTypeUpdate,
+  Shift,
+  ShiftCreate,
+  ShiftType,
+  ShiftTypeCreate,
+  ShiftTypeUpdate,
   Staff,
   UpdateBathReportBody,
   UpdateDayServiceBody,
@@ -5449,3 +5464,1619 @@ export function useGetRouteSheet<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+export const getListShiftTypesUrl = (params?: ListShiftTypesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/shift-types?${stringifiedParams}`
+    : `/api/shift-types`;
+};
+
+export const listShiftTypes = async (
+  params?: ListShiftTypesParams,
+  options?: RequestInit,
+): Promise<ShiftType[]> => {
+  return customFetch<ShiftType[]>(getListShiftTypesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListShiftTypesQueryKey = (params?: ListShiftTypesParams) => {
+  return [`/api/shift-types`, ...(params ? [params] : [])] as const;
+};
+
+export const getListShiftTypesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listShiftTypes>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListShiftTypesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listShiftTypes>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListShiftTypesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listShiftTypes>>> = ({
+    signal,
+  }) => listShiftTypes(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listShiftTypes>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListShiftTypesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listShiftTypes>>
+>;
+export type ListShiftTypesQueryError = ErrorType<unknown>;
+
+export function useListShiftTypes<
+  TData = Awaited<ReturnType<typeof listShiftTypes>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListShiftTypesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listShiftTypes>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListShiftTypesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getCreateShiftTypeUrl = () => {
+  return `/api/shift-types`;
+};
+
+export const createShiftType = async (
+  shiftTypeCreate: ShiftTypeCreate,
+  options?: RequestInit,
+): Promise<ShiftType> => {
+  return customFetch<ShiftType>(getCreateShiftTypeUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(shiftTypeCreate),
+  });
+};
+
+export const getCreateShiftTypeMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createShiftType>>,
+    TError,
+    { data: BodyType<ShiftTypeCreate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createShiftType>>,
+  TError,
+  { data: BodyType<ShiftTypeCreate> },
+  TContext
+> => {
+  const mutationKey = ["createShiftType"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createShiftType>>,
+    { data: BodyType<ShiftTypeCreate> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createShiftType(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateShiftTypeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createShiftType>>
+>;
+export type CreateShiftTypeMutationBody = BodyType<ShiftTypeCreate>;
+export type CreateShiftTypeMutationError = ErrorType<unknown>;
+
+export const useCreateShiftType = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createShiftType>>,
+    TError,
+    { data: BodyType<ShiftTypeCreate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createShiftType>>,
+  TError,
+  { data: BodyType<ShiftTypeCreate> },
+  TContext
+> => {
+  return useMutation(getCreateShiftTypeMutationOptions(options));
+};
+
+export const getGetShiftTypeUrl = (id: string) => {
+  return `/api/shift-types/${id}`;
+};
+
+export const getShiftType = async (
+  id: string,
+  options?: RequestInit,
+): Promise<ShiftType> => {
+  return customFetch<ShiftType>(getGetShiftTypeUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetShiftTypeQueryKey = (id: string) => {
+  return [`/api/shift-types/${id}`] as const;
+};
+
+export const getGetShiftTypeQueryOptions = <
+  TData = Awaited<ReturnType<typeof getShiftType>>,
+  TError = ErrorType<void>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getShiftType>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetShiftTypeQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getShiftType>>> = ({
+    signal,
+  }) => getShiftType(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getShiftType>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetShiftTypeQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getShiftType>>
+>;
+export type GetShiftTypeQueryError = ErrorType<void>;
+
+export function useGetShiftType<
+  TData = Awaited<ReturnType<typeof getShiftType>>,
+  TError = ErrorType<void>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getShiftType>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetShiftTypeQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getUpdateShiftTypeUrl = (id: string) => {
+  return `/api/shift-types/${id}`;
+};
+
+export const updateShiftType = async (
+  id: string,
+  shiftTypeUpdate: ShiftTypeUpdate,
+  options?: RequestInit,
+): Promise<ShiftType> => {
+  return customFetch<ShiftType>(getUpdateShiftTypeUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(shiftTypeUpdate),
+  });
+};
+
+export const getUpdateShiftTypeMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateShiftType>>,
+    TError,
+    { id: string; data: BodyType<ShiftTypeUpdate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateShiftType>>,
+  TError,
+  { id: string; data: BodyType<ShiftTypeUpdate> },
+  TContext
+> => {
+  const mutationKey = ["updateShiftType"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateShiftType>>,
+    { id: string; data: BodyType<ShiftTypeUpdate> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateShiftType(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateShiftTypeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateShiftType>>
+>;
+export type UpdateShiftTypeMutationBody = BodyType<ShiftTypeUpdate>;
+export type UpdateShiftTypeMutationError = ErrorType<unknown>;
+
+export const useUpdateShiftType = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateShiftType>>,
+    TError,
+    { id: string; data: BodyType<ShiftTypeUpdate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateShiftType>>,
+  TError,
+  { id: string; data: BodyType<ShiftTypeUpdate> },
+  TContext
+> => {
+  return useMutation(getUpdateShiftTypeMutationOptions(options));
+};
+
+export const getDeleteShiftTypeUrl = (id: string) => {
+  return `/api/shift-types/${id}`;
+};
+
+export const deleteShiftType = async (
+  id: string,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteShiftTypeUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteShiftTypeMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteShiftType>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteShiftType>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["deleteShiftType"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteShiftType>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteShiftType(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteShiftTypeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteShiftType>>
+>;
+
+export type DeleteShiftTypeMutationError = ErrorType<unknown>;
+
+export const useDeleteShiftType = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteShiftType>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteShiftType>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeleteShiftTypeMutationOptions(options));
+};
+
+export const getListShiftsUrl = (params?: ListShiftsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/shifts?${stringifiedParams}`
+    : `/api/shifts`;
+};
+
+export const listShifts = async (
+  params?: ListShiftsParams,
+  options?: RequestInit,
+): Promise<Shift[]> => {
+  return customFetch<Shift[]>(getListShiftsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListShiftsQueryKey = (params?: ListShiftsParams) => {
+  return [`/api/shifts`, ...(params ? [params] : [])] as const;
+};
+
+export const getListShiftsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listShifts>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListShiftsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listShifts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListShiftsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listShifts>>> = ({
+    signal,
+  }) => listShifts(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listShifts>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListShiftsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listShifts>>
+>;
+export type ListShiftsQueryError = ErrorType<unknown>;
+
+export function useListShifts<
+  TData = Awaited<ReturnType<typeof listShifts>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListShiftsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listShifts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListShiftsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getCreateShiftUrl = () => {
+  return `/api/shifts`;
+};
+
+export const createShift = async (
+  shiftCreate: ShiftCreate,
+  options?: RequestInit,
+): Promise<Shift> => {
+  return customFetch<Shift>(getCreateShiftUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(shiftCreate),
+  });
+};
+
+export const getCreateShiftMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createShift>>,
+    TError,
+    { data: BodyType<ShiftCreate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createShift>>,
+  TError,
+  { data: BodyType<ShiftCreate> },
+  TContext
+> => {
+  const mutationKey = ["createShift"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createShift>>,
+    { data: BodyType<ShiftCreate> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createShift(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateShiftMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createShift>>
+>;
+export type CreateShiftMutationBody = BodyType<ShiftCreate>;
+export type CreateShiftMutationError = ErrorType<unknown>;
+
+export const useCreateShift = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createShift>>,
+    TError,
+    { data: BodyType<ShiftCreate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createShift>>,
+  TError,
+  { data: BodyType<ShiftCreate> },
+  TContext
+> => {
+  return useMutation(getCreateShiftMutationOptions(options));
+};
+
+export const getBulkUpsertShiftsUrl = () => {
+  return `/api/shifts/bulk`;
+};
+
+export const bulkUpsertShifts = async (
+  bulkUpsertShiftsBody: BulkUpsertShiftsBody,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getBulkUpsertShiftsUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(bulkUpsertShiftsBody),
+  });
+};
+
+export const getBulkUpsertShiftsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bulkUpsertShifts>>,
+    TError,
+    { data: BodyType<BulkUpsertShiftsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof bulkUpsertShifts>>,
+  TError,
+  { data: BodyType<BulkUpsertShiftsBody> },
+  TContext
+> => {
+  const mutationKey = ["bulkUpsertShifts"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof bulkUpsertShifts>>,
+    { data: BodyType<BulkUpsertShiftsBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return bulkUpsertShifts(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type BulkUpsertShiftsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof bulkUpsertShifts>>
+>;
+export type BulkUpsertShiftsMutationBody = BodyType<BulkUpsertShiftsBody>;
+export type BulkUpsertShiftsMutationError = ErrorType<unknown>;
+
+export const useBulkUpsertShifts = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bulkUpsertShifts>>,
+    TError,
+    { data: BodyType<BulkUpsertShiftsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof bulkUpsertShifts>>,
+  TError,
+  { data: BodyType<BulkUpsertShiftsBody> },
+  TContext
+> => {
+  return useMutation(getBulkUpsertShiftsMutationOptions(options));
+};
+
+export const getDeleteShiftUrl = (id: string) => {
+  return `/api/shifts/${id}`;
+};
+
+export const deleteShift = async (
+  id: string,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteShiftUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteShiftMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteShift>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteShift>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["deleteShift"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteShift>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteShift(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteShiftMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteShift>>
+>;
+
+export type DeleteShiftMutationError = ErrorType<unknown>;
+
+export const useDeleteShift = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteShift>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteShift>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeleteShiftMutationOptions(options));
+};
+
+export const getListResidentServicesUrl = (
+  params?: ListResidentServicesParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/resident-services?${stringifiedParams}`
+    : `/api/resident-services`;
+};
+
+export const listResidentServices = async (
+  params?: ListResidentServicesParams,
+  options?: RequestInit,
+): Promise<ResidentService[]> => {
+  return customFetch<ResidentService[]>(getListResidentServicesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListResidentServicesQueryKey = (
+  params?: ListResidentServicesParams,
+) => {
+  return [`/api/resident-services`, ...(params ? [params] : [])] as const;
+};
+
+export const getListResidentServicesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listResidentServices>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListResidentServicesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listResidentServices>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListResidentServicesQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listResidentServices>>
+  > = ({ signal }) =>
+    listResidentServices(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listResidentServices>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListResidentServicesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listResidentServices>>
+>;
+export type ListResidentServicesQueryError = ErrorType<unknown>;
+
+export function useListResidentServices<
+  TData = Awaited<ReturnType<typeof listResidentServices>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListResidentServicesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listResidentServices>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListResidentServicesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getCreateResidentServiceUrl = () => {
+  return `/api/resident-services`;
+};
+
+export const createResidentService = async (
+  residentServiceCreate: ResidentServiceCreate,
+  options?: RequestInit,
+): Promise<ResidentService> => {
+  return customFetch<ResidentService>(getCreateResidentServiceUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(residentServiceCreate),
+  });
+};
+
+export const getCreateResidentServiceMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createResidentService>>,
+    TError,
+    { data: BodyType<ResidentServiceCreate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createResidentService>>,
+  TError,
+  { data: BodyType<ResidentServiceCreate> },
+  TContext
+> => {
+  const mutationKey = ["createResidentService"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createResidentService>>,
+    { data: BodyType<ResidentServiceCreate> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createResidentService(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateResidentServiceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createResidentService>>
+>;
+export type CreateResidentServiceMutationBody = BodyType<ResidentServiceCreate>;
+export type CreateResidentServiceMutationError = ErrorType<unknown>;
+
+export const useCreateResidentService = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createResidentService>>,
+    TError,
+    { data: BodyType<ResidentServiceCreate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createResidentService>>,
+  TError,
+  { data: BodyType<ResidentServiceCreate> },
+  TContext
+> => {
+  return useMutation(getCreateResidentServiceMutationOptions(options));
+};
+
+export const getGetResidentServiceUrl = (id: string) => {
+  return `/api/resident-services/${id}`;
+};
+
+export const getResidentService = async (
+  id: string,
+  options?: RequestInit,
+): Promise<ResidentService> => {
+  return customFetch<ResidentService>(getGetResidentServiceUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetResidentServiceQueryKey = (id: string) => {
+  return [`/api/resident-services/${id}`] as const;
+};
+
+export const getGetResidentServiceQueryOptions = <
+  TData = Awaited<ReturnType<typeof getResidentService>>,
+  TError = ErrorType<void>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getResidentService>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetResidentServiceQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getResidentService>>
+  > = ({ signal }) => getResidentService(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getResidentService>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetResidentServiceQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getResidentService>>
+>;
+export type GetResidentServiceQueryError = ErrorType<void>;
+
+export function useGetResidentService<
+  TData = Awaited<ReturnType<typeof getResidentService>>,
+  TError = ErrorType<void>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getResidentService>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetResidentServiceQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getUpdateResidentServiceUrl = (id: string) => {
+  return `/api/resident-services/${id}`;
+};
+
+export const updateResidentService = async (
+  id: string,
+  residentServiceUpdate: ResidentServiceUpdate,
+  options?: RequestInit,
+): Promise<ResidentService> => {
+  return customFetch<ResidentService>(getUpdateResidentServiceUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(residentServiceUpdate),
+  });
+};
+
+export const getUpdateResidentServiceMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateResidentService>>,
+    TError,
+    { id: string; data: BodyType<ResidentServiceUpdate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateResidentService>>,
+  TError,
+  { id: string; data: BodyType<ResidentServiceUpdate> },
+  TContext
+> => {
+  const mutationKey = ["updateResidentService"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateResidentService>>,
+    { id: string; data: BodyType<ResidentServiceUpdate> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateResidentService(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateResidentServiceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateResidentService>>
+>;
+export type UpdateResidentServiceMutationBody = BodyType<ResidentServiceUpdate>;
+export type UpdateResidentServiceMutationError = ErrorType<unknown>;
+
+export const useUpdateResidentService = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateResidentService>>,
+    TError,
+    { id: string; data: BodyType<ResidentServiceUpdate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateResidentService>>,
+  TError,
+  { id: string; data: BodyType<ResidentServiceUpdate> },
+  TContext
+> => {
+  return useMutation(getUpdateResidentServiceMutationOptions(options));
+};
+
+export const getDeleteResidentServiceUrl = (id: string) => {
+  return `/api/resident-services/${id}`;
+};
+
+export const deleteResidentService = async (
+  id: string,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteResidentServiceUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteResidentServiceMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteResidentService>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteResidentService>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["deleteResidentService"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteResidentService>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteResidentService(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteResidentServiceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteResidentService>>
+>;
+
+export type DeleteResidentServiceMutationError = ErrorType<unknown>;
+
+export const useDeleteResidentService = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteResidentService>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteResidentService>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeleteResidentServiceMutationOptions(options));
+};
+
+export const getListServicesByResidentUrl = (id: number) => {
+  return `/api/residents/${id}/services`;
+};
+
+export const listServicesByResident = async (
+  id: number,
+  options?: RequestInit,
+): Promise<ResidentService[]> => {
+  return customFetch<ResidentService[]>(getListServicesByResidentUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListServicesByResidentQueryKey = (id: number) => {
+  return [`/api/residents/${id}/services`] as const;
+};
+
+export const getListServicesByResidentQueryOptions = <
+  TData = Awaited<ReturnType<typeof listServicesByResident>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listServicesByResident>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListServicesByResidentQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listServicesByResident>>
+  > = ({ signal }) => listServicesByResident(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listServicesByResident>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListServicesByResidentQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listServicesByResident>>
+>;
+export type ListServicesByResidentQueryError = ErrorType<unknown>;
+
+export function useListServicesByResident<
+  TData = Awaited<ReturnType<typeof listServicesByResident>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listServicesByResident>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListServicesByResidentQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getListRouteSheetTemplatesUrl = () => {
+  return `/api/route-sheet-templates`;
+};
+
+export const listRouteSheetTemplates = async (
+  options?: RequestInit,
+): Promise<RouteSheetTemplate[]> => {
+  return customFetch<RouteSheetTemplate[]>(getListRouteSheetTemplatesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListRouteSheetTemplatesQueryKey = () => {
+  return [`/api/route-sheet-templates`] as const;
+};
+
+export const getListRouteSheetTemplatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listRouteSheetTemplates>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listRouteSheetTemplates>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListRouteSheetTemplatesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listRouteSheetTemplates>>
+  > = ({ signal }) => listRouteSheetTemplates({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listRouteSheetTemplates>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListRouteSheetTemplatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listRouteSheetTemplates>>
+>;
+export type ListRouteSheetTemplatesQueryError = ErrorType<unknown>;
+
+export function useListRouteSheetTemplates<
+  TData = Awaited<ReturnType<typeof listRouteSheetTemplates>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listRouteSheetTemplates>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListRouteSheetTemplatesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getGetRouteSheetTemplateUrl = (weekday: number) => {
+  return `/api/route-sheet-templates/${weekday}`;
+};
+
+export const getRouteSheetTemplate = async (
+  weekday: number,
+  options?: RequestInit,
+): Promise<RouteSheetTemplateDetail> => {
+  return customFetch<RouteSheetTemplateDetail>(
+    getGetRouteSheetTemplateUrl(weekday),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetRouteSheetTemplateQueryKey = (weekday: number) => {
+  return [`/api/route-sheet-templates/${weekday}`] as const;
+};
+
+export const getGetRouteSheetTemplateQueryOptions = <
+  TData = Awaited<ReturnType<typeof getRouteSheetTemplate>>,
+  TError = ErrorType<void>,
+>(
+  weekday: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getRouteSheetTemplate>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetRouteSheetTemplateQueryKey(weekday);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getRouteSheetTemplate>>
+  > = ({ signal }) =>
+    getRouteSheetTemplate(weekday, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!weekday,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getRouteSheetTemplate>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetRouteSheetTemplateQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getRouteSheetTemplate>>
+>;
+export type GetRouteSheetTemplateQueryError = ErrorType<void>;
+
+export function useGetRouteSheetTemplate<
+  TData = Awaited<ReturnType<typeof getRouteSheetTemplate>>,
+  TError = ErrorType<void>,
+>(
+  weekday: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getRouteSheetTemplate>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetRouteSheetTemplateQueryOptions(weekday, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getUpsertRouteSheetTemplateUrl = (weekday: number) => {
+  return `/api/route-sheet-templates/${weekday}`;
+};
+
+export const upsertRouteSheetTemplate = async (
+  weekday: number,
+  routeSheetTemplateUpsert: RouteSheetTemplateUpsert,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getUpsertRouteSheetTemplateUrl(weekday), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(routeSheetTemplateUpsert),
+  });
+};
+
+export const getUpsertRouteSheetTemplateMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof upsertRouteSheetTemplate>>,
+    TError,
+    { weekday: number; data: BodyType<RouteSheetTemplateUpsert> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof upsertRouteSheetTemplate>>,
+  TError,
+  { weekday: number; data: BodyType<RouteSheetTemplateUpsert> },
+  TContext
+> => {
+  const mutationKey = ["upsertRouteSheetTemplate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof upsertRouteSheetTemplate>>,
+    { weekday: number; data: BodyType<RouteSheetTemplateUpsert> }
+  > = (props) => {
+    const { weekday, data } = props ?? {};
+
+    return upsertRouteSheetTemplate(weekday, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpsertRouteSheetTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof upsertRouteSheetTemplate>>
+>;
+export type UpsertRouteSheetTemplateMutationBody =
+  BodyType<RouteSheetTemplateUpsert>;
+export type UpsertRouteSheetTemplateMutationError = ErrorType<unknown>;
+
+export const useUpsertRouteSheetTemplate = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof upsertRouteSheetTemplate>>,
+    TError,
+    { weekday: number; data: BodyType<RouteSheetTemplateUpsert> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof upsertRouteSheetTemplate>>,
+  TError,
+  { weekday: number; data: BodyType<RouteSheetTemplateUpsert> },
+  TContext
+> => {
+  return useMutation(getUpsertRouteSheetTemplateMutationOptions(options));
+};
+
+export const getMaterializeFromTemplateUrl = (date: string) => {
+  return `/api/route-sheets/${date}/from-template`;
+};
+
+export const materializeFromTemplate = async (
+  date: string,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getMaterializeFromTemplateUrl(date), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getMaterializeFromTemplateMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof materializeFromTemplate>>,
+    TError,
+    { date: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof materializeFromTemplate>>,
+  TError,
+  { date: string },
+  TContext
+> => {
+  const mutationKey = ["materializeFromTemplate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof materializeFromTemplate>>,
+    { date: string }
+  > = (props) => {
+    const { date } = props ?? {};
+
+    return materializeFromTemplate(date, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MaterializeFromTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof materializeFromTemplate>>
+>;
+
+export type MaterializeFromTemplateMutationError = ErrorType<void>;
+
+export const useMaterializeFromTemplate = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof materializeFromTemplate>>,
+    TError,
+    { date: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof materializeFromTemplate>>,
+  TError,
+  { date: string },
+  TContext
+> => {
+  return useMutation(getMaterializeFromTemplateMutationOptions(options));
+};
+
+export const getSaveAsTemplateUrl = (date: string) => {
+  return `/api/route-sheets/${date}/save-as-template`;
+};
+
+export const saveAsTemplate = async (
+  date: string,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getSaveAsTemplateUrl(date), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getSaveAsTemplateMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveAsTemplate>>,
+    TError,
+    { date: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof saveAsTemplate>>,
+  TError,
+  { date: string },
+  TContext
+> => {
+  const mutationKey = ["saveAsTemplate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof saveAsTemplate>>,
+    { date: string }
+  > = (props) => {
+    const { date } = props ?? {};
+
+    return saveAsTemplate(date, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SaveAsTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof saveAsTemplate>>
+>;
+
+export type SaveAsTemplateMutationError = ErrorType<unknown>;
+
+export const useSaveAsTemplate = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveAsTemplate>>,
+    TError,
+    { date: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof saveAsTemplate>>,
+  TError,
+  { date: string },
+  TContext
+> => {
+  return useMutation(getSaveAsTemplateMutationOptions(options));
+};
