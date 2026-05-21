@@ -1,8 +1,7 @@
 import { Router } from "express";
 import { and, eq, isNull, asc } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "@workspace/db";
-import { residentServicesTable } from "@workspace/db/schema/resident-services";
+import { db, residentServicesTable } from "@workspace/db";
 
 const router = Router();
 const timeRe = /^[0-2][0-9]:[0-5][0-9]$/;

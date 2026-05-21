@@ -1,20 +1,18 @@
 import { Router } from "express";
 import { eq, inArray, asc, and, isNull } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "@workspace/db";
 import {
+  db,
   routeSheetTemplatesTable,
   routeSheetTemplateRowsTable,
   routeSheetTemplateCellsTable,
-} from "@workspace/db/schema/route-sheet-templates";
-import { shiftsTable } from "@workspace/db/schema/shifts";
-import { residentServicesTable } from "@workspace/db/schema/resident-services";
-import { residentsTable } from "@workspace/db/schema/residents";
-import {
+  shiftsTable,
+  residentServicesTable,
+  residentsTable,
   routeSheetsTable,
   routeSheetRowsTable,
   routeSheetCellsTable,
-} from "@workspace/db/schema/routeSheets";
+} from "@workspace/db";
 
 const router = Router();
 const timeRe = /^[0-2][0-9]:[0-5][0-9]$/;

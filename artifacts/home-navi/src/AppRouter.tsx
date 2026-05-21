@@ -31,6 +31,9 @@ import HealthDetail from "./pages/health/detail";
 import SettingsPage from "./pages/settings";
 import RouteSheetPage from "./pages/route-sheet/index";
 import ServiceTypesPage from "./pages/service-types";
+import ShiftTypesPage from "./pages/shift-types";
+import ShiftsPage from "./pages/shifts";
+import RouteSheetTemplatesPage from "./pages/route-sheet-templates";
 import { Layout } from "./components/layout";
 
 const PlaceholderPage = ({ title }: { title: string }) => (
@@ -76,6 +79,9 @@ export default function AppRouter() {
       <Route path="/health/:id" component={HealthDetail} />
       <Route path="/route-sheet" component={RouteSheetPage} />
       <Route path="/service-types" component={ServiceTypesPage} />
+      <Route path="/shift-types" component={ShiftTypesPage} />
+      <Route path="/shifts" component={ShiftsPage} />
+      <Route path="/route-sheet-templates" component={RouteSheetTemplatesPage} />
       <Route path="/settings" component={SettingsPage} />
       <Route component={() => <PlaceholderPage title="見つかりません" />} />
     </Switch>

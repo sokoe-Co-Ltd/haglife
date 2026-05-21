@@ -1,8 +1,7 @@
 import { Router } from "express";
 import { eq, asc } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "@workspace/db";
-import { shiftTypesTable } from "@workspace/db/schema/shift-types";
+import { db, shiftTypesTable } from "@workspace/db";
 
 const router = Router();
 

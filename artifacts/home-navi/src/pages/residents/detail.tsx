@@ -3,7 +3,11 @@ import {
   useGetResident, useUpdateResident,
   useGetResidentVitalThresholds, useUpdateResidentVitalThresholds,
   useGetVitalThresholds,
+  useListServicesByResident, useListServiceTypes, useListShiftTypes,
+  useCreateResidentService, useUpdateResidentService, useDeleteResidentService,
+  getListServicesByResidentQueryKey,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, User, Phone, Home, FileText, Pencil, Save, X, Stethoscope, Building2, Activity, RotateCcw } from "lucide-react";
@@ -15,7 +19,13 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { ClipboardList, Plus, Trash2 } from "lucide-react";
 
 const CARE_LEVELS = ["支1","支2","介1","介2","介3","介4","介5","新規申請中","区分変更中"];
 const GENDERS = ["男性","女性"];
@@ -43,6 +53,224 @@ function toThresholdForm(data: typeof DEFAULT_THRESHOLDS): ThresholdForm {
   return Object.fromEntries(
     Object.entries(data).map(([k, v]) => [k, { min: String(v.min), max: String(v.max) }])
   ) as ThresholdForm;
+}
+
+const WEEKDAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
+
+type ServiceForm = {
+  serviceTypeId: string;
+  defaultStartTime: string;
+  defaultDurationMinutes: number;
+  weekdays: number[];
+  preferredShiftTypeId: string;
+  notes: string;
+  effectiveFrom: string;
+};
+
+function emptyServiceForm(): ServiceForm {
+  return {
+    serviceTypeId: "",
+    defaultStartTime: "09:00",
+    defaultDurationMinutes: 60,
+    weekdays: [],
+    preferredShiftTypeId: "",
+    notes: "",
+    effectiveFrom: new Date().toISOString().slice(0, 10),
+  };
+}
+
+function ResidentServicesCard({ residentId }: { residentId: number }) {
+  const qc = useQueryClient();
+  const { data: services = [] } = useListServicesByResident(residentId, { query: { enabled: !!residentId } });
+  const { data: serviceTypes = [] } = useListServiceTypes();
+  const { data: shiftTypes = [] } = useListShiftTypes();
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: getListServicesByResidentQueryKey(residentId) });
+  const createMut = useCreateResidentService({ mutation: { onSuccess: invalidate } });
+  const updateMut = useUpdateResidentService({ mutation: { onSuccess: invalidate } });
+  const deleteMut = useDeleteResidentService({ mutation: { onSuccess: invalidate } });
+
+  const [editingId, setEditingId] = useState<string | null | undefined>(undefined);
+  const [form, setForm] = useState<ServiceForm>(emptyServiceForm());
+
+  const open = (svc?: any) => {
+    setForm(svc ? {
+      serviceTypeId: svc.serviceTypeId,
+      defaultStartTime: svc.defaultStartTime,
+      defaultDurationMinutes: svc.defaultDurationMinutes,
+      weekdays: svc.weekdays ?? [],
+      preferredShiftTypeId: svc.preferredShiftTypeId ?? "",
+      notes: svc.notes ?? "",
+      effectiveFrom: svc.effectiveFrom,
+    } : emptyServiceForm());
+    setEditingId(svc ? svc.id : null);
+  };
+
+  const toggleWeekday = (d: number) => {
+    setForm((f) => ({
+      ...f,
+      weekdays: f.weekdays.includes(d) ? f.weekdays.filter((x) => x !== d) : [...f.weekdays, d].sort(),
+    }));
+  };
+
+  const save = async () => {
+    const payload: any = {
+      ...form,
+      preferredShiftTypeId: form.preferredShiftTypeId || null,
+      notes: form.notes || null,
+      residentId,
+    };
+    if (editingId) {
+      await updateMut.mutateAsync({ id: editingId, data: payload });
+    } else {
+      await createMut.mutateAsync({ data: payload });
+    }
+    setEditingId(undefined);
+  };
+
+  const terminate = async (svc: any) => {
+    if (!confirm(`「${svc.serviceTypeId}」のサービスを終了しますか?`)) return;
+    await deleteMut.mutateAsync({ id: svc.id });
+  };
+
+  const activeServices = (services as any[]).filter((s) => !s.terminatedAt);
+  const pastServices = (services as any[]).filter((s) => s.terminatedAt);
+
+  return (
+    <>
+      <Card>
+        <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2">
+            <ClipboardList className="h-4 w-4 text-primary" />サービス契約
+          </CardTitle>
+          <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => open()}>
+            <Plus className="h-3 w-3 mr-1" />追加
+          </Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          {activeServices.length === 0 ? (
+            <div className="text-center py-6 text-sm text-gray-400">サービス契約がありません</div>
+          ) : (
+            <div className="divide-y">
+              {activeServices.map((svc: any) => {
+                const st = (serviceTypes as any[]).find((t) => t.id === svc.serviceTypeId);
+                const shiftType = (shiftTypes as any[]).find((t) => t.id === svc.preferredShiftTypeId);
+                return (
+                  <div key={svc.id} className="px-4 py-3 flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {st && (
+                          <span
+                            className="px-2 py-0.5 rounded text-xs font-bold"
+                            style={{ background: (st.color ?? "#888") + "22", color: st.color ?? "#555", border: `1px solid ${(st.color ?? "#888")}44` }}
+                          >
+                            {st.shortLabel}
+                          </span>
+                        )}
+                        <span className="text-sm font-medium">{st?.name ?? svc.serviceTypeId}</span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 flex-wrap">
+                        <span>{svc.defaultStartTime} ({svc.defaultDurationMinutes}分)</span>
+                        <span>{(svc.weekdays ?? []).map((d: number) => WEEKDAY_LABELS[d]).join("・")}曜日</span>
+                        {shiftType && <span className="text-gray-400">{shiftType.name}希望</span>}
+                        <span className="text-gray-400">{svc.effectiveFrom}〜</span>
+                      </div>
+                      {svc.notes && <p className="text-xs text-gray-400 mt-0.5">{svc.notes}</p>}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => open(svc)}>編集</Button>
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => terminate(svc)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {pastServices.length > 0 && (
+            <div className="px-4 py-2 border-t bg-gray-50">
+              <p className="text-xs text-gray-400">終了済: {pastServices.length}件</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={editingId !== undefined} onOpenChange={(o) => !o && setEditingId(undefined)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{editingId ? "サービス契約を編集" : "サービス契約を追加"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">サービス種別 <span className="text-red-500">*</span></label>
+              <Select value={form.serviceTypeId} onValueChange={(v) => setForm({ ...form, serviceTypeId: v })}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="選択..." /></SelectTrigger>
+                <SelectContent>
+                  {(serviceTypes as any[]).map((st) => (
+                    <SelectItem key={st.id} value={st.id}>{st.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">開始時刻 <span className="text-red-500">*</span></label>
+                <Input value={form.defaultStartTime} onChange={(e) => setForm({ ...form, defaultStartTime: e.target.value })} className="h-8 text-sm" placeholder="09:00" />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">所要時間（分）</label>
+                <Input type="number" value={form.defaultDurationMinutes} onChange={(e) => setForm({ ...form, defaultDurationMinutes: parseInt(e.target.value) || 60 })} className="h-8 text-sm" />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">実施曜日</label>
+              <div className="flex gap-1 flex-wrap">
+                {WEEKDAY_LABELS.map((label, d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => toggleWeekday(d)}
+                    className={`h-8 w-8 rounded-full text-xs font-bold transition-colors ${
+                      form.weekdays.includes(d)
+                        ? d === 0 ? "bg-red-500 text-white" : d === 6 ? "bg-blue-500 text-white" : "bg-primary text-white"
+                        : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">希望シフト</label>
+              <Select value={form.preferredShiftTypeId || "__none__"} onValueChange={(v) => setForm({ ...form, preferredShiftTypeId: v === "__none__" ? "" : v })}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="指定なし" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">指定なし</SelectItem>
+                  {(shiftTypes as any[]).filter((t) => t.isActive).map((st) => (
+                    <SelectItem key={st.id} value={st.id}>{st.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">開始日 <span className="text-red-500">*</span></label>
+              <Input type="date" value={form.effectiveFrom} onChange={(e) => setForm({ ...form, effectiveFrom: e.target.value })} className="h-8 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">メモ</label>
+              <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="h-8 text-sm" placeholder="備考など" />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 pt-1">
+            <Button variant="outline" size="sm" onClick={() => setEditingId(undefined)}>キャンセル</Button>
+            <Button size="sm" disabled={createMut.isPending || updateMut.isPending || !form.serviceTypeId || !form.effectiveFrom} onClick={save}>保存</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }
 
 function VitalThresholdsCard({ residentId }: { residentId: number }) {
@@ -642,6 +870,9 @@ export default function ResidentDetail() {
                 )}
               </CardContent>
             </Card>
+
+            {/* ── サービス契約 ── */}
+            <ResidentServicesCard residentId={id} />
 
             {/* ── バイタル基準値 ── */}
             <VitalThresholdsCard residentId={id} />

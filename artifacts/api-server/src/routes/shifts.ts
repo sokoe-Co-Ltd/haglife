@@ -1,8 +1,7 @@
 import { Router } from "express";
 import { and, eq, gte, lte, asc } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "@workspace/db";
-import { shiftsTable } from "@workspace/db/schema/shifts";
+import { db, shiftsTable } from "@workspace/db";
 
 const router = Router();
 
