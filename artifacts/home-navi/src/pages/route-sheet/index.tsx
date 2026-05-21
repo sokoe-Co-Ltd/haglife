@@ -27,7 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Save, Printer, CheckCircle2, Circle, ExternalLink, Pencil, Trash2, Coffee,
-  UserRound, X, AlertTriangle,
+  UserRound, X, AlertTriangle, Plus,
 } from "lucide-react";
 import {
   DndContext, DragOverlay, useDraggable, useDroppable, useSensor, useSensors,
@@ -772,6 +772,18 @@ export default function RouteSheetPage() {
     setEditingName(null);
   }
 
+  // ── Add a new (empty) row at the bottom ──────────────────────────────────
+  function addEmptyRow() {
+    const newRow: SheetRow = {
+      staffName: "",
+      shiftType: "日",
+      sortOrder: sheet.rows.length,
+      staffId: null,
+      cells: [],
+    };
+    mark({ ...sheet, rows: [...sheet.rows, newRow] });
+  }
+
   // ── Cell operations ──────────────────────────────────────────────────────
   function openEditCell(ri: number, ci: number) {
     setCellModal({ rowIndex: ri, cellIndex: ci, cell: { ...sheet.rows[ri].cells[ci] } });
@@ -1274,7 +1286,7 @@ export default function RouteSheetPage() {
                       return (
                         <tr
                           key={ri}
-                          className={`border-b border-gray-100 transition-colors ${isOver ? "bg-primary/5" : ""}`}
+                          className={`border-b-2 border-gray-300 transition-colors ${isOver ? "bg-primary/5" : ""}`}
                         >
                           <td
                             className="sticky z-20 bg-white border-r border-gray-200 px-2 py-0"
@@ -1351,6 +1363,15 @@ export default function RouteSheetPage() {
                 </table>
               </div>
             )}
+            <div className="border-t border-gray-200 p-2 bg-gray-50/60">
+              <button
+                onClick={addEmptyRow}
+                className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-medium text-gray-600 hover:text-primary hover:bg-primary/5 rounded-lg border border-dashed border-gray-300 hover:border-primary/50 transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                行を追加
+              </button>
+            </div>
           </div>
 
           {/* ── Day service + special notes ── */}
