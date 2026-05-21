@@ -1628,6 +1628,14 @@ components:
           type: ["string", "null"]
         careManagerName:
           type: ["string", "null"]
+        movedOutAt:
+          type: ["string", "null"]
+        movedOutReason:
+          type: ["string", "null"]
+        hospitalizedAt:
+          type: ["string", "null"]
+        hospitalizedReason:
+          type: ["string", "null"]
         isVisible:
           type: boolean
         createdAt:
@@ -1789,6 +1797,14 @@ components:
         careManagerCompany:
           type: ["string", "null"]
         careManagerName:
+          type: ["string", "null"]
+        movedOutAt:
+          type: ["string", "null"]
+        movedOutReason:
+          type: ["string", "null"]
+        hospitalizedAt:
+          type: ["string", "null"]
+        hospitalizedReason:
           type: ["string", "null"]
         isVisible:
           type: ["boolean", "null"]

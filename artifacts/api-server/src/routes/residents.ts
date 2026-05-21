@@ -119,13 +119,12 @@ router.patch("/residents/:id", async (req, res): Promise<void> => {
       .returning();
     resident = updated;
 
-    const anyData = parsed.data as any;
-    if (updated && anyData.movedOutAt) {
+    if (updated && parsed.data.movedOutAt) {
       await tx
         .update(residentServicesTable)
         .set({
-          terminatedAt: anyData.movedOutAt as string,
-          terminationReason: anyData.movedOutReason ?? "退去",
+          terminatedAt: parsed.data.movedOutAt,
+          terminationReason: parsed.data.movedOutReason ?? "退去",
           updatedAt: new Date(),
         })
         .where(

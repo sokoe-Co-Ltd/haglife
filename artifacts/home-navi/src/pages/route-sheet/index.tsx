@@ -1,8 +1,9 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useSearch } from "wouter";
 import { Layout } from "@/components/layout";
 import { useAppDate } from "@/contexts/AppDateContext";
 import { DayNav } from "@/components/date-nav";
-import { format } from "date-fns";
+import { format, parseISO, isValid } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -344,6 +345,16 @@ function CellModal({ state, residents, onSave, onDelete, onClose }: {
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function RouteSheetPage() {
   const { appDate, setAppDate } = useAppDate();
+  const search = useSearch();
+  useEffect(() => {
+    const urlDate = new URLSearchParams(search).get("date");
+    if (!urlDate) return;
+    const parsed = parseISO(urlDate);
+    if (!isValid(parsed)) return;
+    if (format(parsed, "yyyy-MM-dd") !== format(appDate, "yyyy-MM-dd")) {
+      setAppDate(parsed);
+    }
+  }, [search]);
   const dateStr = format(appDate, "yyyy-MM-dd");
   const { toast } = useToast();
   const queryClient = useQueryClient();

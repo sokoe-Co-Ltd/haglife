@@ -87,6 +87,14 @@ export interface Resident {
   careManagerCompany?: string | null;
   /** @nullable */
   careManagerName?: string | null;
+  /** @nullable */
+  movedOutAt?: string | null;
+  /** @nullable */
+  movedOutReason?: string | null;
+  /** @nullable */
+  hospitalizedAt?: string | null;
+  /** @nullable */
+  hospitalizedReason?: string | null;
   isVisible: boolean;
   createdAt: string;
   updatedAt: string;
@@ -229,6 +237,14 @@ export interface UpdateResidentBody {
   careManagerCompany?: string | null;
   /** @nullable */
   careManagerName?: string | null;
+  /** @nullable */
+  movedOutAt?: string | null;
+  /** @nullable */
+  movedOutReason?: string | null;
+  /** @nullable */
+  hospitalizedAt?: string | null;
+  /** @nullable */
+  hospitalizedReason?: string | null;
   /** @nullable */
   isVisible?: boolean | null;
 }

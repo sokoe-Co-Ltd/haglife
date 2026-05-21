@@ -2,8 +2,9 @@ import { Router, type IRouter } from "express";
 import { eq, desc, inArray, asc } from "drizzle-orm";
 import {
   db, routeSheetsTable, routeSheetRowsTable, routeSheetCellsTable, visitConflictsView,
-  routeSheetTemplatesTable, routeSheetTemplateRowsTable,
+  routeSheetTemplatesTable, routeSheetTemplateRowsTable, routeSheetTemplateCellsTable,
   shiftTypesTable, shiftsTable, staffTable,
+  residentServicesTable, residentsTable, serviceTypesTable,
 } from "@workspace/db";
 import { z } from "zod";
 
@@ -117,6 +118,45 @@ router.get("/route-sheets", async (req, res): Promise<void> => {
       .leftJoin(staffTable, eq(shiftsTable.staffId, staffTable.id))
       .where(eq(shiftsTable.date, date));
 
+    const tplRowIds = tplRowsData.map(({ row }) => row.id);
+    const tplCellsWithDetails = tplRowIds.length === 0 ? [] : await db
+      .select({
+        cell: routeSheetTemplateCellsTable,
+        residentService: residentServicesTable,
+        resident: residentsTable,
+        serviceType: serviceTypesTable,
+      })
+      .from(routeSheetTemplateCellsTable)
+      .leftJoin(residentServicesTable, eq(routeSheetTemplateCellsTable.residentServiceId, residentServicesTable.id))
+      .leftJoin(residentsTable, eq(residentServicesTable.residentId, residentsTable.id))
+      .leftJoin(serviceTypesTable, eq(residentServicesTable.serviceTypeId, serviceTypesTable.id))
+      .where(inArray(routeSheetTemplateCellsTable.templateRowId, tplRowIds));
+
+    const cellsByRowId = new Map<string, Array<Record<string, unknown>>>();
+    for (const { cell, residentService, resident, serviceType } of tplCellsWithDetails) {
+      if (residentService) {
+        if (resident?.movedOutAt) continue;
+        if (resident?.hospitalizedAt) continue;
+        if (residentService.terminatedAt) continue;
+      }
+      const cellData = {
+        id: `tpl-${cell.id}`,
+        routeSheetRowId: cell.templateRowId,
+        startTime: cell.startTime,
+        endTime: cell.endTime,
+        isBreak: cell.isBreak,
+        residentId: residentService?.residentId ?? null,
+        residentName: resident ? `${resident.lastName} ${resident.firstName}` : null,
+        serviceTypeId: residentService?.serviceTypeId ?? null,
+        serviceLabel: serviceType?.shortLabel ?? null,
+        notes: cell.notes,
+      };
+      if (!cellsByRowId.has(cell.templateRowId)) {
+        cellsByRowId.set(cell.templateRowId, []);
+      }
+      cellsByRowId.get(cell.templateRowId)!.push(cellData);
+    }
+
     const synthesizedRows = tplRowsData.map(({ row: tplRow, shiftType }) => {
       const match = shiftsData.find(
         (s) => s.shift.shiftTypeId === tplRow.shiftTypeId && s.shift.slotLabel === tplRow.slotLabel
@@ -126,7 +166,7 @@ router.get("/route-sheets", async (req, res): Promise<void> => {
         shiftType: shiftType?.code ?? "日",
         staffId: match?.shift.staffId ?? null,
         staffName: match?.staff ? `${match.staff.lastName} ${match.staff.firstName}` : "",
-        cells: [],
+        cells: cellsByRowId.get(tplRow.id) ?? [],
       };
     });
 
