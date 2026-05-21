@@ -1106,6 +1106,28 @@ export default function RouteSheetPage() {
                 <Save className="h-4 w-4" />
                 {saveMutation.isPending ? "保存中..." : dirty ? "保存（変更あり）" : "保存済み"}
               </Button>
+              {!isLoading && source === "instance" && !dirty && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => saveAsTemplateMut.mutate()}
+                    disabled={saveAsTemplateMut.isPending}
+                  >
+                    {DOW_JP[appDate.getDay()]}曜テンプレとして保存
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (window.confirm("当日シートを削除してテンプレートに戻しますか？")) resetMut.mutate();
+                    }}
+                    disabled={resetMut.isPending}
+                  >
+                    テンプレに戻す
+                  </Button>
+                </>
+              )}
             </div>
           </div>
 
@@ -1122,30 +1144,6 @@ export default function RouteSheetPage() {
                 className="shrink-0"
               >
                 {fromTemplateMut.isPending ? "生成中..." : "この日を編集する"}
-              </Button>
-            </div>
-          )}
-
-          {/* ── Instance action bar ── */}
-          {!isLoading && source === "instance" && !dirty && (
-            <div className="flex justify-end gap-2 flex-wrap">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => saveAsTemplateMut.mutate()}
-                disabled={saveAsTemplateMut.isPending}
-              >
-                {DOW_JP[appDate.getDay()]}曜テンプレとして保存
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (window.confirm("当日シートを削除してテンプレートに戻しますか？")) resetMut.mutate();
-                }}
-                disabled={resetMut.isPending}
-              >
-                テンプレに戻す
               </Button>
             </div>
           )}
