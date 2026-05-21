@@ -27,7 +27,9 @@ export default function ShiftsPage() {
 
   const { data: shifts = [] } = useListShifts({ from, to });
   const { data: shiftTypes = [] } = useListShiftTypes();
-  const { data: staffList = [] } = useListStaff();
+  const { data: staffListAll = [] } = useListStaff();
+  // 職員一覧で「非表示」にした職員はシフト管理にも出さない
+  const staffList = (staffListAll as any[]).filter((s) => s.isVisible !== false);
   const bulkMut = useBulkUpsertShifts({
     mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListShiftsQueryKey() }) },
   });
