@@ -81,20 +81,12 @@ const HOURS_LIST: number[] = Array.from(
 );
 
 // Distinct pale color per hour band so users can tell which hour they're in.
+// Uses the golden-angle (~137.508°) so adjacent hours land far apart on the
+// hue wheel — preventing same-family colors from sitting next to each other.
 function hourBandColor(h: number): string {
-  // Spread hue across the day; very light so text/cards stay readable.
-  return `hsl(${(h * 32) % 360}, 70%, 95%)`;
+  const hue = ((h - 1) * 137.508) % 360;
+  return `hsl(${hue}, 70%, 94%)`;
 }
-
-// Always-visible 15-min and 60-min vertical grid lines, painted as a layer.
-const gridLinesStyle: React.CSSProperties = {
-  backgroundImage: [
-    // 15-min thin lines (always visible)
-    `repeating-linear-gradient(to right, #cbd5e1 0, #cbd5e1 1px, transparent 1px, transparent ${SLOT_W}px)`,
-    // 60-min stronger lines
-    `repeating-linear-gradient(to right, #64748b 0, #64748b 1.5px, transparent 1.5px, transparent ${SLOT_W * 4}px)`,
-  ].join(", "),
-};
 
 // Renders alternating colored bands behind every hour (1 div per hour).
 function HourBands() {
@@ -115,14 +107,27 @@ function HourBands() {
   );
 }
 
-// Renders the always-visible 15-min & 60-min vertical grid lines.
+// Renders the always-visible vertical grid lines as actual DOM nodes — one
+// per 15-min slot. Hour boundaries (every 4th line) are bolder so the eye
+// can chunk by hour while still seeing every 15-min tick.
 function GridLines() {
   return (
-    <div
-      className="absolute inset-0 pointer-events-none"
-      aria-hidden
-      style={gridLinesStyle}
-    />
+    <div className="absolute inset-0 pointer-events-none" aria-hidden>
+      {Array.from({ length: TOTAL_SLOTS + 1 }).map((_, i) => {
+        const isHour = i % 4 === 0;
+        return (
+          <div
+            key={i}
+            className="absolute top-0 bottom-0"
+            style={{
+              left: i * SLOT_W,
+              width: isHour ? 2 : 1,
+              background: isHour ? "#475569" : "#94a3b8",
+            }}
+          />
+        );
+      })}
+    </div>
   );
 }
 
