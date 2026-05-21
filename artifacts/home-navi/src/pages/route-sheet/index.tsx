@@ -294,12 +294,13 @@ function PaletteCard({ card, hasResident }: { card: ServiceCard; hasResident: bo
 
 // ── RowTimeline (Droppable) ───────────────────────────────────────────────────
 function RowTimeline({
-  rowIdx, children, isDragActive, isOver, registerRef, onTrackClick,
+  rowIdx, children, isDragActive, isOver, dropIndicator, registerRef, onTrackClick,
 }: {
   rowIdx: number;
   children: React.ReactNode;
   isDragActive: boolean;
   isOver: boolean;
+  dropIndicator: { slotIndex: number; widthPx: number; colliding: boolean } | null;
   registerRef: (rowIdx: number, el: HTMLDivElement | null) => void;
   onTrackClick: (rowIdx: number, slotIndex: number, evt: React.MouseEvent) => void;
 }) {
@@ -331,6 +332,21 @@ function RowTimeline({
             />
           ))}
         </div>
+      )}
+      {/* Snapped drop-zone indicator (on the over row only) */}
+      {dropIndicator && (
+        <div
+          aria-hidden
+          className={`absolute top-0.5 bottom-0.5 rounded pointer-events-none border-2 z-0 ${
+            dropIndicator.colliding
+              ? "bg-red-300/40 border-red-500"
+              : "bg-blue-300/40 border-blue-500"
+          }`}
+          style={{
+            left: dropIndicator.slotIndex * SLOT_W,
+            width: dropIndicator.widthPx,
+          }}
+        />
       )}
       {children}
     </div>
@@ -739,10 +755,13 @@ export default function RouteSheetPage() {
     const rowEl = rowRefs.current.get(rowIdx);
     if (!rowEl) return;
     const rect = rowEl.getBoundingClientRect();
-    // Pointer X = initial activator X + delta.x
-    const initialX = (event.activatorEvent as any)?.clientX ?? 0;
-    const pointerX = initialX + event.delta.x;
-    const slotIndex = snapSlotIndex((pointerX - rect.left) / SLOT_W);
+    // Use the dragged source's translated left edge so the snap target
+    // matches the visible ghost position (rather than the bare cursor X).
+    const activeRect = event.active.rect.current.translated;
+    const ghostLeft = activeRect
+      ? activeRect.left - rect.left
+      : ((event.activatorEvent as any)?.clientX ?? 0) + event.delta.x - rect.left;
+    const slotIndex = snapSlotIndex(ghostLeft / SLOT_W);
     const dur = dragDurationMin(dragState.payload);
     const startMin = GRID_START + slotIndex * SLOT_MIN;
     const endMin = Math.min(GRID_END, startMin + dur);
@@ -1102,6 +1121,15 @@ export default function RouteSheetPage() {
                               rowIdx={ri}
                               isDragActive={!!dragState}
                               isOver={isOver}
+                              dropIndicator={
+                                isOver && dragState && dragState.overSlotIndex !== null
+                                  ? {
+                                      slotIndex: dragState.overSlotIndex,
+                                      widthPx: (dragDurationMin(dragState.payload) / SLOT_MIN) * SLOT_W,
+                                      colliding: dragState.colliding,
+                                    }
+                                  : null
+                              }
                               registerRef={registerRowRef}
                               onTrackClick={handleTrackClick}
                             >
