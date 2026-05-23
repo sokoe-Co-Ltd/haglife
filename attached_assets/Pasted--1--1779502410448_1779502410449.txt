@@ -1,0 +1,343 @@
+# 監査画面 実装指示書 / フェーズ1：データ層
+
+## 背景と目的
+
+訪問介護向けに「監査画面」を追加するための準備として、データ層を拡張します。
+監査画面は管理者専用で、曜日別の固定テンプレート（=計画の正本）に対し、操作画面で発生した実態（未実施・担当変更・内容変更・追加サービス）を限定的にオーバーレイ表示する画面です。
+
+**設計原則**
+
+- 計画テンプレート（`route_sheet_templates`系）は管理者のみ編集可。操作画面からは書き換わらない。
+- 当日シート（`route_sheet_cells`）は計画と実績を**同一行で保持**する。
+  - 計画スナップショット用カラム（`planned*`）を追加し、materialize時に計画値を固定
+  - 実態用カラム（`status`, `actualStaffId`, etc.）を追加し、操作画面の変更で更新
+- 監査ログテーブル（`route_sheet_cell_audit_log`）に全変更履歴を保存
+- 後方互換：既存カラムは一切削除・変更しない。追加カラムは全て nullable または default 付き。
+
+-----
+
+## タスク1：Drizzle スキーマ拡張
+
+### 1-1. `lib/db/src/schema/route_sheet_cells.ts`
+
+既存テーブル定義に以下のカラムを追加してください。**既存カラムは触らない**こと。
+
+```ts
+// 既存カラムはそのまま残す
+// 以下を追加（全て nullable または default 付き、既存データに影響なし）
+
+// === 計画スナップショット（materialize 時に埋める） ===
+plannedStaffId: integer('planned_staff_id'),          // 計画上の担当
+plannedStartTime: text('planned_start_time'),         // 計画開始時刻
+plannedEndTime: text('planned_end_time'),             // 計画終了時刻
+plannedServiceTypeId: text('planned_service_type_id'),// 計画サービス種別
+
+// === 実態（操作画面からの書き込み） ===
+status: text('status').default('planned').notNull(),  // 'planned' | 'done' | 'skipped' | 'modified' | 'added'
+skipReason: text('skip_reason'),                      // 未実施理由（status='skipped'時に必須）
+actualStaffId: integer('actual_staff_id'),            // 実担当ヘルパーID
+staffReassigned: boolean('staff_reassigned').default(false).notNull(), // 担当変更フラグ（plannedStaffId != actualStaffId）
+modifiedAt: timestamp('modified_at'),                 // 最終変更日時
+modifiedBy: integer('modified_by'),                   // 最終変更者（staff.id）
+modifiedNote: text('modified_note'),                  // 変更メモ（カード詳細で表示）
+isAdHoc: boolean('is_ad_hoc').default(false).notNull(), // 計画外の追加サービスフラグ
+```
+
+**status値の定義**
+
+|値         |意味                |自動推定タイミング                                 |
+|----------|------------------|------------------------------------------|
+|`planned` |初期値（materialize直後）|from-template 実行時                         |
+|`done`    |実施済み              |暗黙のデフォルト（明示確認不要）                          |
+|`skipped` |未実施               |操作画面で「未実施」登録時、`skipReason` 必須             |
+|`modified`|サービス内容/時間が変更された   |startTime / endTime / serviceTypeId が変わった時|
+|`added`   |計画外の追加サービス        |新規セル作成時、`isAdHoc=true` と連動                |
+
+`staffReassigned` は status とは独立。担当だけ変わった場合は status は変わらず `staffReassigned=true` のみ立つ。
+
+### 1-2. `lib/db/src/schema/route_sheet_cell_audit_log.ts`（新規）
+
+```ts
+import { pgTable, uuid, integer, text, timestamp, jsonb } from 'drizzle-orm/pg-core';
+import { routeSheetCells } from './route_sheet_cells';
+import { staff } from './staff';
+
+export const routeSheetCellAuditLog = pgTable('route_sheet_cell_audit_log', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  cellId: integer('cell_id').notNull().references(() => routeSheetCells.id, { onDelete: 'cascade' }),
+  occurredAt: timestamp('occurred_at').defaultNow().notNull(),
+  actorStaffId: integer('actor_staff_id').references(() => staff.id), // 操作者
+  action: text('action').notNull(), // 'create' | 'update' | 'delete' | 'skip' | 'unskip' | 'add_adhoc' | 'reassign'
+  beforeJson: jsonb('before_json'), // 変更前のセル状態（jsonb）
+  afterJson: jsonb('after_json'),   // 変更後のセル状態（jsonb）
+  reason: text('reason'),            // 任意のメモ（未実施理由など）
+});
+```
+
+インデックス：
+
+- `(cellId, occurredAt DESC)` — セル単位の履歴取得用
+- `(occurredAt DESC)` — 全体ログのページング用
+
+### 1-3. `lib/db/src/schema/route_sheet_templates.ts`
+
+```ts
+// 既存カラムはそのまま残す
+// 以下を追加
+lockedAt: timestamp('locked_at'),
+lockedBy: integer('locked_by'), // staff.id（ロックした管理者）
+```
+
+`lockedAt` が非 NULL の場合、PUT `/api/route-sheet-templates/:weekday` は 423 Locked を返す（フェーズ3で認可と合わせて実装）。
+フェーズ1では**カラムを追加するのみ**で、API側のロック判定はまだ実装しない。
+
+### 1-4. マイグレーション実行
+
+```bash
+pnpm --filter @workspace/db run push
+```
+
+確認：既存データが消えないこと、既存クエリが動くこと。
+
+-----
+
+## タスク2：materialize 処理の修正
+
+### 対象エンドポイント
+
+`POST /api/route-sheets/:date/from-template`
+
+### 修正内容
+
+テンプレからセルを生成する際、各セルに**計画値スナップショット**を埋めること。
+
+**実装位置**：`artifacts/api-server/src/routes/route-sheets.ts`（or 該当ファイル）の from-template ハンドラ
+
+```ts
+// 既存：テンプレセル(route_sheet_template_cells)を読み込み、route_sheet_cells を insert する処理
+// 各 insert に以下を追加：
+
+await db.insert(routeSheetCells).values({
+  // 既存フィールド ...
+  startTime: templateCell.startTime,
+  endTime: templateCell.endTime,
+  residentId: residentService.residentId,
+  serviceTypeId: residentService.serviceTypeId,
+  // ...
+
+  // ↓ 計画スナップショット
+  plannedStaffId: rowStaffId,        // テンプレ行に紐づく計画担当
+  plannedStartTime: templateCell.startTime,
+  plannedEndTime: templateCell.endTime,
+  plannedServiceTypeId: residentService.serviceTypeId,
+  status: 'planned',
+  staffReassigned: false,
+  isAdHoc: false,
+});
+```
+
+**注意**：テンプレ側（`route_sheet_template_rows`）は現状 staffId を持っていないため、計画担当の決定ルールを以下のいずれかに統一する必要があります：
+
+- **案A**：テンプレ行に `default_staff_id` カラムを追加してテンプレ時点で担当固定
+- **案B**：materialize 時に当日のシフト(`shifts`)を見て自動アサイン
+- **案C**：materialize 時点では `plannedStaffId=null`、当日 saveCell で初めて埋める
+
+→ **案Aで進めてください**。`route_sheet_template_rows` に以下を追加：
+
+```ts
+defaultStaffId: integer('default_staff_id'),  // 計画担当（nullable、後から埋めてOK）
+```
+
+これにより、テンプレ編集画面で「金曜の早番枠は山田」のような割付を保存できるようになります。
+materialize時は `route_sheet_template_rows.defaultStaffId` をそのまま `plannedStaffId` にコピー。
+
+-----
+
+## タスク3：セル更新時の status 自動推定
+
+### 対象エンドポイント
+
+`PUT /api/route-sheets/:date`（既存）または個別のセル更新エンドポイント
+
+### 修正内容
+
+セル更新時、以下のロジックで `status` と `staffReassigned` を自動更新：
+
+```ts
+// 既存のセル更新処理内で、保存直前に以下を計算
+
+const before = await db.select().from(routeSheetCells).where(eq(routeSheetCells.id, cellId)).limit(1);
+const beforeCell = before[0];
+
+// staffReassigned 判定
+const newStaffReassigned =
+  beforeCell.plannedStaffId !== null &&
+  payload.actualStaffId !== null &&
+  beforeCell.plannedStaffId !== payload.actualStaffId;
+
+// status 自動推定（明示的に skipped/added が指定されている場合はそれを優先）
+let newStatus = payload.status ?? beforeCell.status;
+
+if (newStatus !== 'skipped' && newStatus !== 'added') {
+  const isModified =
+    beforeCell.plannedStartTime !== payload.startTime ||
+    beforeCell.plannedEndTime !== payload.endTime ||
+    beforeCell.plannedServiceTypeId !== payload.serviceTypeId;
+
+  newStatus = isModified ? 'modified' : 'done';
+}
+
+// 監査ログ書き込み（タスク4参照）
+await db.insert(routeSheetCellAuditLog).values({
+  cellId,
+  actorStaffId: req.user?.id ?? null, // 認証実装前は null OK
+  action: determineAction(beforeCell, payload, newStatus), // create/update/skip/unskip/reassign
+  beforeJson: beforeCell,
+  afterJson: { ...payload, status: newStatus, staffReassigned: newStaffReassigned },
+  reason: payload.skipReason ?? payload.modifiedNote ?? null,
+});
+
+// セル本体を更新
+await db.update(routeSheetCells)
+  .set({
+    ...payload,
+    status: newStatus,
+    staffReassigned: newStaffReassigned,
+    modifiedAt: new Date(),
+    modifiedBy: req.user?.id ?? null,
+  })
+  .where(eq(routeSheetCells.id, cellId));
+```
+
+**action 判定ヘルパー**
+
+```ts
+function determineAction(before, after, newStatus): string {
+  if (!before) return 'create';
+  if (newStatus === 'skipped' && before.status !== 'skipped') return 'skip';
+  if (newStatus !== 'skipped' && before.status === 'skipped') return 'unskip';
+  if (before.plannedStaffId !== after.actualStaffId) return 'reassign';
+  if (before.isAdHoc !== after.isAdHoc && after.isAdHoc) return 'add_adhoc';
+  return 'update';
+}
+```
+
+-----
+
+## タスク4：監査画面向け新規API
+
+`lib/api-spec/openapi.yaml` に以下を追加。codegen で型と React Query フックを生成すること。
+
+### 4-1. `GET /api/audit/route-sheets/:date`
+
+監査画面メインビュー用。当日の全セル＋計画値＋実態を返す。
+
+**レスポンス例**：
+
+```yaml
+RouteSheetCellAuditView:
+  type: object
+  properties:
+    id: { type: integer }
+    rowId: { type: integer }
+    rowShiftType: { type: string }     # 'early' | 'day' | 'late' など
+    rowShiftTypeColor: { type: string } # shift_types.color
+    plannedStaffId: { type: integer, nullable: true }
+    plannedStaffName: { type: string, nullable: true }
+    actualStaffId: { type: integer, nullable: true }
+    actualStaffName: { type: string, nullable: true }
+    plannedStartTime: { type: string }
+    plannedEndTime: { type: string }
+    plannedServiceTypeId: { type: string, nullable: true }
+    plannedServiceLabel: { type: string, nullable: true }
+    residentId: { type: integer, nullable: true }
+    residentName: { type: string, nullable: true }
+    status: { type: string, enum: [planned, done, skipped, modified, added] }
+    skipReason: { type: string, nullable: true }
+    staffReassigned: { type: boolean }
+    modifiedNote: { type: string, nullable: true }
+    isAdHoc: { type: boolean }
+```
+
+クエリ：JOIN で staff・service_types・residents の名前を解決して返す。N+1 を避ける。
+
+### 4-2. `GET /api/audit/notifications/:date`
+
+追加サービス通知（ベル一覧）。`isAdHoc=true` のセルを抽出して返す。
+
+### 4-3. `POST /api/audit/notifications/:cellId/accept`
+
+通知の採用処理。リクエストボディで挙動を切り替え：
+
+```yaml
+NotificationAcceptRequest:
+  type: object
+  properties:
+    scope:
+      type: string
+      enum: [day_only, add_to_template]
+      # day_only: その日限りの実績として確定（isAdHoc を維持、通知から消す）
+      # add_to_template: 曜日テンプレに自動追加（route_sheet_template_cells に insert）
+    weekday:
+      type: integer
+      description: scope='add_to_template' 時に必須（0=日 〜 6=土）
+```
+
+`day_only` の場合、`isAdHoc` は `false` に変更（通知一覧から消すため）し、`status='added'` を維持する。
+`add_to_template` の場合、上記に加えて該当曜日のテンプレに新規セルを追加する。
+
+### 4-4. `GET /api/audit/cells/:cellId/history`
+
+セル単位の変更履歴。`route_sheet_cell_audit_log` を `occurredAt DESC` で返す。
+カード詳細モーダルで「いつ誰が何を変えたか」を表示するため。
+
+### 4-5. `DELETE /api/audit/cells/:cellId/note`
+
+変更メモを消去（論理削除）。`modifiedNote=null` に更新。
+監査ログには `action='clear_note'` で記録を残す。
+
+### 4-6. codegen 実行
+
+```bash
+pnpm --filter @workspace/api-spec run codegen
+```
+
+-----
+
+## タスク5：既存コードへの影響確認
+
+以下を必ず確認してください：
+
+1. **既存の `PUT /api/route-sheets/:date`** が監査ログを書くようになっても、操作画面側のコードは無修正で動くか
+1. **既存の `POST /api/route-sheets/:date/from-template`** が `plannedStaffId` を埋めるようになっても、既存のレスポンス構造は壊れていないか
+1. **route_sheet_cells のレスポンス**に新規カラムが追加されたことで、操作画面のルート票編集UI が型エラーを出さないか（Orval 自動生成の型が更新されているはず）
+
+-----
+
+## タスク6：動作確認チェックリスト
+
+実装完了後、以下を順に確認してください：
+
+- [ ] マイグレーション成功、既存データに影響なし
+- [ ] テンプレートから当日シート生成時、`plannedStaffId/plannedStartTime/plannedEndTime/plannedServiceTypeId` が全セルに入る
+- [ ] 当日シートでセルを編集し、時間を変えると `status='modified'` になる
+- [ ] 担当を変えると `staffReassigned=true` になる（status は modified にならない）
+- [ ] セル削除で `status='skipped'` のレコードが残る（物理削除ではない）  
+  ※削除挙動はフェーズ2でUI仕様確定後に再検討。ここでは「未実施登録」相当の処理を確認
+- [ ] 新規セルを追加すると `isAdHoc=true`, `status='added'` になる
+- [ ] `route_sheet_cell_audit_log` に変更履歴が積まれる
+- [ ] `GET /api/audit/route-sheets/:date` が JOIN 解決済みデータを返す
+- [ ] `GET /api/audit/notifications/:date` で `isAdHoc=true` のセルだけ返る
+- [ ] `POST /api/audit/notifications/:cellId/accept` で day_only / add_to_template の両方が動く
+
+-----
+
+## 未対応事項（フェーズ2以降）
+
+- 認証・認可（管理者ロール判定）
+- テンプレロック機能の実際の動作
+- 監査画面UI（次フェーズ）
+- 利用者軸ビュー
+- 月次サマリ画面
+
+これらはフェーズ1完了後に別指示書で対応します。
