@@ -7,6 +7,7 @@ import {
   routeSheetTemplateRowsTable,
   routeSheetTemplateCellsTable,
   shiftsTable,
+  shiftTypesTable,
   residentServicesTable,
   residentsTable,
   routeSheetsTable,
@@ -31,6 +32,7 @@ const rowSchema = z.object({
   shiftTypeId: z.string().uuid(),
   slotLabel: z.string().default(""),
   sortOrder: z.number().int().default(0),
+  defaultStaffId: z.number().int().nullable().optional(),
   cells: z.array(cellSchema).default([]),
 });
 
@@ -99,6 +101,7 @@ router.put("/route-sheet-templates/:weekday", async (req, res) => {
           shiftTypeId: row.shiftTypeId,
           slotLabel: row.slotLabel,
           sortOrder: row.sortOrder,
+          defaultStaffId: row.defaultStaffId ?? null,
         })
         .returning();
       if (row.cells.length > 0) {
@@ -156,6 +159,16 @@ router.post("/route-sheets/:date/from-template", async (req, res) => {
     .from(shiftsTable)
     .where(eq(shiftsTable.date, date));
 
+  // shift_types: id → code 解決マップ
+  const tplShiftTypeIds = [...new Set(tplRows.map((r) => r.shiftTypeId))];
+  const shiftTypesList = tplShiftTypeIds.length === 0
+    ? []
+    : await db
+        .select()
+        .from(shiftTypesTable)
+        .where(inArray(shiftTypesTable.id, tplShiftTypeIds));
+  const shiftTypeCodeMap = new Map(shiftTypesList.map((s) => [s.id, s.code]));
+
   await db.transaction(async (tx) => {
     const [sheet] = await tx
       .insert(routeSheetsTable)
@@ -168,21 +181,25 @@ router.post("/route-sheets/:date/from-template", async (req, res) => {
 
     const rowIdMap = new Map<string, number>();
 
+    const rowStaffMap = new Map<string, number | null>();
     for (const tplRow of tplRows) {
+      // 計画担当の優先順: テンプレ行の defaultStaffId → 当日シフトから推定
       const matchingShift = shiftsToday.find(
         (s) => s.shiftTypeId === tplRow.shiftTypeId && s.slotLabel === tplRow.slotLabel
       );
+      const plannedStaffId = tplRow.defaultStaffId ?? matchingShift?.staffId ?? null;
       const [newRow] = await tx
         .insert(routeSheetRowsTable)
         .values({
           routeSheetId: sheet.id,
-          staffId: matchingShift?.staffId ?? null,
+          staffId: plannedStaffId,
           staffName: "",
-          shiftType: "日",
+          shiftType: shiftTypeCodeMap.get(tplRow.shiftTypeId) ?? "日",
           sortOrder: tplRow.sortOrder,
         })
         .returning();
       rowIdMap.set(tplRow.id, newRow.id);
+      rowStaffMap.set(tplRow.id, plannedStaffId);
     }
 
     const tplResidentServiceIds = tplCells
@@ -207,6 +224,7 @@ router.post("/route-sheets/:date/from-template", async (req, res) => {
       }
       const rowId = rowIdMap.get(tplCell.templateRowId);
       if (!rowId) continue;
+      const plannedStaffId = rowStaffMap.get(tplCell.templateRowId) ?? null;
       await tx.insert(routeSheetCellsTable).values({
         routeSheetRowId: rowId,
         startTime: tplCell.startTime,
@@ -217,6 +235,15 @@ router.post("/route-sheets/:date/from-template", async (req, res) => {
         serviceTypeId: linked?.rs.serviceTypeId ?? null,
         serviceLabel: null,
         notes: tplCell.notes,
+        // 計画スナップショット（materialize 時点で固定）
+        plannedStaffId,
+        plannedStartTime: tplCell.startTime,
+        plannedEndTime: tplCell.endTime,
+        plannedServiceTypeId: linked?.rs.serviceTypeId ?? null,
+        status: "planned",
+        staffReassigned: false,
+        isAdHoc: false,
+        actualStaffId: plannedStaffId,
       });
     }
   });

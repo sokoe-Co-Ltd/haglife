@@ -17,6 +17,9 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AuditCellHistoryResponse,
+  AuditNotificationsResponse,
+  AuditRouteSheetResponse,
   BathReport,
   BulkUpsertShiftsBody,
   CheckEliminationRound200,
@@ -54,6 +57,7 @@ import type {
   ListVitalsParams,
   ListWeightsParams,
   Meal,
+  NotificationAcceptRequest,
   ResetEliminationRound200,
   Resident,
   ResidentEliminationStatus,
@@ -7079,4 +7083,448 @@ export const useSaveAsTemplate = <
   TContext
 > => {
   return useMutation(getSaveAsTemplateMutationOptions(options));
+};
+
+/**
+ * @summary Plan vs actual view for a date (all cells incl. skipped)
+ */
+export const getGetAuditRouteSheetUrl = (date: string) => {
+  return `/api/audit/route-sheets/${date}`;
+};
+
+export const getAuditRouteSheet = async (
+  date: string,
+  options?: RequestInit,
+): Promise<AuditRouteSheetResponse> => {
+  return customFetch<AuditRouteSheetResponse>(getGetAuditRouteSheetUrl(date), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAuditRouteSheetQueryKey = (date: string) => {
+  return [`/api/audit/route-sheets/${date}`] as const;
+};
+
+export const getGetAuditRouteSheetQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAuditRouteSheet>>,
+  TError = ErrorType<unknown>,
+>(
+  date: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAuditRouteSheet>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAuditRouteSheetQueryKey(date);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAuditRouteSheet>>
+  > = ({ signal }) => getAuditRouteSheet(date, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!date,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAuditRouteSheet>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAuditRouteSheetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAuditRouteSheet>>
+>;
+export type GetAuditRouteSheetQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Plan vs actual view for a date (all cells incl. skipped)
+ */
+
+export function useGetAuditRouteSheet<
+  TData = Awaited<ReturnType<typeof getAuditRouteSheet>>,
+  TError = ErrorType<unknown>,
+>(
+  date: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAuditRouteSheet>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAuditRouteSheetQueryOptions(date, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Ad-hoc service notifications for a date
+ */
+export const getGetAuditNotificationsUrl = (date: string) => {
+  return `/api/audit/notifications/${date}`;
+};
+
+export const getAuditNotifications = async (
+  date: string,
+  options?: RequestInit,
+): Promise<AuditNotificationsResponse> => {
+  return customFetch<AuditNotificationsResponse>(
+    getGetAuditNotificationsUrl(date),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetAuditNotificationsQueryKey = (date: string) => {
+  return [`/api/audit/notifications/${date}`] as const;
+};
+
+export const getGetAuditNotificationsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAuditNotifications>>,
+  TError = ErrorType<unknown>,
+>(
+  date: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAuditNotifications>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAuditNotificationsQueryKey(date);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAuditNotifications>>
+  > = ({ signal }) =>
+    getAuditNotifications(date, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!date,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAuditNotifications>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAuditNotificationsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAuditNotifications>>
+>;
+export type GetAuditNotificationsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Ad-hoc service notifications for a date
+ */
+
+export function useGetAuditNotifications<
+  TData = Awaited<ReturnType<typeof getAuditNotifications>>,
+  TError = ErrorType<unknown>,
+>(
+  date: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAuditNotifications>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAuditNotificationsQueryOptions(date, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Accept an ad-hoc notification (day_only or add_to_template)
+ */
+export const getAcceptAuditNotificationUrl = (cellId: number) => {
+  return `/api/audit/notifications/${cellId}/accept`;
+};
+
+export const acceptAuditNotification = async (
+  cellId: number,
+  notificationAcceptRequest: NotificationAcceptRequest,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getAcceptAuditNotificationUrl(cellId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(notificationAcceptRequest),
+  });
+};
+
+export const getAcceptAuditNotificationMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acceptAuditNotification>>,
+    TError,
+    { cellId: number; data: BodyType<NotificationAcceptRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof acceptAuditNotification>>,
+  TError,
+  { cellId: number; data: BodyType<NotificationAcceptRequest> },
+  TContext
+> => {
+  const mutationKey = ["acceptAuditNotification"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof acceptAuditNotification>>,
+    { cellId: number; data: BodyType<NotificationAcceptRequest> }
+  > = (props) => {
+    const { cellId, data } = props ?? {};
+
+    return acceptAuditNotification(cellId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AcceptAuditNotificationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof acceptAuditNotification>>
+>;
+export type AcceptAuditNotificationMutationBody =
+  BodyType<NotificationAcceptRequest>;
+export type AcceptAuditNotificationMutationError = ErrorType<void>;
+
+/**
+ * @summary Accept an ad-hoc notification (day_only or add_to_template)
+ */
+export const useAcceptAuditNotification = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acceptAuditNotification>>,
+    TError,
+    { cellId: number; data: BodyType<NotificationAcceptRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof acceptAuditNotification>>,
+  TError,
+  { cellId: number; data: BodyType<NotificationAcceptRequest> },
+  TContext
+> => {
+  return useMutation(getAcceptAuditNotificationMutationOptions(options));
+};
+
+/**
+ * @summary Change history for a cell
+ */
+export const getGetAuditCellHistoryUrl = (cellId: number) => {
+  return `/api/audit/cells/${cellId}/history`;
+};
+
+export const getAuditCellHistory = async (
+  cellId: number,
+  options?: RequestInit,
+): Promise<AuditCellHistoryResponse> => {
+  return customFetch<AuditCellHistoryResponse>(
+    getGetAuditCellHistoryUrl(cellId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetAuditCellHistoryQueryKey = (cellId: number) => {
+  return [`/api/audit/cells/${cellId}/history`] as const;
+};
+
+export const getGetAuditCellHistoryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAuditCellHistory>>,
+  TError = ErrorType<unknown>,
+>(
+  cellId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAuditCellHistory>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAuditCellHistoryQueryKey(cellId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAuditCellHistory>>
+  > = ({ signal }) =>
+    getAuditCellHistory(cellId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!cellId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAuditCellHistory>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAuditCellHistoryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAuditCellHistory>>
+>;
+export type GetAuditCellHistoryQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Change history for a cell
+ */
+
+export function useGetAuditCellHistory<
+  TData = Awaited<ReturnType<typeof getAuditCellHistory>>,
+  TError = ErrorType<unknown>,
+>(
+  cellId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAuditCellHistory>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAuditCellHistoryQueryOptions(cellId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Clear the modifiedNote of a cell
+ */
+export const getClearAuditCellNoteUrl = (cellId: number) => {
+  return `/api/audit/cells/${cellId}/note`;
+};
+
+export const clearAuditCellNote = async (
+  cellId: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getClearAuditCellNoteUrl(cellId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getClearAuditCellNoteMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearAuditCellNote>>,
+    TError,
+    { cellId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof clearAuditCellNote>>,
+  TError,
+  { cellId: number },
+  TContext
+> => {
+  const mutationKey = ["clearAuditCellNote"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof clearAuditCellNote>>,
+    { cellId: number }
+  > = (props) => {
+    const { cellId } = props ?? {};
+
+    return clearAuditCellNote(cellId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ClearAuditCellNoteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof clearAuditCellNote>>
+>;
+
+export type ClearAuditCellNoteMutationError = ErrorType<void>;
+
+/**
+ * @summary Clear the modifiedNote of a cell
+ */
+export const useClearAuditCellNote = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearAuditCellNote>>,
+    TError,
+    { cellId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof clearAuditCellNote>>,
+  TError,
+  { cellId: number },
+  TContext
+> => {
+  return useMutation(getClearAuditCellNoteMutationOptions(options));
 };

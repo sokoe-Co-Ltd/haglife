@@ -21,6 +21,7 @@ import routeSheetTemplatesRouter from "./routeSheetTemplates";
 import photosRouter from "./photos";
 import residentPhotosRouter from "./residentPhotos";
 import eliminationPhotosRouter from "./eliminationPhotos";
+import auditRouter from "./audit";
 
 const router: IRouter = Router();
 
@@ -46,5 +47,6 @@ router.use(shiftTypesRouter);
 router.use(shiftsRouter);
 router.use(residentServicesRouter);
 router.use(routeSheetTemplatesRouter);
+router.use(auditRouter);
 
 export default router;

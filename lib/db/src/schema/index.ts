@@ -15,4 +15,5 @@ export * from "./shift-types";
 export * from "./shifts";
 export * from "./resident-services";
 export * from "./route-sheet-templates";
+export * from "./routeSheetCellAuditLog";
 export * from "./views";

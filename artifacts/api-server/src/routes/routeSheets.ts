@@ -1,10 +1,11 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, inArray, asc } from "drizzle-orm";
+import { eq, desc, inArray, asc, ne, and, notInArray } from "drizzle-orm";
 import {
   db, routeSheetsTable, routeSheetRowsTable, routeSheetCellsTable, visitConflictsView,
   routeSheetTemplatesTable, routeSheetTemplateRowsTable, routeSheetTemplateCellsTable,
   shiftTypesTable, shiftsTable, staffTable,
   residentServicesTable, residentsTable, serviceTypesTable,
+  routeSheetCellAuditLogTable,
 } from "@workspace/db";
 import { z } from "zod";
 
@@ -20,6 +21,12 @@ const CellInput = z.object({
   notes: z.string().nullable().optional(),
   residentId: z.number().int().nullable().optional(),
   serviceTypeId: z.string().nullable().optional(),
+  // 監査用フィールド（フロントは未送信でも可）
+  status: z.string().nullable().optional(),
+  skipReason: z.string().nullable().optional(),
+  actualStaffId: z.number().int().nullable().optional(),
+  modifiedNote: z.string().nullable().optional(),
+  isAdHoc: z.boolean().optional(),
 });
 
 const RowInput = z.object({
@@ -38,6 +45,9 @@ const UpsertBody = z.object({
   rows: z.array(RowInput).default([]),
 });
 
+type CellInputT = z.infer<typeof CellInput>;
+type CellRecord = typeof routeSheetCellsTable.$inferSelect;
+
 async function buildSheet(sheetId: number) {
   const sheet = await db.query.routeSheetsTable.findFirst({
     where: eq(routeSheetsTable.id, sheetId),
@@ -52,10 +62,16 @@ async function buildSheet(sheetId: number) {
 
   const rowsWithCells = await Promise.all(
     rows.map(async (row) => {
+      // 操作画面では status='skipped'（論理削除）のセルは非表示
       const cells = await db
         .select()
         .from(routeSheetCellsTable)
-        .where(eq(routeSheetCellsTable.routeSheetRowId, row.id))
+        .where(
+          and(
+            eq(routeSheetCellsTable.routeSheetRowId, row.id),
+            ne(routeSheetCellsTable.status, "skipped")
+          )
+        )
         .orderBy(routeSheetCellsTable.startTime);
       return { ...row, cells };
     })
@@ -200,6 +216,51 @@ router.get("/route-sheets/:date", async (req, res): Promise<void> => {
   res.json(await buildSheet(sheet.id));
 });
 
+// ── status 自動推定 ────────────────────────────────────────────
+function computeStatus(before: CellRecord | null, input: CellInputT): string {
+  // 明示的に skipped が指定されている場合はそれを優先
+  if (input.status === "skipped") return "skipped";
+  if (input.status === "added") return "added";
+
+  // 新規セル（before なし）= 計画外の追加
+  if (!before) return "added";
+
+  // 計画スナップショットがあるなら差分検出
+  const planned = {
+    startTime: before.plannedStartTime,
+    endTime: before.plannedEndTime,
+    serviceTypeId: before.plannedServiceTypeId,
+  };
+  // planned* が一つも入っていない（古いデータ）→ 比較不能、現状維持
+  if (
+    planned.startTime === null &&
+    planned.endTime === null &&
+    planned.serviceTypeId === null
+  ) {
+    return before.status === "planned" ? "done" : before.status;
+  }
+
+  const isModified =
+    (planned.startTime ?? before.startTime) !== input.startTime ||
+    (planned.endTime ?? before.endTime) !== input.endTime ||
+    (planned.serviceTypeId ?? before.serviceTypeId) !== (input.serviceTypeId ?? null);
+
+  return isModified ? "modified" : "done";
+}
+
+function determineAction(
+  before: CellRecord | null,
+  newStatus: string,
+  newStaffReassigned: boolean,
+  isAdHoc: boolean
+): string {
+  if (!before) return isAdHoc ? "add_adhoc" : "create";
+  if (newStatus === "skipped" && before.status !== "skipped") return "skip";
+  if (newStatus !== "skipped" && before.status === "skipped") return "unskip";
+  if (!before.staffReassigned && newStaffReassigned) return "reassign";
+  return "update";
+}
+
 router.put("/route-sheets/:date", async (req, res): Promise<void> => {
   const { date } = req.params;
   const parsed = UpsertBody.safeParse(req.body);
@@ -225,33 +286,181 @@ router.put("/route-sheets/:date", async (req, res): Promise<void> => {
     sheetId = created.id;
   }
 
-  await db.delete(routeSheetRowsTable).where(eq(routeSheetRowsTable.routeSheetId, sheetId));
+  // === 既存の rows / cells を取得（差分判定用） ===
+  const existingRows = await db
+    .select()
+    .from(routeSheetRowsTable)
+    .where(eq(routeSheetRowsTable.routeSheetId, sheetId));
+  const existingRowIds = existingRows.map((r) => r.id);
+  const existingCells = existingRowIds.length === 0
+    ? []
+    : await db
+        .select()
+        .from(routeSheetCellsTable)
+        .where(inArray(routeSheetCellsTable.routeSheetRowId, existingRowIds));
+  const existingCellsById = new Map(existingCells.map((c) => [c.id, c]));
 
+  // payload に含まれている cell.id を集める（残存セル）
+  const keptCellIds = new Set<number>();
+
+  // 監査ログ用バッファ
+  const auditLogs: Array<typeof routeSheetCellAuditLogTable.$inferInsert> = [];
+
+  // === Row 差分マージ ===
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    const [insertedRow] = await db.insert(routeSheetRowsTable).values({
-      routeSheetId: sheetId,
-      staffName: row.staffName,
-      shiftType: row.shiftType,
-      sortOrder: row.sortOrder ?? i,
-      staffId: row.staffId ?? null,
-    }).returning();
+    let rowId: number;
 
-    if (row.cells.length > 0) {
-      await db.insert(routeSheetCellsTable).values(
-        row.cells.map((cell) => ({
-          routeSheetRowId: insertedRow.id,
-          startTime: cell.startTime,
-          endTime: cell.endTime,
-          isBreak: cell.isBreak,
-          residentName: cell.residentName ?? null,
-          serviceLabel: cell.serviceLabel ?? null,
-          notes: cell.notes ?? null,
-          residentId: cell.residentId ?? null,
-          serviceTypeId: cell.serviceTypeId ?? null,
-        }))
-      );
+    if (row.id && existingRowIds.includes(row.id)) {
+      // UPDATE 既存行
+      await db.update(routeSheetRowsTable)
+        .set({
+          staffName: row.staffName,
+          shiftType: row.shiftType,
+          sortOrder: row.sortOrder ?? i,
+          staffId: row.staffId ?? null,
+        })
+        .where(eq(routeSheetRowsTable.id, row.id));
+      rowId = row.id;
+    } else {
+      // INSERT 新規行
+      const [inserted] = await db.insert(routeSheetRowsTable).values({
+        routeSheetId: sheetId,
+        staffName: row.staffName,
+        shiftType: row.shiftType,
+        sortOrder: row.sortOrder ?? i,
+        staffId: row.staffId ?? null,
+      }).returning();
+      rowId = inserted.id;
     }
+
+    // === Cell 差分マージ ===
+    for (const cell of row.cells) {
+      const before = cell.id ? (existingCellsById.get(cell.id) ?? null) : null;
+      const actualStaffId = cell.actualStaffId ?? row.staffId ?? null;
+      const plannedStaffId = before?.plannedStaffId ?? null;
+      const newStaffReassigned =
+        plannedStaffId !== null &&
+        actualStaffId !== null &&
+        plannedStaffId !== actualStaffId;
+      const newStatus = computeStatus(before, cell);
+      const isAdHoc = before ? before.isAdHoc : (cell.isAdHoc ?? !cell.id);
+
+      const baseFields = {
+        routeSheetRowId: rowId,
+        startTime: cell.startTime,
+        endTime: cell.endTime,
+        isBreak: cell.isBreak,
+        residentName: cell.residentName ?? null,
+        serviceLabel: cell.serviceLabel ?? null,
+        notes: cell.notes ?? null,
+        residentId: cell.residentId ?? null,
+        serviceTypeId: cell.serviceTypeId ?? null,
+        status: newStatus,
+        skipReason: cell.skipReason ?? null,
+        actualStaffId,
+        staffReassigned: newStaffReassigned,
+        modifiedNote: cell.modifiedNote ?? before?.modifiedNote ?? null,
+        isAdHoc,
+        modifiedAt: new Date(),
+        modifiedBy: null as number | null,
+      };
+
+      let savedCellId: number;
+      if (before) {
+        // UPDATE
+        await db.update(routeSheetCellsTable)
+          .set(baseFields)
+          .where(eq(routeSheetCellsTable.id, before.id));
+        savedCellId = before.id;
+        keptCellIds.add(before.id);
+      } else {
+        // INSERT — 新規セルは計画外（isAdHoc=true, status='added' 推奨）
+        const [inserted] = await db.insert(routeSheetCellsTable)
+          .values({
+            ...baseFields,
+            status: newStatus === "done" ? "added" : newStatus, // 比較対象無いので added 固定
+            isAdHoc: true,
+            // planned* は新規セルでは null 維持
+          })
+          .returning();
+        savedCellId = inserted.id;
+        keptCellIds.add(savedCellId);
+      }
+
+      // 監査ログ：意味のある差分があるときだけ書く
+      const action = determineAction(before, newStatus, newStaffReassigned, isAdHoc);
+      const isMeaningfulChange =
+        !before ||
+        before.status !== newStatus ||
+        before.staffReassigned !== newStaffReassigned ||
+        before.startTime !== cell.startTime ||
+        before.endTime !== cell.endTime ||
+        before.serviceTypeId !== (cell.serviceTypeId ?? null) ||
+        before.residentId !== (cell.residentId ?? null) ||
+        (before.modifiedNote ?? null) !== (cell.modifiedNote ?? before.modifiedNote ?? null);
+      if (isMeaningfulChange) {
+        auditLogs.push({
+          cellId: savedCellId,
+          actorStaffId: null,
+          action,
+          beforeJson: before ?? null,
+          afterJson: { id: savedCellId, ...baseFields },
+          reason: cell.skipReason ?? cell.modifiedNote ?? null,
+        });
+      }
+    }
+  }
+
+  // === payload に含まれなかった既存セル → status='skipped' でソフトデリート ===
+  const removedCells = existingCells.filter((c) => !keptCellIds.has(c.id));
+  for (const cell of removedCells) {
+    if (cell.status === "skipped") continue; // 既に skipped なら何もしない
+    await db.update(routeSheetCellsTable)
+      .set({
+        status: "skipped",
+        modifiedAt: new Date(),
+      })
+      .where(eq(routeSheetCellsTable.id, cell.id));
+    auditLogs.push({
+      cellId: cell.id,
+      actorStaffId: null,
+      action: "skip",
+      beforeJson: cell,
+      afterJson: { ...cell, status: "skipped" },
+      reason: null,
+    });
+  }
+
+  // === payload に含まれなかった既存行 → 配下の非skippedセルを skipped 化（行自体は残す）===
+  // 行を物理削除すると、その下の skipped セルが sheet からたどれなくなり監査で見えなくなるため、
+  // 行は残したまま配下セルをソフトデリートする。フロント側は配下に visible セルが無い行を非表示にする想定。
+  const keptRowIds = new Set<number>(
+    rows.filter((r) => r.id != null).map((r) => r.id!)
+  );
+  const removedRowIds = existingRowIds.filter((id) => !keptRowIds.has(id));
+  if (removedRowIds.length > 0) {
+    const cellsUnderRemovedRows = existingCells.filter(
+      (c) => removedRowIds.includes(c.routeSheetRowId) && c.status !== "skipped" && !keptCellIds.has(c.id)
+    );
+    for (const cell of cellsUnderRemovedRows) {
+      await db.update(routeSheetCellsTable)
+        .set({ status: "skipped", modifiedAt: new Date() })
+        .where(eq(routeSheetCellsTable.id, cell.id));
+      auditLogs.push({
+        cellId: cell.id,
+        actorStaffId: null,
+        action: "skip",
+        beforeJson: cell,
+        afterJson: { ...cell, status: "skipped" },
+        reason: "row_removed",
+      });
+    }
+  }
+
+  // 監査ログを一括 INSERT
+  if (auditLogs.length > 0) {
+    await db.insert(routeSheetCellAuditLogTable).values(auditLogs);
   }
 
   res.json(await buildSheet(sheetId));
@@ -271,3 +480,6 @@ router.delete("/route-sheets/:date", async (req, res): Promise<void> => {
 });
 
 export default router;
+
+// Suppress unused import (kept for potential future use)
+void notInArray;

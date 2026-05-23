@@ -45,6 +45,8 @@ tags:
     description: Resident service contracts
   - name: route-sheet-templates
     description: Weekly route sheet templates
+  - name: audit
+    description: Audit (admin-only) views for route-sheet plan vs actual
 
 paths:
   /healthz:
@@ -1553,6 +1555,88 @@ paths:
       responses:
         "200": { description: OK }
 
+  # ── Audit (admin) ───────────────────────────────────────────────
+  /audit/route-sheets/{date}:
+    get:
+      operationId: getAuditRouteSheet
+      tags: [audit]
+      summary: Plan vs actual view for a date (all cells incl. skipped)
+      parameters:
+        - in: path
+          name: date
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuditRouteSheetResponse" }
+  /audit/notifications/{date}:
+    get:
+      operationId: getAuditNotifications
+      tags: [audit]
+      summary: Ad-hoc service notifications for a date
+      parameters:
+        - in: path
+          name: date
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuditNotificationsResponse" }
+  /audit/notifications/{cellId}/accept:
+    post:
+      operationId: acceptAuditNotification
+      tags: [audit]
+      summary: Accept an ad-hoc notification (day_only or add_to_template)
+      parameters:
+        - in: path
+          name: cellId
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NotificationAcceptRequest" }
+      responses:
+        "200": { description: OK }
+        "400": { description: Bad Request }
+        "404": { description: Not Found }
+  /audit/cells/{cellId}/history:
+    get:
+      operationId: getAuditCellHistory
+      tags: [audit]
+      summary: Change history for a cell
+      parameters:
+        - in: path
+          name: cellId
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuditCellHistoryResponse" }
+  /audit/cells/{cellId}/note:
+    delete:
+      operationId: clearAuditCellNote
+      tags: [audit]
+      summary: Clear the modifiedNote of a cell
+      parameters:
+        - in: path
+          name: cellId
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: OK }
+        "404": { description: Not Found }
+
 components:
   schemas:
     HealthStatus:
@@ -2850,6 +2934,40 @@ components:
         serviceTypeId:
           type: string
           nullable: true
+        plannedStaffId:
+          type: integer
+          nullable: true
+        plannedStartTime:
+          type: string
+          nullable: true
+        plannedEndTime:
+          type: string
+          nullable: true
+        plannedServiceTypeId:
+          type: string
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        skipReason:
+          type: string
+          nullable: true
+        actualStaffId:
+          type: integer
+          nullable: true
+        staffReassigned:
+          type: boolean
+          nullable: true
+        modifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+        modifiedNote:
+          type: string
+          nullable: true
+        isAdHoc:
+          type: boolean
+          nullable: true
 
     RouteSheetRowData:
       type: object
@@ -3027,6 +3145,7 @@ components:
         shiftTypeId: { type: string, format: uuid }
         slotLabel: { type: string }
         sortOrder: { type: integer }
+        defaultStaffId: { type: integer, nullable: true }
     RouteSheetTemplateCell:
       type: object
       required: [id, templateRowId, startTime, endTime, isBreak]
@@ -3063,6 +3182,7 @@ components:
               shiftTypeId: { type: string, format: uuid }
               slotLabel: { type: string, default: "" }
               sortOrder: { type: integer, default: 0 }
+              defaultStaffId: { type: integer, nullable: true }
               cells:
                 type: array
                 items:
@@ -3075,3 +3195,109 @@ components:
                     endTime: { type: string }
                     isBreak: { type: boolean, default: false }
                     notes: { type: string, nullable: true }
+
+    AuditCellView:
+      type: object
+      required: [id, rowId, status, staffReassigned, isAdHoc, isBreak]
+      properties:
+        id: { type: integer }
+        rowId: { type: integer }
+        rowShiftType: { type: string, nullable: true }
+        rowShiftTypeColor: { type: string, nullable: true }
+        plannedStaffId: { type: integer, nullable: true }
+        plannedStaffName: { type: string, nullable: true }
+        actualStaffId: { type: integer, nullable: true }
+        actualStaffName: { type: string, nullable: true }
+        plannedStartTime: { type: string, nullable: true }
+        plannedEndTime: { type: string, nullable: true }
+        plannedServiceTypeId: { type: string, nullable: true }
+        plannedServiceLabel: { type: string, nullable: true }
+        startTime: { type: string }
+        endTime: { type: string }
+        serviceTypeId: { type: string, nullable: true }
+        serviceLabel: { type: string, nullable: true }
+        residentId: { type: integer, nullable: true }
+        residentName: { type: string, nullable: true }
+        status:
+          type: string
+          enum: [planned, done, skipped, modified, added]
+        skipReason: { type: string, nullable: true }
+        staffReassigned: { type: boolean }
+        modifiedNote: { type: string, nullable: true }
+        modifiedAt: { type: string, format: date-time, nullable: true }
+        isAdHoc: { type: boolean }
+        isBreak: { type: boolean }
+    AuditRouteSheetResponse:
+      type: object
+      required: [date, cells]
+      properties:
+        date: { type: string, format: date }
+        sheetId: { type: integer, nullable: true }
+        cells:
+          type: array
+          items: { $ref: "#/components/schemas/AuditCellView" }
+
+    AuditNotification:
+      type: object
+      required: [cellId, startTime, endTime, status]
+      properties:
+        cellId: { type: integer }
+        startTime: { type: string }
+        endTime: { type: string }
+        residentId: { type: integer, nullable: true }
+        residentName: { type: string, nullable: true }
+        serviceTypeId: { type: string, nullable: true }
+        serviceLabel: { type: string, nullable: true }
+        actualStaffId: { type: integer, nullable: true }
+        actualStaffName: { type: string, nullable: true }
+        modifiedAt: { type: string, format: date-time, nullable: true }
+        modifiedNote: { type: string, nullable: true }
+        status: { type: string }
+    AuditNotificationsResponse:
+      type: object
+      required: [date, notifications]
+      properties:
+        date: { type: string, format: date }
+        notifications:
+          type: array
+          items: { $ref: "#/components/schemas/AuditNotification" }
+
+    NotificationAcceptRequest:
+      type: object
+      required: [scope]
+      properties:
+        scope:
+          type: string
+          enum: [day_only, add_to_template]
+        weekday:
+          type: integer
+          minimum: 0
+          maximum: 6
+          nullable: true
+
+    AuditCellHistoryEntry:
+      type: object
+      required: [id, occurredAt, action]
+      properties:
+        id: { type: string, format: uuid }
+        occurredAt: { type: string, format: date-time }
+        actorStaffId: { type: integer, nullable: true }
+        actorStaffName: { type: string, nullable: true }
+        action: { type: string }
+        beforeJson:
+          type: object
+          nullable: true
+          additionalProperties: true
+        afterJson:
+          type: object
+          nullable: true
+          additionalProperties: true
+        reason: { type: string, nullable: true }
+    AuditCellHistoryResponse:
+      type: object
+      required: [cellId, history]
+      properties:
+        cellId: { type: integer }
+        history:
+          type: array
+          items: { $ref: "#/components/schemas/AuditCellHistoryEntry" }

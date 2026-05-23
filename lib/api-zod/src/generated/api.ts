@@ -1747,6 +1747,17 @@ export const GetRouteSheetResponse = zod.object({
               notes: zod.string().nullish(),
               residentId: zod.number().nullish(),
               serviceTypeId: zod.string().nullish(),
+              plannedStaffId: zod.number().nullish(),
+              plannedStartTime: zod.string().nullish(),
+              plannedEndTime: zod.string().nullish(),
+              plannedServiceTypeId: zod.string().nullish(),
+              status: zod.string().nullish(),
+              skipReason: zod.string().nullish(),
+              actualStaffId: zod.number().nullish(),
+              staffReassigned: zod.boolean().nullish(),
+              modifiedAt: zod.coerce.date().nullish(),
+              modifiedNote: zod.string().nullish(),
+              isAdHoc: zod.boolean().nullish(),
             }),
           )
           .optional(),
@@ -2095,6 +2106,7 @@ export const GetRouteSheetTemplateResponse = zod.object({
       shiftTypeId: zod.string().uuid(),
       slotLabel: zod.string(),
       sortOrder: zod.number(),
+      defaultStaffId: zod.number().nullish(),
     }),
   ),
   cells: zod.array(
@@ -2137,6 +2149,7 @@ export const UpsertRouteSheetTemplateBody = zod.object({
         sortOrder: zod
           .number()
           .default(upsertRouteSheetTemplateBodyRowsItemSortOrderDefault),
+        defaultStaffId: zod.number().nullish(),
         cells: zod
           .array(
             zod.object({
@@ -2164,4 +2177,121 @@ export const MaterializeFromTemplateParams = zod.object({
 
 export const SaveAsTemplateParams = zod.object({
   date: zod.date(),
+});
+
+/**
+ * @summary Plan vs actual view for a date (all cells incl. skipped)
+ */
+export const GetAuditRouteSheetParams = zod.object({
+  date: zod.date(),
+});
+
+export const GetAuditRouteSheetResponse = zod.object({
+  date: zod.coerce.date(),
+  sheetId: zod.number().nullish(),
+  cells: zod.array(
+    zod.object({
+      id: zod.number(),
+      rowId: zod.number(),
+      rowShiftType: zod.string().nullish(),
+      rowShiftTypeColor: zod.string().nullish(),
+      plannedStaffId: zod.number().nullish(),
+      plannedStaffName: zod.string().nullish(),
+      actualStaffId: zod.number().nullish(),
+      actualStaffName: zod.string().nullish(),
+      plannedStartTime: zod.string().nullish(),
+      plannedEndTime: zod.string().nullish(),
+      plannedServiceTypeId: zod.string().nullish(),
+      plannedServiceLabel: zod.string().nullish(),
+      startTime: zod.string().optional(),
+      endTime: zod.string().optional(),
+      serviceTypeId: zod.string().nullish(),
+      serviceLabel: zod.string().nullish(),
+      residentId: zod.number().nullish(),
+      residentName: zod.string().nullish(),
+      status: zod.enum(["planned", "done", "skipped", "modified", "added"]),
+      skipReason: zod.string().nullish(),
+      staffReassigned: zod.boolean(),
+      modifiedNote: zod.string().nullish(),
+      modifiedAt: zod.coerce.date().nullish(),
+      isAdHoc: zod.boolean(),
+      isBreak: zod.boolean(),
+    }),
+  ),
+});
+
+/**
+ * @summary Ad-hoc service notifications for a date
+ */
+export const GetAuditNotificationsParams = zod.object({
+  date: zod.date(),
+});
+
+export const GetAuditNotificationsResponse = zod.object({
+  date: zod.coerce.date(),
+  notifications: zod.array(
+    zod.object({
+      cellId: zod.number(),
+      startTime: zod.string(),
+      endTime: zod.string(),
+      residentId: zod.number().nullish(),
+      residentName: zod.string().nullish(),
+      serviceTypeId: zod.string().nullish(),
+      serviceLabel: zod.string().nullish(),
+      actualStaffId: zod.number().nullish(),
+      actualStaffName: zod.string().nullish(),
+      modifiedAt: zod.coerce.date().nullish(),
+      modifiedNote: zod.string().nullish(),
+      status: zod.string(),
+    }),
+  ),
+});
+
+/**
+ * @summary Accept an ad-hoc notification (day_only or add_to_template)
+ */
+export const AcceptAuditNotificationParams = zod.object({
+  cellId: zod.coerce.number(),
+});
+
+export const acceptAuditNotificationBodyWeekdayMin = 0;
+export const acceptAuditNotificationBodyWeekdayMax = 6;
+
+export const AcceptAuditNotificationBody = zod.object({
+  scope: zod.enum(["day_only", "add_to_template"]),
+  weekday: zod
+    .number()
+    .min(acceptAuditNotificationBodyWeekdayMin)
+    .max(acceptAuditNotificationBodyWeekdayMax)
+    .nullish(),
+});
+
+/**
+ * @summary Change history for a cell
+ */
+export const GetAuditCellHistoryParams = zod.object({
+  cellId: zod.coerce.number(),
+});
+
+export const GetAuditCellHistoryResponse = zod.object({
+  cellId: zod.number(),
+  history: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      occurredAt: zod.coerce.date(),
+      actorStaffId: zod.number().nullish(),
+      actorStaffName: zod.string().nullish(),
+      action: zod.string(),
+      beforeJson: zod.record(zod.string(), zod.unknown()).nullish(),
+      afterJson: zod.record(zod.string(), zod.unknown()).nullish(),
+      reason: zod.string().nullish(),
+    }),
+  ),
+});
+
+/**
+ * @summary Clear the modifiedNote of a cell
+ */
+export const ClearAuditCellNoteParams = zod.object({
+  cellId: zod.coerce.number(),
 });

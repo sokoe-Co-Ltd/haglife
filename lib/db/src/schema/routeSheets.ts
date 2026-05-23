@@ -39,6 +39,22 @@ export const routeSheetCellsTable = pgTable("route_sheet_cells", {
   notes: text("notes"),
   residentId: integer("resident_id"),
   serviceTypeId: text("service_type_id"),
+
+  // === 計画スナップショット（materialize 時に固定） ===
+  plannedStaffId: integer("planned_staff_id"),
+  plannedStartTime: text("planned_start_time"),
+  plannedEndTime: text("planned_end_time"),
+  plannedServiceTypeId: text("planned_service_type_id"),
+
+  // === 実態（操作画面からの書き込み） ===
+  status: text("status").notNull().default("planned"),
+  skipReason: text("skip_reason"),
+  actualStaffId: integer("actual_staff_id"),
+  staffReassigned: boolean("staff_reassigned").notNull().default(false),
+  modifiedAt: timestamp("modified_at"),
+  modifiedBy: integer("modified_by"),
+  modifiedNote: text("modified_note"),
+  isAdHoc: boolean("is_ad_hoc").notNull().default(false),
 });
 
 export type RouteSheet = typeof routeSheetsTable.$inferSelect;

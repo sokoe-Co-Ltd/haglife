@@ -1012,6 +1012,17 @@ export interface RouteSheetCellData {
   notes?: string | null;
   residentId?: number | null;
   serviceTypeId?: string | null;
+  plannedStaffId?: number | null;
+  plannedStartTime?: string | null;
+  plannedEndTime?: string | null;
+  plannedServiceTypeId?: string | null;
+  status?: string | null;
+  skipReason?: string | null;
+  actualStaffId?: number | null;
+  staffReassigned?: boolean | null;
+  modifiedAt?: string | null;
+  modifiedNote?: string | null;
+  isAdHoc?: boolean | null;
 }
 
 export interface RouteSheetRowData {
@@ -1164,6 +1175,7 @@ export interface RouteSheetTemplateRow {
   shiftTypeId: string;
   slotLabel: string;
   sortOrder: number;
+  defaultStaffId?: number | null;
 }
 
 export interface RouteSheetTemplateCell {
@@ -1196,12 +1208,115 @@ export type RouteSheetTemplateUpsertRowsItem = {
   shiftTypeId: string;
   slotLabel?: string;
   sortOrder?: number;
+  defaultStaffId?: number | null;
   cells?: RouteSheetTemplateUpsertRowsItemCellsItem[];
 };
 
 export interface RouteSheetTemplateUpsert {
   notes?: string | null;
   rows?: RouteSheetTemplateUpsertRowsItem[];
+}
+
+export type AuditCellViewStatus =
+  (typeof AuditCellViewStatus)[keyof typeof AuditCellViewStatus];
+
+export const AuditCellViewStatus = {
+  planned: "planned",
+  done: "done",
+  skipped: "skipped",
+  modified: "modified",
+  added: "added",
+} as const;
+
+export interface AuditCellView {
+  id: number;
+  rowId: number;
+  rowShiftType?: string | null;
+  rowShiftTypeColor?: string | null;
+  plannedStaffId?: number | null;
+  plannedStaffName?: string | null;
+  actualStaffId?: number | null;
+  actualStaffName?: string | null;
+  plannedStartTime?: string | null;
+  plannedEndTime?: string | null;
+  plannedServiceTypeId?: string | null;
+  plannedServiceLabel?: string | null;
+  startTime?: string;
+  endTime?: string;
+  serviceTypeId?: string | null;
+  serviceLabel?: string | null;
+  residentId?: number | null;
+  residentName?: string | null;
+  status: AuditCellViewStatus;
+  skipReason?: string | null;
+  staffReassigned: boolean;
+  modifiedNote?: string | null;
+  modifiedAt?: string | null;
+  isAdHoc: boolean;
+  isBreak: boolean;
+}
+
+export interface AuditRouteSheetResponse {
+  date: string;
+  sheetId?: number | null;
+  cells: AuditCellView[];
+}
+
+export interface AuditNotification {
+  cellId: number;
+  startTime: string;
+  endTime: string;
+  residentId?: number | null;
+  residentName?: string | null;
+  serviceTypeId?: string | null;
+  serviceLabel?: string | null;
+  actualStaffId?: number | null;
+  actualStaffName?: string | null;
+  modifiedAt?: string | null;
+  modifiedNote?: string | null;
+  status: string;
+}
+
+export interface AuditNotificationsResponse {
+  date: string;
+  notifications: AuditNotification[];
+}
+
+export type NotificationAcceptRequestScope =
+  (typeof NotificationAcceptRequestScope)[keyof typeof NotificationAcceptRequestScope];
+
+export const NotificationAcceptRequestScope = {
+  day_only: "day_only",
+  add_to_template: "add_to_template",
+} as const;
+
+export interface NotificationAcceptRequest {
+  scope: NotificationAcceptRequestScope;
+  /**
+   * @minimum 0
+   * @maximum 6
+   */
+  weekday?: number | null;
+}
+
+export type AuditCellHistoryEntryBeforeJson = { [key: string]: unknown } | null;
+
+export type AuditCellHistoryEntryAfterJson = { [key: string]: unknown } | null;
+
+export interface AuditCellHistoryEntry {
+  id: string;
+  occurredAt: string;
+  actorStaffId?: number | null;
+  actorStaffName?: string | null;
+  action: string;
+  beforeJson?: AuditCellHistoryEntryBeforeJson;
+  afterJson?: AuditCellHistoryEntryAfterJson;
+  reason?: string | null;
+}
+
+export interface AuditCellHistoryResponse {
+  cellId: number;
+  history: AuditCellHistoryEntry[];
 }
 
 export type ListResidentsParams = {
