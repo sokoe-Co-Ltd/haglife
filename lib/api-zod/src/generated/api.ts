@@ -2266,6 +2266,18 @@ export const AcceptAuditNotificationBody = zod.object({
     .nullish(),
 });
 
+export const acceptAuditNotificationResponseAlreadyExistsDefault = false;
+
+export const AcceptAuditNotificationResponse = zod.object({
+  accepted: zod.boolean(),
+  alreadyExists: zod
+    .boolean()
+    .default(acceptAuditNotificationResponseAlreadyExistsDefault),
+  fallbackScope: zod.enum(["day_only"]).nullish(),
+  scope: zod.enum(["day_only", "add_to_template"]).nullish(),
+  message: zod.string().nullish(),
+});
+
 /**
  * @summary Change history for a cell
  */

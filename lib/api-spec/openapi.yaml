@@ -1604,7 +1604,11 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/NotificationAcceptRequest" }
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NotificationAcceptResponse" }
         "400": { description: Bad Request }
         "404": { description: Not Found }
   /audit/cells/{cellId}/history:
@@ -3274,6 +3278,21 @@ components:
           minimum: 0
           maximum: 6
           nullable: true
+    NotificationAcceptResponse:
+      type: object
+      required: [accepted]
+      properties:
+        accepted: { type: boolean }
+        alreadyExists: { type: boolean, default: false }
+        fallbackScope:
+          type: string
+          enum: [day_only]
+          nullable: true
+        scope:
+          type: string
+          enum: [day_only, add_to_template]
+          nullable: true
+        message: { type: string, nullable: true }
 
     AuditCellHistoryEntry:
       type: object

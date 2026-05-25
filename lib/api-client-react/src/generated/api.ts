@@ -58,6 +58,7 @@ import type {
   ListWeightsParams,
   Meal,
   NotificationAcceptRequest,
+  NotificationAcceptResponse,
   ResetEliminationRound200,
   Resident,
   ResidentEliminationStatus,
@@ -7276,13 +7277,16 @@ export const acceptAuditNotification = async (
   cellId: number,
   notificationAcceptRequest: NotificationAcceptRequest,
   options?: RequestInit,
-): Promise<void> => {
-  return customFetch<void>(getAcceptAuditNotificationUrl(cellId), {
-    ...options,
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(notificationAcceptRequest),
-  });
+): Promise<NotificationAcceptResponse> => {
+  return customFetch<NotificationAcceptResponse>(
+    getAcceptAuditNotificationUrl(cellId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(notificationAcceptRequest),
+    },
+  );
 };
 
 export const getAcceptAuditNotificationMutationOptions = <

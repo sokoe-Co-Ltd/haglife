@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, desc, inArray, isNotNull } from "drizzle-orm";
+import { eq, and, desc, inArray, isNotNull, isNull } from "drizzle-orm";
 import { z } from "zod";
 import {
   db,
@@ -303,6 +303,53 @@ router.post("/audit/notifications/:cellId/accept", async (req, res): Promise<voi
       residentServiceId = rs?.id ?? null;
     }
 
+    // 重複チェック: 同一 templateRowId × startTime × residentServiceId が既存ならINSERTスキップ
+    const dupWhere = residentServiceId === null
+      ? and(
+          eq(routeSheetTemplateCellsTable.templateRowId, templateRowId),
+          eq(routeSheetTemplateCellsTable.startTime, cell.startTime),
+          isNull(routeSheetTemplateCellsTable.residentServiceId),
+        )
+      : and(
+          eq(routeSheetTemplateCellsTable.templateRowId, templateRowId),
+          eq(routeSheetTemplateCellsTable.startTime, cell.startTime),
+          eq(routeSheetTemplateCellsTable.residentServiceId, residentServiceId),
+        );
+    const existingTplCells = await db
+      .select()
+      .from(routeSheetTemplateCellsTable)
+      .where(dupWhere)
+      .limit(1);
+
+    if (existingTplCells.length > 0) {
+      // テンプレに既に同一セルが存在 → day_only にフォールバック
+      await db.update(routeSheetCellsTable)
+        .set({ isAdHoc: false, modifiedAt: new Date() })
+        .where(eq(routeSheetCellsTable.id, cellId));
+
+      await db.insert(routeSheetCellAuditLogTable).values({
+        cellId,
+        actorStaffId: null,
+        action: "accept_notification",
+        beforeJson: cell,
+        afterJson: {
+          ...cell,
+          isAdHoc: false,
+          acceptedScope: "day_only",
+          requestedScope: "add_to_template",
+        },
+        reason: "template_duplicate_fallback_to_day_only",
+      });
+
+      res.json({
+        accepted: true,
+        alreadyExists: true,
+        fallbackScope: "day_only",
+        message: "既にテンプレートに存在するため、その日限りの実績として確定しました",
+      });
+      return;
+    }
+
     await db.insert(routeSheetTemplateCellsTable).values({
       templateRowId,
       residentServiceId,
@@ -330,7 +377,12 @@ router.post("/audit/notifications/:cellId/accept", async (req, res): Promise<voi
     reason: scope === "add_to_template" ? `add_to_template (weekday=${weekday})` : "day_only",
   });
 
-  res.json({ ok: true, scope });
+  res.json({
+    accepted: true,
+    alreadyExists: false,
+    fallbackScope: null,
+    scope,
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────
@@ -413,3 +465,4 @@ export default router;
 
 // Suppress unused (kept for future filtering helpers)
 void isNotNull;
+void isNull;

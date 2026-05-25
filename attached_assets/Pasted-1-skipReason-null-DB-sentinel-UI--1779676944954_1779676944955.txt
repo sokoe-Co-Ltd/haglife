@@ -1,0 +1,78 @@
+1. skipReason → null のままで確定
+理由：
+
+DB設計としてクリーン（'(理由未入力)'のような sentinel 文字列は将来の保守で破綻しやすい）
+「理由未入力」の判定はUI側で !skipReason || skipReason.trim() === '' で行えばいい
+フェーズ2の指示書側を合わせて修正します（下に修正パッチ）
+
+2. add_to_template 重複 → スキップ＋通知
+理由：
+
+既存テンプレを意図せず書き換える「上書き」はリスクが高い
+「エラー」はUXが悪い（ユーザーが何が起きたか分からない）
+「重複してる時は、その日限りとして確定する」が一番安全
+
+実装指示
+ts// audit.ts の add_to_template 分岐内
+// route_sheet_template_cells への INSERT 前に重複チェック
+
+const existing = await db.select()
+  .from(routeSheetTemplateCells)
+  .where(and(
+    eq(routeSheetTemplateCells.templateRowId, targetRowId),
+    eq(routeSheetTemplateCells.startTime, payload.startTime),
+    eq(routeSheetTemplateCells.residentServiceId, payload.residentServiceId)
+  ))
+  .limit(1);
+
+if (existing.length > 0) {
+  // INSERT はスキップして day_only と同じ後処理を実行
+  // (cell の isAdHoc=false に更新、通知から消す)
+  await db.update(routeSheetCells)
+    .set({ isAdHoc: false })
+    .where(eq(routeSheetCells.id, cellId));
+  
+  // 監査ログには「重複のため day_only に切替」を記録
+  await db.insert(routeSheetCellAuditLog).values({
+    cellId,
+    action: 'accept_notification',
+    reason: 'template_duplicate_fallback_to_day_only',
+    afterJson: { acceptedScope: 'day_only', requestedScope: 'add_to_template' },
+  });
+  
+  return res.status(200).json({
+    accepted: true,
+    alreadyExists: true,
+    fallbackScope: 'day_only',
+    message: '既にテンプレートに存在するため、その日限りの実績として確定しました',
+  });
+}
+
+// 重複なし → 通常の INSERT 処理（既存ロジック）
+OpenAPI のレスポンスも更新：
+yamlNotificationAcceptResponse:
+  type: object
+  properties:
+    accepted: { type: boolean }
+    alreadyExists: { type: boolean, default: false }
+    fallbackScope: { type: string, enum: [day_only], nullable: true }
+    message: { type: string, nullable: true }
+3. 追加対応不要
+Agentの理解で正しい。plannedStaffId=null のセルが staffReassigned=false のままなのは仕様通りです。「計画担当未定なら、誰がアサインされても再アサインではない」が筋。
+
+フェーズ2指示書への修正パッチ
+skipReason の判定を null ベースに変更します。Agentにフェーズ2指示書を渡す時、以下の置換を伝えてください：
+修正1：タスク3-4 AuditGanttCell.tsx
+diff- {cell.status === 'skipped' && cell.skipReason === '(理由未入力)' && (
++ {cell.status === 'skipped' && (!cell.skipReason || cell.skipReason.trim() === '') && (
+    <AlertTriangle className="absolute top-1 right-1 size-2.5 text-orange-600" />
+  )}
+修正2：タスク3-4 セル内テキスト
+diff- {cell.status === 'skipped' && ` ・ ${cell.skipReason || '未'}`}
++ {cell.status === 'skipped' && ` ・ ${cell.skipReason?.trim() || '理由未入力'}`}
+修正3：タスク4-3 SkippedSection
+diff- const noReason = cell.skipReason === '(理由未入力)';
++ const noReason = !cell.skipReason || cell.skipReason.trim() === '';
+修正4：タスク4-3 SkippedSection 表示部分
+diff- 理由：{cell.skipReason || '未記入'}
++ 理由：{cell.skipReason?.trim() || '未記入'}

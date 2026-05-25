@@ -1299,6 +1299,31 @@ export interface NotificationAcceptRequest {
   weekday?: number | null;
 }
 
+export type NotificationAcceptResponseFallbackScope =
+  | (typeof NotificationAcceptResponseFallbackScope)[keyof typeof NotificationAcceptResponseFallbackScope]
+  | null;
+
+export const NotificationAcceptResponseFallbackScope = {
+  day_only: "day_only",
+} as const;
+
+export type NotificationAcceptResponseScope =
+  | (typeof NotificationAcceptResponseScope)[keyof typeof NotificationAcceptResponseScope]
+  | null;
+
+export const NotificationAcceptResponseScope = {
+  day_only: "day_only",
+  add_to_template: "add_to_template",
+} as const;
+
+export interface NotificationAcceptResponse {
+  accepted: boolean;
+  alreadyExists?: boolean;
+  fallbackScope?: NotificationAcceptResponseFallbackScope;
+  scope?: NotificationAcceptResponseScope;
+  message?: string | null;
+}
+
 export type AuditCellHistoryEntryBeforeJson = { [key: string]: unknown } | null;
 
 export type AuditCellHistoryEntryAfterJson = { [key: string]: unknown } | null;
