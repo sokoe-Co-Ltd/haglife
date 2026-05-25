@@ -34,6 +34,8 @@ import ServiceTypesPage from "./pages/service-types";
 import ShiftTypesPage from "./pages/shift-types";
 import ShiftsPage from "./pages/shifts";
 import RouteSheetTemplatesPage from "./pages/route-sheet-templates";
+import AuditDashboardPage from "./pages/admin/audit";
+import AuditCellDetailPage from "./pages/admin/audit/cells/[cellId]";
 import { Layout } from "./components/layout";
 
 const PlaceholderPage = ({ title }: { title: string }) => (
@@ -82,6 +84,8 @@ export default function AppRouter() {
       <Route path="/shift-types" component={ShiftTypesPage} />
       <Route path="/shifts" component={ShiftsPage} />
       <Route path="/route-sheet-templates" component={RouteSheetTemplatesPage} />
+      <Route path="/admin/audit" component={AuditDashboardPage} />
+      <Route path="/admin/audit/cells/:cellId" component={AuditCellDetailPage} />
       <Route path="/settings" component={SettingsPage} />
       <Route component={() => <PlaceholderPage title="見つかりません" />} />
     </Switch>

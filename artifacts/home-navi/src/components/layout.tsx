@@ -39,6 +39,7 @@ const NAV_ITEMS = [
   { href: "/bath-reports", label: "入浴報告", icon: Bath },
   { href: "/route-sheet", label: "ルート票", icon: Route },
   { href: "/route-sheet-templates", label: "テンプレート", icon: LayoutTemplate },
+  { href: "/admin/audit", label: "監査ビュー", icon: ChevronRight },
   { href: "/shifts", label: "シフト管理", icon: CalendarDays },
   { href: "/service-types", label: "サービス種別", icon: Settings },
   { href: "/shift-types", label: "シフト種別", icon: Settings },
