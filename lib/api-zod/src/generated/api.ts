@@ -2279,6 +2279,67 @@ export const AcceptAuditNotificationResponse = zod.object({
 });
 
 /**
+ * @summary Get a single audit cell (for direct-link detail page)
+ */
+export const GetAuditCellParams = zod.object({
+  cellId: zod.coerce.number(),
+});
+
+export const GetAuditCellResponse = zod.object({
+  id: zod.number(),
+  rowId: zod.number(),
+  rowShiftType: zod.string().nullish(),
+  rowShiftTypeColor: zod.string().nullish(),
+  plannedStaffId: zod.number().nullish(),
+  plannedStaffName: zod.string().nullish(),
+  actualStaffId: zod.number().nullish(),
+  actualStaffName: zod.string().nullish(),
+  plannedStartTime: zod.string().nullish(),
+  plannedEndTime: zod.string().nullish(),
+  plannedServiceTypeId: zod.string().nullish(),
+  plannedServiceLabel: zod.string().nullish(),
+  startTime: zod.string().optional(),
+  endTime: zod.string().optional(),
+  serviceTypeId: zod.string().nullish(),
+  serviceLabel: zod.string().nullish(),
+  residentId: zod.number().nullish(),
+  residentName: zod.string().nullish(),
+  status: zod.enum(["planned", "done", "skipped", "modified", "added"]),
+  skipReason: zod.string().nullish(),
+  staffReassigned: zod.boolean(),
+  modifiedNote: zod.string().nullish(),
+  modifiedAt: zod.coerce.date().nullish(),
+  isAdHoc: zod.boolean(),
+  isBreak: zod.boolean(),
+});
+
+/**
+ * @summary Restore a skipped cell back to planned/done
+ */
+export const UnskipAuditCellParams = zod.object({
+  cellId: zod.coerce.number(),
+});
+
+export const unskipAuditCellBodyRestoreStatusDefault = `done`;
+
+export const UnskipAuditCellBody = zod.object({
+  restoreStatus: zod
+    .enum(["planned", "done"])
+    .default(unskipAuditCellBodyRestoreStatusDefault),
+});
+
+/**
+ * @summary Set or overwrite a cell's skipReason
+ */
+export const UpdateAuditCellSkipReasonParams = zod.object({
+  cellId: zod.coerce.number(),
+});
+
+export const UpdateAuditCellSkipReasonBody = zod.object({
+  skipReason: zod.string().min(1),
+});
+
+/**
  * @summary Change history for a cell
  */
 export const GetAuditCellHistoryParams = zod.object({
@@ -2299,6 +2360,17 @@ export const GetAuditCellHistoryResponse = zod.object({
       reason: zod.string().nullish(),
     }),
   ),
+});
+
+/**
+ * @summary Set or overwrite a cell's modifiedNote
+ */
+export const UpdateAuditCellNoteParams = zod.object({
+  cellId: zod.coerce.number(),
+});
+
+export const UpdateAuditCellNoteBody = zod.object({
+  note: zod.string().min(1),
 });
 
 /**

@@ -1611,6 +1611,61 @@ paths:
               schema: { $ref: "#/components/schemas/NotificationAcceptResponse" }
         "400": { description: Bad Request }
         "404": { description: Not Found }
+  /audit/cells/{cellId}:
+    get:
+      operationId: getAuditCell
+      tags: [audit]
+      summary: Get a single audit cell (for direct-link detail page)
+      parameters:
+        - in: path
+          name: cellId
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuditCellView" }
+        "404": { description: Not Found }
+  /audit/cells/{cellId}/unskip:
+    post:
+      operationId: unskipAuditCell
+      tags: [audit]
+      summary: Restore a skipped cell back to planned/done
+      parameters:
+        - in: path
+          name: cellId
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UnskipRequest" }
+      responses:
+        "200": { description: OK }
+        "400": { description: Bad Request }
+        "404": { description: Not Found }
+  /audit/cells/{cellId}/skip-reason:
+    post:
+      operationId: updateAuditCellSkipReason
+      tags: [audit]
+      summary: Set or overwrite a cell's skipReason
+      parameters:
+        - in: path
+          name: cellId
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SkipReasonUpdateRequest" }
+      responses:
+        "200": { description: OK }
+        "400": { description: Bad Request }
+        "404": { description: Not Found }
   /audit/cells/{cellId}/history:
     get:
       operationId: getAuditCellHistory
@@ -1628,6 +1683,24 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/AuditCellHistoryResponse" }
   /audit/cells/{cellId}/note:
+    post:
+      operationId: updateAuditCellNote
+      tags: [audit]
+      summary: Set or overwrite a cell's modifiedNote
+      parameters:
+        - in: path
+          name: cellId
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NoteUpdateRequest" }
+      responses:
+        "200": { description: OK }
+        "400": { description: Bad Request }
+        "404": { description: Not Found }
     delete:
       operationId: clearAuditCellNote
       tags: [audit]
@@ -3293,6 +3366,28 @@ components:
           enum: [day_only, add_to_template]
           nullable: true
         message: { type: string, nullable: true }
+
+    UnskipRequest:
+      type: object
+      properties:
+        restoreStatus:
+          type: string
+          enum: [planned, done]
+          default: done
+    SkipReasonUpdateRequest:
+      type: object
+      required: [skipReason]
+      properties:
+        skipReason:
+          type: string
+          minLength: 1
+    NoteUpdateRequest:
+      type: object
+      required: [note]
+      properties:
+        note:
+          type: string
+          minLength: 1
 
     AuditCellHistoryEntry:
       type: object

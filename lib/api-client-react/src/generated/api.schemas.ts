@@ -1324,6 +1324,28 @@ export interface NotificationAcceptResponse {
   message?: string | null;
 }
 
+export type UnskipRequestRestoreStatus =
+  (typeof UnskipRequestRestoreStatus)[keyof typeof UnskipRequestRestoreStatus];
+
+export const UnskipRequestRestoreStatus = {
+  planned: "planned",
+  done: "done",
+} as const;
+
+export interface UnskipRequest {
+  restoreStatus?: UnskipRequestRestoreStatus;
+}
+
+export interface SkipReasonUpdateRequest {
+  /** @minLength 1 */
+  skipReason: string;
+}
+
+export interface NoteUpdateRequest {
+  /** @minLength 1 */
+  note: string;
+}
+
 export type AuditCellHistoryEntryBeforeJson = { [key: string]: unknown } | null;
 
 export type AuditCellHistoryEntryAfterJson = { [key: string]: unknown } | null;

@@ -461,6 +461,255 @@ router.delete("/audit/cells/:cellId/note", async (req, res): Promise<void> => {
   res.json({ ok: true });
 });
 
+// ─────────────────────────────────────────────────────────────────
+// GET /api/audit/cells/:cellId
+// セル単体取得（個別ページ /admin/audit/cells/:cellId 用）
+// ─────────────────────────────────────────────────────────────────
+router.get("/audit/cells/:cellId", async (req, res): Promise<void> => {
+  const cellId = parseInt(req.params.cellId, 10);
+  if (Number.isNaN(cellId)) {
+    res.status(400).json({ error: "invalid cellId" });
+    return;
+  }
+  const [cell] = await db
+    .select()
+    .from(routeSheetCellsTable)
+    .where(eq(routeSheetCellsTable.id, cellId))
+    .limit(1);
+  if (!cell) {
+    res.status(404).json({ error: "cell not found" });
+    return;
+  }
+
+  const [row] = await db
+    .select()
+    .from(routeSheetRowsTable)
+    .where(eq(routeSheetRowsTable.id, cell.routeSheetRowId))
+    .limit(1);
+
+  const staffIds = new Set<number>();
+  const serviceTypeIds = new Set<string>();
+  if (cell.plannedStaffId) staffIds.add(cell.plannedStaffId);
+  if (cell.actualStaffId) staffIds.add(cell.actualStaffId);
+  if (cell.plannedServiceTypeId) serviceTypeIds.add(cell.plannedServiceTypeId);
+  if (cell.serviceTypeId) serviceTypeIds.add(cell.serviceTypeId);
+
+  const [staffList, serviceTypeList, residentRow, shiftTypeList] = await Promise.all([
+    staffIds.size === 0
+      ? []
+      : db.select().from(staffTable).where(inArray(staffTable.id, [...staffIds])),
+    serviceTypeIds.size === 0
+      ? []
+      : db.select().from(serviceTypesTable).where(inArray(serviceTypesTable.id, [...serviceTypeIds])),
+    cell.residentId
+      ? db.select().from(residentsTable).where(eq(residentsTable.id, cell.residentId)).limit(1)
+      : Promise.resolve([]),
+    db.select().from(shiftTypesTable),
+  ]);
+
+  const staffMap = new Map(staffList.map((s) => [s.id, `${s.lastName} ${s.firstName}`]));
+  const serviceTypeMap = new Map(serviceTypeList.map((s) => [s.id, s.shortLabel]));
+  const resident = residentRow[0];
+  const st = row ? shiftTypeList.find((s) => s.code === row.shiftType) : null;
+
+  res.json({
+    id: cell.id,
+    rowId: cell.routeSheetRowId,
+    rowShiftType: row?.shiftType ?? null,
+    rowShiftTypeColor: st?.color ?? null,
+    plannedStaffId: cell.plannedStaffId,
+    plannedStaffName: cell.plannedStaffId ? (staffMap.get(cell.plannedStaffId) ?? null) : null,
+    actualStaffId: cell.actualStaffId,
+    actualStaffName: cell.actualStaffId ? (staffMap.get(cell.actualStaffId) ?? null) : null,
+    plannedStartTime: cell.plannedStartTime,
+    plannedEndTime: cell.plannedEndTime,
+    plannedServiceTypeId: cell.plannedServiceTypeId,
+    plannedServiceLabel: cell.plannedServiceTypeId
+      ? (serviceTypeMap.get(cell.plannedServiceTypeId) ?? null)
+      : null,
+    startTime: cell.startTime,
+    endTime: cell.endTime,
+    serviceTypeId: cell.serviceTypeId,
+    serviceLabel: cell.serviceTypeId ? (serviceTypeMap.get(cell.serviceTypeId) ?? null) : null,
+    residentId: cell.residentId,
+    residentName: resident ? `${resident.lastName} ${resident.firstName}` : null,
+    status: cell.status,
+    skipReason: cell.skipReason,
+    staffReassigned: cell.staffReassigned,
+    modifiedNote: cell.modifiedNote,
+    modifiedAt: cell.modifiedAt,
+    isAdHoc: cell.isAdHoc,
+    isBreak: cell.isBreak,
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────
+// POST /api/audit/cells/:cellId/unskip
+// 未実施を解除して計画状態に戻す（restoreStatus: 'planned' | 'done'）
+// ─────────────────────────────────────────────────────────────────
+const UnskipBody = z.object({
+  restoreStatus: z.enum(["planned", "done"]).default("done"),
+});
+
+router.post("/audit/cells/:cellId/unskip", async (req, res): Promise<void> => {
+  const cellId = parseInt(req.params.cellId, 10);
+  if (Number.isNaN(cellId)) {
+    res.status(400).json({ error: "invalid cellId" });
+    return;
+  }
+  const parsed = UnskipBody.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const { restoreStatus } = parsed.data;
+
+  const [cell] = await db
+    .select()
+    .from(routeSheetCellsTable)
+    .where(eq(routeSheetCellsTable.id, cellId))
+    .limit(1);
+  if (!cell) {
+    res.status(404).json({ error: "cell not found" });
+    return;
+  }
+  if (cell.status !== "skipped") {
+    res.status(400).json({ error: "cell is not skipped" });
+    return;
+  }
+
+  await db.transaction(async (tx) => {
+    await tx.update(routeSheetCellsTable)
+      .set({
+        status: restoreStatus,
+        skipReason: null,
+        modifiedAt: new Date(),
+      })
+      .where(eq(routeSheetCellsTable.id, cellId));
+
+    await tx.insert(routeSheetCellAuditLogTable).values({
+      cellId,
+      actorStaffId: null,
+      action: "unskip",
+      beforeJson: cell,
+      afterJson: { ...cell, status: restoreStatus, skipReason: null },
+      reason: null,
+    });
+  });
+
+  res.json({ ok: true, restoreStatus });
+});
+
+// ─────────────────────────────────────────────────────────────────
+// POST /api/audit/cells/:cellId/skip-reason
+// skipReason を後追い登録 / 上書き
+// ─────────────────────────────────────────────────────────────────
+const SkipReasonBody = z.object({
+  skipReason: z.string().min(1),
+});
+
+router.post("/audit/cells/:cellId/skip-reason", async (req, res): Promise<void> => {
+  const cellId = parseInt(req.params.cellId, 10);
+  if (Number.isNaN(cellId)) {
+    res.status(400).json({ error: "invalid cellId" });
+    return;
+  }
+  const parsed = SkipReasonBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const skipReason = parsed.data.skipReason.trim();
+  if (!skipReason) {
+    res.status(400).json({ error: "skipReason must not be empty" });
+    return;
+  }
+
+  const [cell] = await db
+    .select()
+    .from(routeSheetCellsTable)
+    .where(eq(routeSheetCellsTable.id, cellId))
+    .limit(1);
+  if (!cell) {
+    res.status(404).json({ error: "cell not found" });
+    return;
+  }
+  if (cell.status !== "skipped") {
+    res.status(400).json({ error: "cell is not skipped; cannot set skipReason" });
+    return;
+  }
+
+  await db.transaction(async (tx) => {
+    await tx.update(routeSheetCellsTable)
+      .set({ skipReason, modifiedAt: new Date() })
+      .where(eq(routeSheetCellsTable.id, cellId));
+
+    await tx.insert(routeSheetCellAuditLogTable).values({
+      cellId,
+      actorStaffId: null,
+      action: "update_skip_reason",
+      beforeJson: cell,
+      afterJson: { ...cell, skipReason },
+      reason: skipReason,
+    });
+  });
+
+  res.json({ ok: true });
+});
+
+// ─────────────────────────────────────────────────────────────────
+// POST /api/audit/cells/:cellId/note
+// 変更メモを追記 / 上書き
+// ─────────────────────────────────────────────────────────────────
+const NoteUpdateBody = z.object({
+  note: z.string().min(1),
+});
+
+router.post("/audit/cells/:cellId/note", async (req, res): Promise<void> => {
+  const cellId = parseInt(req.params.cellId, 10);
+  if (Number.isNaN(cellId)) {
+    res.status(400).json({ error: "invalid cellId" });
+    return;
+  }
+  const parsed = NoteUpdateBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const note = parsed.data.note.trim();
+  if (!note) {
+    res.status(400).json({ error: "note must not be empty" });
+    return;
+  }
+
+  const [cell] = await db
+    .select()
+    .from(routeSheetCellsTable)
+    .where(eq(routeSheetCellsTable.id, cellId))
+    .limit(1);
+  if (!cell) {
+    res.status(404).json({ error: "cell not found" });
+    return;
+  }
+
+  await db.transaction(async (tx) => {
+    await tx.update(routeSheetCellsTable)
+      .set({ modifiedNote: note, modifiedAt: new Date() })
+      .where(eq(routeSheetCellsTable.id, cellId));
+
+    await tx.insert(routeSheetCellAuditLogTable).values({
+      cellId,
+      actorStaffId: null,
+      action: "update_note",
+      beforeJson: cell,
+      afterJson: { ...cell, modifiedNote: note },
+      reason: null,
+    });
+  });
+
+  res.json({ ok: true });
+});
+
 export default router;
 
 // Suppress unused (kept for future filtering helpers)

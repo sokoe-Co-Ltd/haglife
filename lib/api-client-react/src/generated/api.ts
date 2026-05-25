@@ -18,6 +18,7 @@ import type {
 
 import type {
   AuditCellHistoryResponse,
+  AuditCellView,
   AuditNotificationsResponse,
   AuditRouteSheetResponse,
   BathReport,
@@ -57,6 +58,7 @@ import type {
   ListVitalsParams,
   ListWeightsParams,
   Meal,
+  NoteUpdateRequest,
   NotificationAcceptRequest,
   NotificationAcceptResponse,
   ResetEliminationRound200,
@@ -80,7 +82,9 @@ import type {
   ShiftType,
   ShiftTypeCreate,
   ShiftTypeUpdate,
+  SkipReasonUpdateRequest,
   Staff,
+  UnskipRequest,
   UpdateBathReportBody,
   UpdateDayServiceBody,
   UpdateHandoverNoteBody,
@@ -7358,6 +7362,268 @@ export const useAcceptAuditNotification = <
 };
 
 /**
+ * @summary Get a single audit cell (for direct-link detail page)
+ */
+export const getGetAuditCellUrl = (cellId: number) => {
+  return `/api/audit/cells/${cellId}`;
+};
+
+export const getAuditCell = async (
+  cellId: number,
+  options?: RequestInit,
+): Promise<AuditCellView> => {
+  return customFetch<AuditCellView>(getGetAuditCellUrl(cellId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAuditCellQueryKey = (cellId: number) => {
+  return [`/api/audit/cells/${cellId}`] as const;
+};
+
+export const getGetAuditCellQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAuditCell>>,
+  TError = ErrorType<void>,
+>(
+  cellId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAuditCell>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAuditCellQueryKey(cellId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAuditCell>>> = ({
+    signal,
+  }) => getAuditCell(cellId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!cellId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAuditCell>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAuditCellQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAuditCell>>
+>;
+export type GetAuditCellQueryError = ErrorType<void>;
+
+/**
+ * @summary Get a single audit cell (for direct-link detail page)
+ */
+
+export function useGetAuditCell<
+  TData = Awaited<ReturnType<typeof getAuditCell>>,
+  TError = ErrorType<void>,
+>(
+  cellId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAuditCell>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAuditCellQueryOptions(cellId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Restore a skipped cell back to planned/done
+ */
+export const getUnskipAuditCellUrl = (cellId: number) => {
+  return `/api/audit/cells/${cellId}/unskip`;
+};
+
+export const unskipAuditCell = async (
+  cellId: number,
+  unskipRequest?: UnskipRequest,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getUnskipAuditCellUrl(cellId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(unskipRequest),
+  });
+};
+
+export const getUnskipAuditCellMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unskipAuditCell>>,
+    TError,
+    { cellId: number; data: BodyType<UnskipRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof unskipAuditCell>>,
+  TError,
+  { cellId: number; data: BodyType<UnskipRequest> },
+  TContext
+> => {
+  const mutationKey = ["unskipAuditCell"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof unskipAuditCell>>,
+    { cellId: number; data: BodyType<UnskipRequest> }
+  > = (props) => {
+    const { cellId, data } = props ?? {};
+
+    return unskipAuditCell(cellId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UnskipAuditCellMutationResult = NonNullable<
+  Awaited<ReturnType<typeof unskipAuditCell>>
+>;
+export type UnskipAuditCellMutationBody = BodyType<UnskipRequest>;
+export type UnskipAuditCellMutationError = ErrorType<void>;
+
+/**
+ * @summary Restore a skipped cell back to planned/done
+ */
+export const useUnskipAuditCell = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unskipAuditCell>>,
+    TError,
+    { cellId: number; data: BodyType<UnskipRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof unskipAuditCell>>,
+  TError,
+  { cellId: number; data: BodyType<UnskipRequest> },
+  TContext
+> => {
+  return useMutation(getUnskipAuditCellMutationOptions(options));
+};
+
+/**
+ * @summary Set or overwrite a cell's skipReason
+ */
+export const getUpdateAuditCellSkipReasonUrl = (cellId: number) => {
+  return `/api/audit/cells/${cellId}/skip-reason`;
+};
+
+export const updateAuditCellSkipReason = async (
+  cellId: number,
+  skipReasonUpdateRequest: SkipReasonUpdateRequest,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getUpdateAuditCellSkipReasonUrl(cellId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(skipReasonUpdateRequest),
+  });
+};
+
+export const getUpdateAuditCellSkipReasonMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAuditCellSkipReason>>,
+    TError,
+    { cellId: number; data: BodyType<SkipReasonUpdateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateAuditCellSkipReason>>,
+  TError,
+  { cellId: number; data: BodyType<SkipReasonUpdateRequest> },
+  TContext
+> => {
+  const mutationKey = ["updateAuditCellSkipReason"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateAuditCellSkipReason>>,
+    { cellId: number; data: BodyType<SkipReasonUpdateRequest> }
+  > = (props) => {
+    const { cellId, data } = props ?? {};
+
+    return updateAuditCellSkipReason(cellId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateAuditCellSkipReasonMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateAuditCellSkipReason>>
+>;
+export type UpdateAuditCellSkipReasonMutationBody =
+  BodyType<SkipReasonUpdateRequest>;
+export type UpdateAuditCellSkipReasonMutationError = ErrorType<void>;
+
+/**
+ * @summary Set or overwrite a cell's skipReason
+ */
+export const useUpdateAuditCellSkipReason = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAuditCellSkipReason>>,
+    TError,
+    { cellId: number; data: BodyType<SkipReasonUpdateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateAuditCellSkipReason>>,
+  TError,
+  { cellId: number; data: BodyType<SkipReasonUpdateRequest> },
+  TContext
+> => {
+  return useMutation(getUpdateAuditCellSkipReasonMutationOptions(options));
+};
+
+/**
  * @summary Change history for a cell
  */
 export const getGetAuditCellHistoryUrl = (cellId: number) => {
@@ -7448,6 +7714,93 @@ export function useGetAuditCellHistory<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Set or overwrite a cell's modifiedNote
+ */
+export const getUpdateAuditCellNoteUrl = (cellId: number) => {
+  return `/api/audit/cells/${cellId}/note`;
+};
+
+export const updateAuditCellNote = async (
+  cellId: number,
+  noteUpdateRequest: NoteUpdateRequest,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getUpdateAuditCellNoteUrl(cellId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(noteUpdateRequest),
+  });
+};
+
+export const getUpdateAuditCellNoteMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAuditCellNote>>,
+    TError,
+    { cellId: number; data: BodyType<NoteUpdateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateAuditCellNote>>,
+  TError,
+  { cellId: number; data: BodyType<NoteUpdateRequest> },
+  TContext
+> => {
+  const mutationKey = ["updateAuditCellNote"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateAuditCellNote>>,
+    { cellId: number; data: BodyType<NoteUpdateRequest> }
+  > = (props) => {
+    const { cellId, data } = props ?? {};
+
+    return updateAuditCellNote(cellId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateAuditCellNoteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateAuditCellNote>>
+>;
+export type UpdateAuditCellNoteMutationBody = BodyType<NoteUpdateRequest>;
+export type UpdateAuditCellNoteMutationError = ErrorType<void>;
+
+/**
+ * @summary Set or overwrite a cell's modifiedNote
+ */
+export const useUpdateAuditCellNote = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAuditCellNote>>,
+    TError,
+    { cellId: number; data: BodyType<NoteUpdateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateAuditCellNote>>,
+  TError,
+  { cellId: number; data: BodyType<NoteUpdateRequest> },
+  TContext
+> => {
+  return useMutation(getUpdateAuditCellNoteMutationOptions(options));
+};
 
 /**
  * @summary Clear the modifiedNote of a cell

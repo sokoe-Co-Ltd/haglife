@@ -1,0 +1,1039 @@
+# 監査画面 実装指示書 / フェーズ2：監査画面UI（修正版）
+
+## 背景
+
+フェーズ1でデータ層（拡張カラム・監査ログ・新規API 5本＋通知採用のテンプレ重複フォールバック）が完成しました。
+このフェーズではフロントエンドに `/admin/audit` を追加し、管理者が計画と実態を確認できる画面を構築します。
+
+**設計原則**
+
+- 既存の操作画面（ルート票編集など）には**一切手を入れない**
+- 既存スタック準拠：React + Vite + TS + Wouter + TanStack Query + Tailwind + shadcn/ui + lucide-react
+- Orval自動生成のReact Queryフックを使う（フェーズ1で生成済み）
+- PC前提だが、Tailwindの`md:`ブレークでタブレットも閲覧可能に
+- 凡例は常時表示（販売を見据えた初見ユーザー配慮）
+
+**フェーズ1で確定した重要仕様**
+
+- `skipReason` は null 保存。UI側で `!skipReason || skipReason.trim() === ''` で「理由未入力」を判定
+- 通知採用時のレスポンスは `{ accepted, alreadyExists, fallbackScope, message, scope }` 形式。`alreadyExists=true` の場合は day_only にフォールバックされている
+
+---
+
+## タスク0：フェーズ1のAPI実装確認（最初に実施）
+
+以下のAPIがフェーズ1で実装済みか確認してください。**未実装の場合はフェーズ2の最初に追加**してください。
+
+### 確認エンドポイント（実装済み）
+
+- [x] `GET /api/audit/route-sheets/:date`
+- [x] `GET /api/audit/notifications/:date`
+- [x] `POST /api/audit/notifications/:cellId/accept`（重複フォールバック対応済み）
+- [x] `GET /api/audit/cells/:cellId/history`
+- [x] `DELETE /api/audit/cells/:cellId/note`
+
+### 追加が必要なエンドポイント
+
+- [ ] `POST /api/audit/cells/:cellId/unskip` — 未実施を解除して計画状態に戻す
+- [ ] `POST /api/audit/cells/:cellId/skip-reason` — skipReason が null のセルに理由を後追い登録（既存値の上書きも可）
+- [ ] `POST /api/audit/cells/:cellId/note` — 変更メモを追記/上書き
+- [ ] `GET /api/audit/cells/:cellId` — セル単体取得（直リンク用）
+
+各エンドポイントのスキーマ：
+
+```yaml
+UnskipRequest:
+  type: object
+  properties:
+    restoreStatus:
+      type: string
+      enum: [planned, done]
+      default: done
+
+SkipReasonUpdateRequest:
+  type: object
+  required: [skipReason]
+  properties:
+    skipReason:
+      type: string
+      minLength: 1
+
+NoteUpdateRequest:
+  type: object
+  required: [note]
+  properties:
+    note:
+      type: string
+      minLength: 1
+```
+
+全エンドポイントで `route_sheet_cell_audit_log` に記録（action: `unskip` / `update_skip_reason` / `update_note`）。
+`lib/api-spec/openapi.yaml` に追加 → codegen 実行。
+
+---
+
+## タスク1：ルーティングとレイアウト
+
+### 1-1. ルート追加
+
+`artifacts/home-navi/src/App.tsx`（または該当ルーティングファイル）に追加：
+
+```tsx
+<Route path="/admin/audit" component={AuditDashboard} />
+<Route path="/admin/audit/cells/:cellId" component={AuditCellDetail} />
+```
+
+### 1-2. サイドバーメニュー追加
+
+既存のサイドバーに「監査」項目を追加：
+
+```tsx
+{
+  label: "監査",
+  icon: ShieldCheck, // lucide-react
+  path: "/admin/audit",
+  // フェーズ3で role !== '管理者' なら非表示
+}
+```
+
+### 1-3. ファイル構成
+
+```
+artifacts/home-navi/src/
+└── pages/
+    └── admin/
+        └── audit/
+            ├── index.tsx              # メインダッシュボード
+            ├── components/
+            │   ├── AuditGantt.tsx     # ガント本体
+            │   ├── AuditGanttCell.tsx # セル個別
+            │   ├── AuditCellModal.tsx # カード詳細モーダル
+            │   ├── NotificationPanel.tsx # ベル通知
+            │   ├── AcceptDialog.tsx   # 採用ダイアログ
+            │   ├── Legend.tsx         # 凡例
+            │   └── AxisTabs.tsx       # ヘルパー軸/利用者軸切替
+            ├── utils/
+            │   ├── timeToPercent.ts
+            │   └── skipReason.ts      # ヘルパー関数
+            └── hooks/
+                └── useAuditData.ts
+```
+
+### 1-4. 共通ヘルパー関数
+
+`utils/skipReason.ts`：
+
+```ts
+export function isReasonEmpty(skipReason: string | null | undefined): boolean {
+  return !skipReason || skipReason.trim() === '';
+}
+
+export function displaySkipReason(skipReason: string | null | undefined, fallback = '理由未入力'): string {
+  return skipReason?.trim() || fallback;
+}
+```
+
+`utils/timeToPercent.ts`：
+
+```ts
+// 7:00 を 0%、19:00 を 100% として時刻を百分率変換
+export function timeToPercent(time: string | null | undefined, startHour = 7, endHour = 19): number {
+  if (!time) return 0;
+  const [h, m] = time.split(':').map(Number);
+  const totalMinutes = (h - startHour) * 60 + m;
+  const rangeMinutes = (endHour - startHour) * 60;
+  return Math.max(0, Math.min(100, (totalMinutes / rangeMinutes) * 100));
+}
+```
+
+---
+
+## タスク2：メインダッシュボード実装
+
+### 2-1. ページ全体構成（`pages/admin/audit/index.tsx`）
+
+```tsx
+import { useState } from 'react';
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+import AuditGantt from './components/AuditGantt';
+import NotificationPanel from './components/NotificationPanel';
+import Legend from './components/Legend';
+import AxisTabs from './components/AxisTabs';
+
+export default function AuditDashboard() {
+  const [date, setDate] = useState(new Date());
+  const [axis, setAxis] = useState<'staff' | 'resident'>('staff');
+  const weekday = date.getDay(); // 0=日, 6=土
+  const dateStr = format(date, 'yyyy-MM-dd');
+
+  return (
+    <div className="p-6 space-y-4">
+      <Header date={date} onDateChange={setDate} dateStr={dateStr} />
+      <WeekdayTabs weekday={weekday} date={date} onChange={setDate} />
+      <AxisTabs value={axis} onChange={setAxis} />
+      <AuditGantt date={dateStr} axis={axis} />
+      <Legend />
+      <NotificationPanel date={dateStr} />
+    </div>
+  );
+}
+```
+
+### 2-2. ヘッダー
+
+```tsx
+function Header({ date, onDateChange, dateStr }) {
+  const { data: notifications } = useGetAuditNotifications(dateStr);
+  
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex items-baseline gap-3">
+        <h1 className="text-lg font-medium">監査ビュー</h1>
+        <span className="text-sm text-muted-foreground">
+          {format(date, 'yyyy/MM/dd (E)', { locale: ja })}
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <DatePicker value={date} onChange={onDateChange} />
+        {notifications && notifications.length > 0 && (
+          <Badge variant="outline" className="bg-purple-50 text-purple-900 border-purple-200">
+            <Bell className="size-3.5 mr-1" /> 通知 {notifications.length}
+          </Badge>
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+### 2-3. 曜日タブ
+
+```tsx
+function WeekdayTabs({ weekday, date, onChange }) {
+  const days = ['日', '月', '火', '水', '木', '金', '土'];
+  return (
+    <div className="flex gap-1">
+      {days.map((d, i) => (
+        <button
+          key={i}
+          onClick={() => {
+            const newDate = new Date(date);
+            newDate.setDate(date.getDate() - weekday + i);
+            onChange(newDate);
+          }}
+          className={cn(
+            'text-sm px-3 py-1.5 rounded-md border',
+            i === weekday
+              ? 'border-foreground/30 font-medium'
+              : 'border-border/40 text-muted-foreground'
+          )}
+        >
+          {d}
+        </button>
+      ))}
+    </div>
+  );
+}
+```
+
+**動作**：曜日タブは「同じ週内で日付を切り替える」。月をまたぐ場合は日付ピッカーで指定。
+
+---
+
+## タスク3：ガントビュー実装
+
+### 3-1. AuditGantt.tsx の基本構造
+
+```tsx
+export default function AuditGantt({ date, axis }: { date: string; axis: 'staff' | 'resident' }) {
+  const { data, isLoading } = useGetAuditRouteSheets(date);
+  
+  if (isLoading) return <Skeleton className="h-96" />;
+  if (!data?.cells || data.cells.length === 0) return <EmptyState />;
+  
+  const grouped = axis === 'staff'
+    ? groupByStaff(data.cells)
+    : groupByResident(data.cells);
+  
+  return (
+    <div className="border rounded-lg overflow-hidden bg-background">
+      <TimeAxisHeader />
+      {grouped.map(group => (
+        <GanttRow
+          key={group.key}
+          axis={axis}
+          label={group.label}
+          shiftType={group.shiftType}
+          shiftColor={group.shiftColor}
+          cells={group.cells}
+          plannedSlots={axis === 'staff' ? data.reassignedSlots?.filter(s => s.plannedStaffId === group.key) : []}
+        />
+      ))}
+    </div>
+  );
+}
+
+// グルーピング関数
+function groupByStaff(cells) {
+  // actualStaffId でグルーピング、null は「未アサイン」グループ
+  // shift_types.code/color は cells 内に含まれている前提（rowShiftType, rowShiftTypeColor）
+  // ...
+}
+
+function groupByResident(cells) {
+  // residentId でグルーピング
+  // ...
+}
+```
+
+### 3-2. 時間軸ヘッダー
+
+```tsx
+function TimeAxisHeader() {
+  const hours = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+  return (
+    <div className="grid bg-muted/50 border-b" style={{ gridTemplateColumns: `110px repeat(${hours.length - 1}, 1fr)` }}>
+      <div className="p-2 text-xs text-muted-foreground">担当</div>
+      {hours.slice(0, -1).map(h => (
+        <div key={h} className="p-2 text-xs text-muted-foreground text-center">
+          {h}:00
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+### 3-3. 行コンポーネント
+
+```tsx
+function GanttRow({ axis, label, shiftType, shiftColor, cells, plannedSlots }) {
+  return (
+    <div className="grid border-b min-h-14" style={{ gridTemplateColumns: '110px 1fr' }}>
+      <div
+        className="p-3 flex items-center gap-2 border-r bg-muted/30"
+        style={{ borderLeft: axis === 'staff' && shiftColor ? `3px solid ${shiftColor}` : undefined }}
+      >
+        <span className="text-sm">{label}</span>
+        {axis === 'staff' && shiftType && (
+          <ShiftBadge type={shiftType} color={shiftColor} />
+        )}
+      </div>
+      
+      <div className="relative py-1.5">
+        {/* 担当変更時の「元担当の空きセル」を斜線で表示 */}
+        {axis === 'staff' && plannedSlots?.map(slot => (
+          <ReassignedSlot key={`reassigned-${slot.cellId}`} slot={slot} />
+        ))}
+        
+        {cells.map(cell => (
+          <AuditGanttCell key={cell.id} cell={cell} axis={axis} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ShiftBadge({ type, color }) {
+  // shift_types.shortLabel (例: '早') を優先、なければ name の頭1文字
+  return (
+    <span
+      className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+      style={{
+        backgroundColor: color ? `${color}20` : undefined,
+        color: color ?? undefined,
+      }}
+    >
+      {type}
+    </span>
+  );
+}
+```
+
+### 3-4. セル本体（AuditGanttCell.tsx）
+
+```tsx
+import { isReasonEmpty, displaySkipReason } from '../utils/skipReason';
+import { timeToPercent } from '../utils/timeToPercent';
+
+function AuditGanttCell({ cell, axis }) {
+  const [openModal, setOpenModal] = useState(false);
+  
+  const left = timeToPercent(cell.actualStartTime ?? cell.plannedStartTime);
+  const right = timeToPercent(cell.actualEndTime ?? cell.plannedEndTime);
+  const width = right - left;
+  
+  const colorClasses = getCellColor(cell);
+  const noReason = cell.status === 'skipped' && isReasonEmpty(cell.skipReason);
+  
+  // 利用者軸の場合は担当ヘルパー名を表示、ヘルパー軸の場合は利用者名を表示
+  const primaryLabel = axis === 'staff' ? cell.residentName : (cell.actualStaffName ?? cell.plannedStaffName ?? '未');
+  
+  return (
+    <>
+      <button
+        className={cn(
+          'absolute top-1.5 bottom-1.5 rounded-md p-1.5 text-xs',
+          'flex flex-col justify-center overflow-hidden',
+          'hover:ring-2 hover:ring-offset-1 hover:ring-foreground/20 transition',
+          colorClasses
+        )}
+        style={{ left: `${left}%`, width: `${width}%` }}
+        onClick={() => setOpenModal(true)}
+      >
+        <span className={cn('font-medium', cell.status === 'skipped' && 'line-through')}>
+          {primaryLabel}
+        </span>
+        <span className="text-[10px] opacity-80">
+          {cell.actualServiceLabel ?? cell.plannedServiceLabel}
+          {cell.status === 'skipped' && ` ・ ${displaySkipReason(cell.skipReason)}`}
+          {cell.status === 'added' && ' ・追加'}
+          {cell.staffReassigned && ' ・代替'}
+        </span>
+        
+        {/* 変更メモあり：右上に黄色ドット */}
+        {cell.modifiedNote && (
+          <span className="absolute top-1 right-1 size-1.5 rounded-full bg-amber-500" />
+        )}
+        
+        {/* 追加サービス：右上にベル */}
+        {cell.isAdHoc && (
+          <Bell className="absolute top-1 right-1 size-2.5 text-purple-700" />
+        )}
+        
+        {/* 理由未入力のskipped：警告アイコン */}
+        {noReason && (
+          <AlertTriangle className="absolute top-1 right-1 size-2.5 text-orange-600" />
+        )}
+      </button>
+      
+      <AuditCellModal cell={cell} open={openModal} onClose={() => setOpenModal(false)} />
+    </>
+  );
+}
+
+function getCellColor(cell): string {
+  if (cell.status === 'skipped') {
+    return 'bg-red-50 border border-red-500/60 text-red-900';
+  }
+  if (cell.isAdHoc || cell.status === 'added') {
+    return 'bg-purple-50 border border-purple-500/60 text-purple-900';
+  }
+  if (cell.staffReassigned) {
+    return 'bg-blue-50 border border-blue-500/60 text-blue-900';
+  }
+  return 'bg-background border border-border/60';
+}
+```
+
+### 3-5. 担当変更の「元担当」表示
+
+```tsx
+function ReassignedSlot({ slot }) {
+  const [, navigate] = useLocation(); // wouter
+  const left = timeToPercent(slot.plannedStartTime);
+  const right = timeToPercent(slot.plannedEndTime);
+  const width = right - left;
+  
+  return (
+    <button
+      className={cn(
+        'absolute top-1.5 bottom-1.5 rounded-md p-1.5 text-xs',
+        'bg-stripe-pattern border border-dashed border-muted-foreground/40',
+        'text-muted-foreground hover:ring-2 hover:ring-foreground/20 transition',
+        'flex flex-col justify-center overflow-hidden'
+      )}
+      style={{ left: `${left}%`, width: `${width}%` }}
+      onClick={() => navigate(`/admin/audit/cells/${slot.cellId}`)}
+      title={`→ ${slot.actualStaffName} に振替`}
+    >
+      <span className="line-through">{slot.residentName}</span>
+      <span className="text-[10px] block">→{slot.actualStaffName}</span>
+    </button>
+  );
+}
+```
+
+**斜線パターンCSS**（プロジェクトのグローバルCSSまたは Tailwind config に追加）：
+
+```css
+@layer utilities {
+  .bg-stripe-pattern {
+    background-image: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 4px,
+      rgba(0, 0, 0, 0.04) 4px,
+      rgba(0, 0, 0, 0.04) 8px
+    );
+  }
+}
+```
+
+---
+
+## タスク4：カード詳細モーダル
+
+### 4-1. 全体構造
+
+```tsx
+function AuditCellModal({ cell, open, onClose }) {
+  const { data: history } = useGetAuditCellHistory(cell.id, { enabled: open });
+  const deleteNote = useDeleteAuditCellNote();
+  const updateNote = usePostAuditCellNote();
+  const unskip = usePostAuditCellUnskip();
+  const updateSkipReason = usePostAuditCellSkipReason();
+  
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>
+            {cell.residentName} ・ {cell.plannedServiceLabel ?? '追加サービス'}
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <ComparisonTable cell={cell} />
+          
+          {cell.status === 'skipped' && (
+            <SkippedSection
+              cell={cell}
+              onUnskip={() => unskip.mutate({ cellId: cell.id, data: { restoreStatus: 'done' } })}
+              onUpdateReason={(reason) => updateSkipReason.mutate({ cellId: cell.id, data: { skipReason: reason } })}
+            />
+          )}
+          
+          <NoteSection
+            note={cell.modifiedNote}
+            onUpdate={(note) => updateNote.mutate({ cellId: cell.id, data: { note } })}
+            onDelete={() => deleteNote.mutate({ cellId: cell.id })}
+          />
+          
+          <HistorySection history={history} />
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+### 4-2. 比較テーブル
+
+```tsx
+function ComparisonTable({ cell }) {
+  const rows = [
+    { label: '担当', planned: cell.plannedStaffName, actual: cell.actualStaffName, changed: cell.staffReassigned },
+    { label: '開始時刻', planned: cell.plannedStartTime, actual: cell.actualStartTime, changed: cell.plannedStartTime !== cell.actualStartTime },
+    { label: '終了時刻', planned: cell.plannedEndTime, actual: cell.actualEndTime, changed: cell.plannedEndTime !== cell.actualEndTime },
+    { label: 'サービス', planned: cell.plannedServiceLabel, actual: cell.actualServiceLabel, changed: cell.plannedServiceTypeId !== cell.actualServiceTypeId },
+  ];
+  
+  return (
+    <table className="w-full text-sm">
+      <thead className="text-xs text-muted-foreground">
+        <tr>
+          <th className="text-left py-2 w-20">項目</th>
+          <th className="text-left py-2">計画</th>
+          <th className="text-left py-2">実態</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map(row => (
+          <tr key={row.label} className={cn('border-t', row.changed && 'bg-amber-50/40')}>
+            <td className="py-2 text-muted-foreground">{row.label}</td>
+            <td className="py-2">{row.planned ?? '—'}</td>
+            <td className={cn('py-2', row.changed && 'font-medium')}>
+              {row.actual ?? '—'}
+              {row.changed && <span className="ml-2 text-xs text-amber-700">変更</span>}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+```
+
+### 4-3. 未実施セクション（null判定対応版）
+
+```tsx
+import { isReasonEmpty } from '../utils/skipReason';
+
+function SkippedSection({ cell, onUnskip, onUpdateReason }) {
+  const [editingReason, setEditingReason] = useState(false);
+  const [reasonText, setReasonText] = useState(cell.skipReason ?? '');
+  const noReason = isReasonEmpty(cell.skipReason);
+  
+  return (
+    <div className={cn(
+      'p-3 rounded-md border',
+      noReason ? 'bg-orange-50 border-orange-300' : 'bg-red-50 border-red-300'
+    )}>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-medium text-red-900">未実施</span>
+        <button onClick={onUnskip} className="text-xs text-blue-700 hover:underline">
+          未実施を解除
+        </button>
+      </div>
+      {!editingReason ? (
+        <div className="flex items-center justify-between">
+          <span className={cn('text-sm', noReason && 'text-orange-700')}>
+            理由：{cell.skipReason?.trim() || '未記入'}
+          </span>
+          <button onClick={() => setEditingReason(true)} className="text-xs text-blue-700">
+            理由を{noReason ? '追加' : '編集'}
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <select
+            value={['利用者拒否', '入院', '欠席', '家族都合'].includes(reasonText) ? reasonText : ''}
+            onChange={(e) => setReasonText(e.target.value)}
+            className="w-full text-sm border rounded p-1"
+          >
+            <option value="">選択してください</option>
+            <option>利用者拒否</option>
+            <option>入院</option>
+            <option>欠席</option>
+            <option>家族都合</option>
+          </select>
+          <textarea
+            value={reasonText}
+            onChange={(e) => setReasonText(e.target.value)}
+            placeholder="自由記述（プリセットを選んでも上書き可）"
+            className="w-full text-sm border rounded p-2"
+            rows={2}
+          />
+          <div className="flex gap-2 justify-end">
+            <button onClick={() => setEditingReason(false)} className="text-xs">キャンセル</button>
+            <button
+              onClick={() => {
+                if (reasonText.trim()) {
+                  onUpdateReason(reasonText.trim());
+                  setEditingReason(false);
+                }
+              }}
+              disabled={!reasonText.trim()}
+              className="text-xs bg-foreground text-background px-2 py-1 rounded disabled:opacity-50"
+            >
+              保存
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+### 4-4. 変更メモセクション
+
+```tsx
+function NoteSection({ note, onUpdate, onDelete }) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(note ?? '');
+  
+  if (!note && !editing) {
+    return (
+      <button onClick={() => setEditing(true)} className="text-xs text-muted-foreground hover:underline">
+        + 変更メモを追加
+      </button>
+    );
+  }
+  
+  return (
+    <div className="p-3 rounded-md border bg-amber-50/40 border-amber-300">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-medium">変更メモ</span>
+        {!editing && (
+          <div className="flex gap-2">
+            <button onClick={() => setEditing(true)} className="text-xs">編集</button>
+            <button onClick={onDelete} className="text-xs text-red-700">消去</button>
+          </div>
+        )}
+      </div>
+      {editing ? (
+        <div className="space-y-2">
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            className="w-full text-sm border rounded p-2"
+            rows={3}
+          />
+          <div className="flex gap-2 justify-end">
+            <button onClick={() => { setText(note ?? ''); setEditing(false); }} className="text-xs">キャンセル</button>
+            <button
+              onClick={() => { onUpdate(text); setEditing(false); }}
+              disabled={!text.trim()}
+              className="text-xs bg-foreground text-background px-2 py-1 rounded disabled:opacity-50"
+            >
+              保存
+            </button>
+          </div>
+        </div>
+      ) : (
+        <p className="text-sm whitespace-pre-wrap">{note}</p>
+      )}
+    </div>
+  );
+}
+```
+
+### 4-5. 変更履歴セクション
+
+```tsx
+function HistorySection({ history }) {
+  if (!history || history.length === 0) return null;
+  
+  return (
+    <details className="text-sm">
+      <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+        変更履歴（{history.length}件）
+      </summary>
+      <ul className="mt-2 space-y-1.5 border-l-2 border-muted pl-3">
+        {history.map(log => (
+          <li key={log.id} className="text-xs">
+            <span className="text-muted-foreground">
+              {format(new Date(log.occurredAt), 'M/d HH:mm')}
+            </span>
+            <span className="ml-2 font-medium">{actionLabel(log.action)}</span>
+            {log.actorStaffName && (
+              <span className="ml-2 text-muted-foreground">by {log.actorStaffName}</span>
+            )}
+            {log.reason && (
+              <p className="mt-0.5 text-muted-foreground ml-12">{log.reason}</p>
+            )}
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
+function actionLabel(action: string): string {
+  return {
+    create: '作成',
+    update: '更新',
+    delete: '削除',
+    skip: '未実施登録',
+    unskip: '未実施解除',
+    add_adhoc: '追加サービス',
+    reassign: '担当変更',
+    update_note: 'メモ更新',
+    update_skip_reason: '理由更新',
+    clear_note: 'メモ消去',
+    accept_notification: '通知採用',
+  }[action] ?? action;
+}
+```
+
+---
+
+## タスク5：ベル通知パネル
+
+### 5-1. NotificationPanel.tsx
+
+```tsx
+function NotificationPanel({ date }) {
+  const { data: notifications, refetch } = useGetAuditNotifications(date);
+  const [acceptTarget, setAcceptTarget] = useState(null);
+  
+  if (!notifications || notifications.length === 0) return null;
+  
+  return (
+    <div className="mt-6">
+      <h3 className="text-sm font-medium mb-2 flex items-center gap-1.5">
+        <Bell className="size-4 text-purple-600" />
+        追加サービス通知
+        <span className="text-xs text-muted-foreground font-normal ml-1">
+          採用するとその日の実績またはテンプレに反映されます
+        </span>
+      </h3>
+      
+      <div className="border rounded-lg overflow-hidden">
+        <div className="grid bg-muted/50 px-3 py-2 text-xs text-muted-foreground" style={{ gridTemplateColumns: '80px 1fr 1fr 1fr 140px' }}>
+          <span>時刻</span><span>利用者</span><span>サービス</span><span>担当</span>
+          <span className="text-right">採否</span>
+        </div>
+        {notifications.map(n => (
+          <div key={n.cellId} className="grid px-3 py-2.5 text-sm items-center border-t" style={{ gridTemplateColumns: '80px 1fr 1fr 1fr 140px' }}>
+            <span>{n.actualStartTime}</span>
+            <span>{n.residentName}</span>
+            <span>{n.actualServiceLabel}</span>
+            <span>{n.actualStaffName}</span>
+            <div className="flex gap-1.5 justify-end">
+              <button
+                onClick={() => setAcceptTarget(n)}
+                className="text-xs px-2 py-1 bg-purple-600 text-white rounded hover:bg-purple-700"
+              >
+                採用
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      <AcceptDialog
+        notification={acceptTarget}
+        date={date}
+        onClose={() => setAcceptTarget(null)}
+        onSuccess={() => { setAcceptTarget(null); refetch(); }}
+      />
+    </div>
+  );
+}
+```
+
+**注記**：「却下」ボタンは現状の API に存在しないので、フェーズ2では省略します（必要なら別途エンドポイント追加検討）。
+
+### 5-2. 採用ダイアログ（AcceptDialog.tsx）
+
+`alreadyExists=true` のフォールバック応答に対応します。
+
+```tsx
+import { toast } from 'sonner';
+
+function AcceptDialog({ notification, date, onClose, onSuccess }) {
+  const [scope, setScope] = useState<'day_only' | 'add_to_template'>('day_only');
+  const accept = usePostAuditNotificationAccept();
+  const weekday = new Date(date).getDay();
+  const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
+  
+  if (!notification) return null;
+  
+  const handleSubmit = () => {
+    accept.mutate(
+      {
+        cellId: notification.cellId,
+        data: {
+          scope,
+          weekday: scope === 'add_to_template' ? weekday : undefined,
+        },
+      },
+      {
+        onSuccess: (response) => {
+          if (response.alreadyExists) {
+            toast.warning(
+              response.message ?? '既にテンプレートに存在するため、その日限りの実績として確定しました'
+            );
+          } else if (response.scope === 'add_to_template' || response.fallbackScope == null) {
+            toast.success(
+              scope === 'add_to_template'
+                ? `${dayNames[weekday]}曜日のテンプレートに追加しました`
+                : 'その日限りの実績として確定しました'
+            );
+          } else {
+            toast.success('採用しました');
+          }
+          onSuccess();
+        },
+        onError: () => {
+          toast.error('採用に失敗しました');
+        },
+      },
+    );
+  };
+  
+  return (
+    <Dialog open={!!notification} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>追加サービスの採用</DialogTitle>
+          <DialogDescription>
+            {notification.residentName} ・ {notification.actualServiceLabel} を採用します。
+          </DialogDescription>
+        </DialogHeader>
+        
+        <RadioGroup value={scope} onValueChange={(v) => setScope(v as any)}>
+          <div className="flex items-start gap-2">
+            <RadioGroupItem value="day_only" id="day_only" />
+            <label htmlFor="day_only" className="text-sm">
+              <strong>その日限り</strong>の実績として確定
+              <p className="text-xs text-muted-foreground mt-0.5">
+                通知から消えます。テンプレートには影響しません。
+              </p>
+            </label>
+          </div>
+          <div className="flex items-start gap-2">
+            <RadioGroupItem value="add_to_template" id="template" />
+            <label htmlFor="template" className="text-sm">
+              <strong>{dayNames[weekday]}曜日テンプレートに追加</strong>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                次回以降の{dayNames[weekday]}曜日にも反映されます。<br/>
+                ※既に同じサービスがテンプレに存在する場合は、自動的に「その日限り」になります。
+              </p>
+            </label>
+          </div>
+        </RadioGroup>
+        
+        <DialogFooter>
+          <button onClick={onClose} className="text-sm px-3 py-1.5 border rounded">キャンセル</button>
+          <button
+            onClick={handleSubmit}
+            disabled={accept.isPending}
+            className="text-sm px-3 py-1.5 bg-foreground text-background rounded disabled:opacity-50"
+          >
+            {accept.isPending ? '処理中...' : '採用する'}
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+**重要**：`alreadyExists=true` のレスポンスを `toast.warning`（黄色）で表示することで、ユーザーが「テンプレ追加したつもりが day_only になった」ことに気付ける設計です。
+
+---
+
+## タスク6：軸切替タブ（AxisTabs.tsx）
+
+```tsx
+function AxisTabs({ value, onChange }) {
+  return (
+    <div className="flex gap-1 border-b">
+      <button
+        onClick={() => onChange('staff')}
+        className={cn(
+          'text-sm px-4 py-2 border-b-2 -mb-px transition-colors',
+          value === 'staff' ? 'border-foreground font-medium' : 'border-transparent text-muted-foreground hover:text-foreground'
+        )}
+      >
+        ヘルパー軸
+      </button>
+      <button
+        onClick={() => onChange('resident')}
+        className={cn(
+          'text-sm px-4 py-2 border-b-2 -mb-px transition-colors',
+          value === 'resident' ? 'border-foreground font-medium' : 'border-transparent text-muted-foreground hover:text-foreground'
+        )}
+      >
+        利用者軸
+      </button>
+    </div>
+  );
+}
+```
+
+**利用者軸の挙動**：
+- 行ヘッダー：利用者名（room number等あれば併記）
+- シフトバッジは非表示、行左の色帯も非表示
+- 担当変更時の「元担当の空きセル」は表示しない（軸が利用者なので意味がない）
+- セル内のテキスト：「{担当ヘルパー名}」（利用者名は行頭にあるので省略）
+
+---
+
+## タスク7：凡例（Legend.tsx）
+
+```tsx
+function Legend() {
+  return (
+    <div className="flex flex-wrap gap-3 text-xs text-muted-foreground px-3 py-2 bg-muted/30 rounded-md">
+      <LegendItem color="bg-background border border-border" label="計画通り" />
+      <LegendItem color="bg-red-50 border border-red-500/60" label="未実施" />
+      <LegendItem color="bg-blue-50 border border-blue-500/60" label="担当変更" />
+      <LegendItem color="bg-purple-50 border border-purple-500/60" label="追加" />
+      <LegendItem dot="bg-amber-500" label="変更メモあり" />
+      <LegendItem dot="bg-orange-500" label="未実施・理由未入力" />
+    </div>
+  );
+}
+
+function LegendItem({ color, dot, label }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {color && <span className={cn('size-3 rounded-sm', color)} />}
+      {dot && <span className={cn('size-2 rounded-full', dot)} />}
+      {label}
+    </span>
+  );
+}
+```
+
+---
+
+## タスク8：個別ページ `/admin/audit/cells/:cellId`
+
+```tsx
+function AuditCellDetail() {
+  const params = useParams();
+  const cellId = parseInt(params.cellId);
+  const { data: cell } = useGetAuditCell(cellId);
+  const [, navigate] = useLocation();
+  
+  if (!cell) return <Skeleton />;
+  
+  return (
+    <div className="p-6 max-w-2xl mx-auto">
+      <button onClick={() => history.back()} className="text-sm text-muted-foreground mb-4 hover:text-foreground">
+        ← 戻る
+      </button>
+      <h1 className="text-lg font-medium mb-4">
+        {cell.residentName} ・ {cell.plannedServiceLabel ?? '追加サービス'}
+      </h1>
+      {/* AuditCellModal の中身を展開（モーダルではなくページとして） */}
+      <div className="space-y-4">
+        <ComparisonTable cell={cell} />
+        {/* ... SkippedSection / NoteSection / HistorySection ... */}
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## タスク9：動作確認チェックリスト
+
+### 表示確認
+- [ ] `/admin/audit` でガントが表示される
+- [ ] 曜日タブで日付が切り替わる
+- [ ] 日付ピッカーで任意の日付に飛べる
+- [ ] ヘルパー軸 / 利用者軸の切替が動く
+- [ ] シフト種別バッジが表示される
+- [ ] 行左の色帯が表示される（ヘルパー軸のみ）
+- [ ] 計画通り=白、未実施=赤、担当変更=青、追加=紫の色分け
+- [ ] 変更メモありに黄色ドット
+- [ ] 追加サービスにベル
+- [ ] **skipReason が null または空白のskippedにオレンジ警告アイコン**
+- [ ] 担当変更時、元担当の行に斜線パターンの空きセル
+- [ ] 凡例が常時表示
+
+### モーダル確認
+- [ ] セルクリックでカード詳細モーダルが開く
+- [ ] 計画 vs 実態の比較テーブル表示
+- [ ] 変更箇所がアンバー背景で目立つ
+- [ ] 未実施セルで「未実施を解除」ボタンが動く
+- [ ] **skipReason が null/空白のskippedで「理由を追加」が動く**
+- [ ] **理由を保存後、警告アイコンが消える**
+- [ ] 変更メモの追加・編集・消去が動く
+- [ ] 変更履歴が時系列で表示
+
+### ベル通知確認
+- [ ] 通知パネルに isAdHoc=true のセルが並ぶ
+- [ ] ヘッダーの通知バッジに件数
+- [ ] 「採用」クリックでダイアログ
+- [ ] 「その日限り」採用：通知から消え、ガント上は紫のまま
+- [ ] 「テンプレに追加」採用（重複なし）：route_sheet_template_cells に新規行
+- [ ] **「テンプレに追加」採用（重複あり）：toast.warning が表示され、day_only として確定**
+- [ ] 採用後、isAdHoc=false に変わっている
+
+### 既存画面への影響確認
+- [ ] 既存のルート票編集画面が無修正で動く
+- [ ] 既存のテンプレ編集画面が無修正で動く
+- [ ] サイドバーの他リンクが壊れていない
+
+---
+
+## 未対応事項（フェーズ3で対応）
+
+- 認証・認可（管理者ロール判定）
+- テンプレロック機能のUI
+- 月次サマリ画面（実施率・件数集計）
+- 利用者マスタの「要介護度・支給限度額・算定可能加算」表示
+- 残単位からの追加サービス提案ロジック
+- 通知の「却下」エンドポイント（必要なら別途検討）
+
+これらはフェーズ2完了後に別指示書で対応します。
