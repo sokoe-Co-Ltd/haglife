@@ -17,6 +17,17 @@ function getJapaneseDayOfWeek(): string {
   return days[new Date().getDay()];
 }
 
+const VALID_WEEKDAYS = new Set(["月", "火", "水", "木", "金", "土", "日"]);
+
+function validateUsageDays(days: string[] | undefined): string | null {
+  if (!days) return null;
+  const invalid = days.filter((d) => !VALID_WEEKDAYS.has(d));
+  if (invalid.length > 0) {
+    return `不正な曜日が含まれています: ${invalid.join(", ")}`;
+  }
+  return null;
+}
+
 router.get("/day-services", async (req, res): Promise<void> => {
   const query = ListDayServicesQueryParams.safeParse(req.query);
   const conditions = [];
@@ -50,6 +61,11 @@ router.post("/day-services", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  const dayError = validateUsageDays(parsed.data.usageDays);
+  if (dayError) {
+    res.status(400).json({ error: dayError });
+    return;
+  }
   const [service] = await db.insert(dayServicesTable).values(parsed.data).returning();
   const [resident] = await db.select().from(residentsTable).where(eq(residentsTable.id, service.residentId));
   res.status(201).json({ ...service, residentName: resident ? `${resident.lastName}${resident.firstName}` : null });
@@ -67,9 +83,14 @@ router.patch("/day-services/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  const dayError = validateUsageDays(parsed.data.usageDays ?? undefined);
+  if (dayError) {
+    res.status(400).json({ error: dayError });
+    return;
+  }
   const updateData: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(parsed.data)) {
-    if (v !== null && v !== undefined) updateData[k] = v;
+    if (v !== undefined) updateData[k] = v;
   }
   const [service] = await db
     .update(dayServicesTable)

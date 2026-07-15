@@ -2619,6 +2619,10 @@ components:
           type: ["string", "null"]
         itemPhotoUrl:
           type: ["string", "null"]
+        itemPhotoUrls:
+          type: array
+          items:
+            type: string
         isPrepared:
           type: boolean
         createdAt:
@@ -2627,6 +2631,7 @@ components:
         - id
         - residentId
         - usageDays
+        - itemPhotoUrls
         - isPrepared
         - createdAt
 
@@ -2647,6 +2652,10 @@ components:
           type: ["string", "null"]
         itemPhotoUrl:
           type: ["string", "null"]
+        itemPhotoUrls:
+          type: array
+          items:
+            type: string
       required:
         - residentId
         - usageDays
@@ -2666,6 +2675,10 @@ components:
           type: ["string", "null"]
         itemPhotoUrl:
           type: ["string", "null"]
+        itemPhotoUrls:
+          type: array
+          items:
+            type: string
 
     # ── Bath Report ───────────────────────────────────────────────
     BathReport:

@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, User, Phone, Home, FileText, Pencil, Save, X, Stethoscope, Building2, Activity, RotateCcw } from "lucide-react";
 import { ResidentAvatar } from "@/components/ResidentAvatar";
+import { ResidentDayServiceCard } from "@/components/ResidentDayServiceCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link, useParams, useSearch } from "wouter";
@@ -873,6 +874,12 @@ export default function ResidentDetail() {
 
             {/* ── サービス契約 ── */}
             <ResidentServicesCard residentId={id} />
+
+            {/* ── デイサービス ── */}
+            <ResidentDayServiceCard
+              residentId={id}
+              residentName={resident ? `${resident.lastName}${resident.firstName}` : undefined}
+            />
 
             {/* ── バイタル基準値 ── */}
             <VitalThresholdsCard residentId={id} />

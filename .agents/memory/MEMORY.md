@@ -1,0 +1,1 @@
+- [Drizzle push prompts](drizzle-push-prompts.md) — db push can hang on interactive prompts (unique constraints); apply column adds via psql + manual SQL file in lib/db/migrations instead.

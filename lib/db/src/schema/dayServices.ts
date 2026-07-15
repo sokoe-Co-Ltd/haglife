@@ -17,6 +17,7 @@ export const dayServicesTable = pgTable("day_services", {
   itemsToBring: text("items_to_bring"),
   itemLocations: text("item_locations"),
   itemPhotoUrl: text("item_photo_url"),
+  itemPhotoUrls: text("item_photo_urls").array().notNull().default([]),
   isPrepared: boolean("is_prepared").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

@@ -1277,6 +1277,7 @@ export const ListDayServicesResponseItem = zod.object({
   itemsToBring: zod.string().nullish(),
   itemLocations: zod.string().nullish(),
   itemPhotoUrl: zod.string().nullish(),
+  itemPhotoUrls: zod.array(zod.string()),
   isPrepared: zod.boolean(),
   createdAt: zod.string(),
 });
@@ -1292,6 +1293,7 @@ export const CreateDayServiceBody = zod.object({
   itemsToBring: zod.string().nullish(),
   itemLocations: zod.string().nullish(),
   itemPhotoUrl: zod.string().nullish(),
+  itemPhotoUrls: zod.array(zod.string()).optional(),
 });
 
 /**
@@ -1307,6 +1309,7 @@ export const UpdateDayServiceBody = zod.object({
   itemsToBring: zod.string().nullish(),
   itemLocations: zod.string().nullish(),
   itemPhotoUrl: zod.string().nullish(),
+  itemPhotoUrls: zod.array(zod.string()).optional(),
 });
 
 export const UpdateDayServiceResponse = zod.object({
@@ -1318,6 +1321,7 @@ export const UpdateDayServiceResponse = zod.object({
   itemsToBring: zod.string().nullish(),
   itemLocations: zod.string().nullish(),
   itemPhotoUrl: zod.string().nullish(),
+  itemPhotoUrls: zod.array(zod.string()),
   isPrepared: zod.boolean(),
   createdAt: zod.string(),
 });
@@ -1345,6 +1349,7 @@ export const ToggleDayServicePreparedResponse = zod.object({
   itemsToBring: zod.string().nullish(),
   itemLocations: zod.string().nullish(),
   itemPhotoUrl: zod.string().nullish(),
+  itemPhotoUrls: zod.array(zod.string()),
   isPrepared: zod.boolean(),
   createdAt: zod.string(),
 });

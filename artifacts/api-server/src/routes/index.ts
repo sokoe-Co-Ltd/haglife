@@ -21,6 +21,7 @@ import routeSheetTemplatesRouter from "./routeSheetTemplates";
 import photosRouter from "./photos";
 import residentPhotosRouter from "./residentPhotos";
 import eliminationPhotosRouter from "./eliminationPhotos";
+import dayServicePhotosRouter from "./dayServicePhotos";
 import auditRouter from "./audit";
 
 const router: IRouter = Router();
@@ -28,6 +29,7 @@ const router: IRouter = Router();
 router.use(photosRouter);
 router.use(residentPhotosRouter);
 router.use(eliminationPhotosRouter);
+router.use(dayServicePhotosRouter);
 router.use(healthRouter);
 router.use(dashboardRouter);
 router.use(residentsRouter);

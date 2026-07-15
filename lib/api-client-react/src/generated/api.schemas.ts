@@ -756,6 +756,7 @@ export interface DayService {
   itemLocations?: string | null;
   /** @nullable */
   itemPhotoUrl?: string | null;
+  itemPhotoUrls: string[];
   isPrepared: boolean;
   createdAt: string;
 }
@@ -771,6 +772,7 @@ export interface CreateDayServiceBody {
   itemLocations?: string | null;
   /** @nullable */
   itemPhotoUrl?: string | null;
+  itemPhotoUrls?: string[];
 }
 
 export interface UpdateDayServiceBody {
@@ -783,6 +785,7 @@ export interface UpdateDayServiceBody {
   itemLocations?: string | null;
   /** @nullable */
   itemPhotoUrl?: string | null;
+  itemPhotoUrls?: string[];
 }
 
 export interface BathReport {

@@ -42,7 +42,8 @@ All routes under `/api/` prefix:
 - `GET/POST/PATCH/DELETE /api/meals` — meal records
 - `GET/POST/PATCH/DELETE /api/weights` + `GET /api/weights/monthly-status` — weight records
 - `GET/POST/DELETE /api/eliminations` + round management — elimination records
-- `GET/POST/PATCH/DELETE /api/day-services` + toggle-prepared — day service preparations
+- `GET/POST/PATCH/DELETE /api/day-services` + toggle-prepared — day service preparations（曜日パターン・持参物・置き場所メモ・配置写真複数枚）
+- `POST /api/day-services/upload-photo` + `GET /api/day-service-photos/:filename` — 配置写真アップロード/配信（multer、OpenAPI外の生ルート、排泄写真と同パターン）
 - `GET/POST/PATCH/DELETE /api/bath-reports` — bath reports
 - `GET/POST/PATCH/DELETE /api/insurances` — insurance records
 - `GET /api/dashboard/today` + `GET /api/dashboard/alerts` — dashboard summaries
