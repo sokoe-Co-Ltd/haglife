@@ -1,0 +1,14 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "vT5B2-VtRxjGOH41w1hKv"
+uri = "file://screenshots/day-services-mobile.jpg"
+type = "image"
+title = "デイ準備物ページ（スマホ表示）"
+
+[[outputs]]
+id = "1NpMPHZZ6u-TvvlFaz_EF"
+uri = "file://screenshots/resident-detail-dayservice-mobile.jpg"
+type = "image"
+title = "利用者詳細のデイサービスカード（スマホ表示）"
