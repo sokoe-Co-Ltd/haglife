@@ -13,8 +13,6 @@ import {
   Briefcase,
   CheckCircle2,
   Circle,
-  ClipboardList,
-  Download,
   Plus,
   Pencil,
   Trash2,
@@ -22,7 +20,7 @@ import {
   Package,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { QuickActionsCard, StaffMemoCard, InfoCard } from "@/components/PageRightPanel";
+import { InfoCard } from "@/components/PageRightPanel";
 import { DayServiceFormModal, WEEKDAYS } from "@/components/DayServiceFormModal";
 import { ResidentPickerModal } from "@/components/ResidentPickerModal";
 import {
@@ -86,11 +84,6 @@ export default function DayServicesList() {
   const prepared = services?.filter((s) => s.isPrepared) ?? [];
   const unprepared = services?.filter((s) => !s.isPrepared) ?? [];
   const isToday = selectedDay === todayJa();
-
-  const quickActions = [
-    { label: "一括確認", icon: ClipboardList, color: "bg-primary" },
-    { label: "準備物エクスポート", icon: Download },
-  ];
 
   const photosOf = (s: DayService): string[] =>
     s.itemPhotoUrls?.length ? s.itemPhotoUrls : s.itemPhotoUrl ? [s.itemPhotoUrl] : [];
@@ -243,8 +236,6 @@ export default function DayServicesList() {
           </div>
 
           <div className="hidden lg:flex flex-col gap-4">
-            <QuickActionsCard actions={quickActions} />
-
             <InfoCard title="準備状況">
               <div className="space-y-2">
                 <div className="flex items-center justify-between py-1.5 border-b border-gray-50">
@@ -263,8 +254,6 @@ export default function DayServicesList() {
                 </div>
               </div>
             </InfoCard>
-
-            <StaffMemoCard memo="忘れ物がないよう、送迎前に持参物を確認してください。" />
           </div>
         </div>
       </div>
