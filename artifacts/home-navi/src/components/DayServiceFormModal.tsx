@@ -39,6 +39,8 @@ export function DayServiceFormModal({
   const { toast } = useToast();
   const [facilityName, setFacilityName] = useState("");
   const [usageDays, setUsageDays] = useState<string[]>([]);
+  const [pickupTime, setPickupTime] = useState("");
+  const [returnTime, setReturnTime] = useState("");
   const [itemsToBring, setItemsToBring] = useState("");
   const [itemLocations, setItemLocations] = useState("");
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
@@ -49,6 +51,8 @@ export function DayServiceFormModal({
     if (open) {
       setFacilityName(existing?.facilityName ?? "");
       setUsageDays(existing?.usageDays ?? []);
+      setPickupTime(existing?.pickupTime ?? "");
+      setReturnTime(existing?.returnTime ?? "");
       setItemsToBring(existing?.itemsToBring ?? "");
       setItemLocations(existing?.itemLocations ?? "");
       setPhotoUrls(
@@ -102,6 +106,8 @@ export function DayServiceFormModal({
     const body = {
       facilityName: facilityName || null,
       usageDays,
+      pickupTime: pickupTime || null,
+      returnTime: returnTime || null,
       itemsToBring: itemsToBring || null,
       itemLocations: itemLocations || null,
       itemPhotoUrls: photoUrls,
@@ -164,6 +170,25 @@ export function DayServiceFormModal({
                   {d}
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>お迎え時間</Label>
+              <Input
+                type="time"
+                value={pickupTime}
+                onChange={(e) => setPickupTime(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>お帰り時間</Label>
+              <Input
+                type="time"
+                value={returnTime}
+                onChange={(e) => setReturnTime(e.target.value)}
+              />
             </div>
           </div>
 

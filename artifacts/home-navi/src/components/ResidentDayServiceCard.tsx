@@ -10,7 +10,7 @@ import type { DayService } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { DayServiceFormModal, WEEKDAYS } from "@/components/DayServiceFormModal";
-import { Briefcase, Plus, Pencil, Trash2, MapPin, Package } from "lucide-react";
+import { Briefcase, Plus, Pencil, Trash2, MapPin, Package, Clock } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -113,6 +113,14 @@ export function ResidentDayServiceCard({
                       </span>
                     ))}
                   </div>
+                  {(svc.pickupTime || svc.returnTime) && (
+                    <p className="text-xs font-bold text-gray-600 mt-1.5 flex items-center gap-1">
+                      <Clock className="h-3.5 w-3.5 text-primary" />
+                      {svc.pickupTime ? `お迎え ${svc.pickupTime}` : ""}
+                      {svc.pickupTime && svc.returnTime ? "　" : ""}
+                      {svc.returnTime ? `お帰り ${svc.returnTime}` : ""}
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-1 shrink-0">
                   <button

@@ -2613,6 +2613,10 @@ components:
           type: array
           items:
             type: string
+        pickupTime:
+          type: ["string", "null"]
+        returnTime:
+          type: ["string", "null"]
         itemsToBring:
           type: ["string", "null"]
         itemLocations:
@@ -2646,6 +2650,10 @@ components:
           type: array
           items:
             type: string
+        pickupTime:
+          type: ["string", "null"]
+        returnTime:
+          type: ["string", "null"]
         itemsToBring:
           type: ["string", "null"]
         itemLocations:
@@ -2669,6 +2677,10 @@ components:
           type: array
           items:
             type: string
+        pickupTime:
+          type: ["string", "null"]
+        returnTime:
+          type: ["string", "null"]
         itemsToBring:
           type: ["string", "null"]
         itemLocations:

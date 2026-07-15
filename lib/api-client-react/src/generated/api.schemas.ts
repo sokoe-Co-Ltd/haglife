@@ -751,6 +751,10 @@ export interface DayService {
   facilityName?: string | null;
   usageDays: string[];
   /** @nullable */
+  pickupTime?: string | null;
+  /** @nullable */
+  returnTime?: string | null;
+  /** @nullable */
   itemsToBring?: string | null;
   /** @nullable */
   itemLocations?: string | null;
@@ -767,6 +771,10 @@ export interface CreateDayServiceBody {
   facilityName?: string | null;
   usageDays: string[];
   /** @nullable */
+  pickupTime?: string | null;
+  /** @nullable */
+  returnTime?: string | null;
+  /** @nullable */
   itemsToBring?: string | null;
   /** @nullable */
   itemLocations?: string | null;
@@ -779,6 +787,10 @@ export interface UpdateDayServiceBody {
   /** @nullable */
   facilityName?: string | null;
   usageDays?: string[];
+  /** @nullable */
+  pickupTime?: string | null;
+  /** @nullable */
+  returnTime?: string | null;
   /** @nullable */
   itemsToBring?: string | null;
   /** @nullable */

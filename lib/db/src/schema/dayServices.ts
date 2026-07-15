@@ -14,6 +14,8 @@ export const dayServicesTable = pgTable("day_services", {
   residentId: integer("resident_id").notNull(),
   facilityName: text("facility_name"),
   usageDays: text("usage_days").array().notNull().default([]),
+  pickupTime: text("pickup_time"),
+  returnTime: text("return_time"),
   itemsToBring: text("items_to_bring"),
   itemLocations: text("item_locations"),
   itemPhotoUrl: text("item_photo_url"),

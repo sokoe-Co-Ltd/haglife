@@ -18,6 +18,7 @@ import {
   Trash2,
   MapPin,
   Package,
+  Clock,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { InfoCard } from "@/components/PageRightPanel";
@@ -160,6 +161,14 @@ export default function DayServicesList() {
                         <p className="text-[11px] text-gray-400 mt-0.5">
                           利用曜日：{service.usageDays.join("・")}
                         </p>
+                        {(service.pickupTime || service.returnTime) && (
+                          <p className="text-xs font-bold text-gray-600 mt-1 flex items-center gap-1">
+                            <Clock className="h-3.5 w-3.5 text-primary" />
+                            {service.pickupTime ? `お迎え ${service.pickupTime}` : ""}
+                            {service.pickupTime && service.returnTime ? "　" : ""}
+                            {service.returnTime ? `お帰り ${service.returnTime}` : ""}
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         <button
