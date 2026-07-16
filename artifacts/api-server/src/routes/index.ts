@@ -22,6 +22,7 @@ import photosRouter from "./photos";
 import residentPhotosRouter from "./residentPhotos";
 import eliminationPhotosRouter from "./eliminationPhotos";
 import auditRouter from "./audit";
+import homecareIntegrationRouter from "./homecareIntegration";
 
 const router: IRouter = Router();
 
@@ -48,5 +49,6 @@ router.use(shiftsRouter);
 router.use(residentServicesRouter);
 router.use(routeSheetTemplatesRouter);
 router.use(auditRouter);
+router.use(homecareIntegrationRouter);
 
 export default router;
