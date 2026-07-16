@@ -19,17 +19,10 @@
  */
 
 import { Router, type IRouter, type Response } from "express";
-import { eq } from "drizzle-orm";
-import {
-  db,
-  routeSheetsTable,
-  routeSheetRowsTable,
-  routeSheetCellsTable,
-} from "@workspace/db";
 import { z } from "zod";
 
 import { fetchHomecareRoutes, HomecareApiError } from "../integrations/homecareClient";
-import { mapHomecareRoutesToSheetPlan } from "../integrations/homecareRouteMapper";
+import { syncHomecareRouteForDate } from "../integrations/homecareSync";
 
 const router: IRouter = Router();
 
@@ -84,76 +77,28 @@ router.post("/integrations/homecare/sync", async (req, res) => {
   }
   const { date, dryRun } = parsed.data;
 
-  let plan;
   try {
-    const homecare = await fetchHomecareRoutes(date);
-    plan = mapHomecareRoutesToSheetPlan(homecare);
+    const result = await syncHomecareRouteForDate(date, { dryRun });
+    if (result.kind === "dryRun") {
+      res.json({ dryRun: true, plan: result.plan });
+    } else if (result.kind === "exists") {
+      res.status(409).json({
+        error: "sheet_exists",
+        message: `${date} のルート表は既に存在します。上書きしません（再取り込みは既存シート削除後に実行）。`,
+        routeSheetId: result.routeSheetId,
+      });
+    } else {
+      res.status(201).json({
+        dryRun: false,
+        imported: {
+          routeSheetId: result.routeSheetId,
+          rowCount: result.rowCount,
+          cellCount: result.cellCount,
+        },
+      });
+    }
   } catch (err) {
     if (respondHomecareError(res, err)) return;
-    res.status(500).json({ error: "internal_error" });
-    return;
-  }
-
-  if (dryRun) {
-    res.json({ dryRun: true, plan });
-    return;
-  }
-
-  // 既存シート保護: その日の route_sheet があれば上書きしない
-  const existing = await db.query.routeSheetsTable.findFirst({
-    where: eq(routeSheetsTable.date, date),
-  });
-  if (existing) {
-    res.status(409).json({
-      error: "sheet_exists",
-      message: `${date} のルート表は既に存在します。上書きしません（再取り込みは既存シート削除後に実行）。`,
-      routeSheetId: existing.id,
-    });
-    return;
-  }
-
-  // 書き込み（トランザクション。失敗時はロールバック）
-  try {
-    const result = await db.transaction(async (tx) => {
-      const [sheet] = await tx
-        .insert(routeSheetsTable)
-        .values({ date, materializedFromTemplateId: plan.source })
-        .returning();
-
-      let cellCount = 0;
-      for (const row of plan.rows) {
-        const [insertedRow] = await tx
-          .insert(routeSheetRowsTable)
-          .values({
-            routeSheetId: sheet!.id,
-            staffName: row.staffName,
-            shiftType: row.shiftType,
-            sortOrder: row.sortOrder,
-            staffId: row.staffId,
-          })
-          .returning();
-
-        if (row.cells.length > 0) {
-          await tx.insert(routeSheetCellsTable).values(
-            row.cells.map((c) => ({
-              routeSheetRowId: insertedRow!.id,
-              startTime: c.startTime,
-              endTime: c.endTime,
-              isBreak: c.isBreak,
-              residentName: c.residentName,
-              serviceLabel: c.serviceLabel,
-              notes: c.notes,
-              status: c.status,
-            })),
-          );
-          cellCount += row.cells.length;
-        }
-      }
-      return { routeSheetId: sheet!.id, rowCount: plan.rows.length, cellCount };
-    });
-
-    res.status(201).json({ dryRun: false, imported: result });
-  } catch (err) {
     res.status(500).json({
       error: "import_failed",
       message: err instanceof Error ? err.message : "unknown",

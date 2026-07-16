@@ -72,12 +72,41 @@ curl -X POST http://localhost:8080/api/integrations/homecare/sync \
 - **shiftType の語彙**: JP 1 文字（明/早/日/遅/夜）でよいか、こちらの `shift_types` に合わせるか。
 - **再取り込み時の扱い**: 既存シートの上書き（materialize 済みの計画スナップショットを差し替えるか）。
 
+## 自動同期（Replit Scheduled Deployment）
+
+定期実行スクリプト `src/scripts/syncHomecareRoutes.ts`（`pnpm --filter @workspace/api-server run sync:homecare`）
+が、今日〜(今日+N)日ぶん（JST）を 1 回で取り込んで終了する。これを Replit の
+**Scheduled Deployment** に「1 日 1 回」等で登録すると自動同期になる。
+
+追加の環境変数:
+
+| 変数 | 既定 | 説明 |
+| --- | --- | --- |
+| `HOMECARE_SYNC_DAYS` | `1` | 今日から何日ぶん取り込むか（例 3 = 今日+明日+明後日） |
+| `HOMECARE_SYNC_DRY_RUN` | `true` | **既定は安全側の dry-run**。`false` のときだけ実書き込み |
+
+Scheduled Deployment のコマンド例:
+
+```bash
+pnpm --filter @workspace/api-server run sync:homecare
+# Secrets: HOMECARE_API_BASE_URL / HOMECARE_API_KEY / DATABASE_URL
+#          HOMECARE_SYNC_DAYS=3 / HOMECARE_SYNC_DRY_RUN=false（検証後に false へ）
+```
+
+> ⚠️ **必ず「①手動 dry-run で写像を確認 → ②自動を有効化」の順で**。最初から
+> `HOMECARE_SYNC_DRY_RUN=false` で回すと、写像（status/staff 等）が未確定のまま毎日
+> 書き込まれる。既定 dry-run で内容を確認し、写像を確定してから false にすること。
+> 既存シートは上書きしない（skip）ので、既存の編集済みシートは保護される。
+
 ## 検証（Replit 実環境で）
 
 このコードは homecare の API キー・こちらの `DATABASE_URL` が要るため、Replit 実環境で確認する:
 
 ```bash
-pnpm run typecheck                       # 型チェック（全パッケージ）
+pnpm run typecheck                            # 型チェック（全パッケージ）
 pnpm --filter @workspace/api-server run dev   # api-server 起動（port 8080）
-# 上の curl でプレビュー → 問題なければ dryRun:false
+# 1) 疎通: GET /api/integrations/homecare/routes?date=...
+# 2) 写像確認: POST /api/integrations/homecare/sync {date}（dry-run）
+#    または pnpm --filter @workspace/api-server run sync:homecare（HOMECARE_SYNC_DRY_RUN 未設定）
+# 3) 問題なければ実書き込み（POST に dryRun:false / スクリプトは HOMECARE_SYNC_DRY_RUN=false）
 ```
