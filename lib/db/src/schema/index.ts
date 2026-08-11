@@ -17,3 +17,4 @@ export * from "./resident-services";
 export * from "./route-sheet-templates";
 export * from "./routeSheetCellAuditLog";
 export * from "./views";
+export * from "./transferRequests";

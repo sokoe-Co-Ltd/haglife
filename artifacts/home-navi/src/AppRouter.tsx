@@ -36,6 +36,7 @@ import ShiftsPage from "./pages/shifts";
 import RouteSheetTemplatesPage from "./pages/route-sheet-templates";
 import AuditDashboardPage from "./pages/admin/audit";
 import AuditCellDetailPage from "./pages/admin/audit/cells/[cellId]";
+import TransferRequestsPage from "./pages/transfer-requests";
 import { Layout } from "./components/layout";
 
 const PlaceholderPage = ({ title }: { title: string }) => (
@@ -86,6 +87,7 @@ export default function AppRouter() {
       <Route path="/route-sheet-templates" component={RouteSheetTemplatesPage} />
       <Route path="/admin/audit" component={AuditDashboardPage} />
       <Route path="/admin/audit/cells/:cellId" component={AuditCellDetailPage} />
+      <Route path="/transfer-requests" component={TransferRequestsPage} />
       <Route path="/settings" component={SettingsPage} />
       <Route component={() => <PlaceholderPage title="見つかりません" />} />
     </Switch>
