@@ -25,7 +25,6 @@ import {
   Route,
   CalendarDays,
   LayoutTemplate,
-  CreditCard,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -47,7 +46,6 @@ const NAV_ITEMS = [
   { href: "/staff", label: "職員一覧", icon: UserCircle },
   { href: "/residents/moved-out", label: "退去者情報", icon: DoorOpen },
   { href: "/settings", label: "設定", icon: Settings },
-  { href: "/transfer-requests", label: "振込依頼", icon: CreditCard },
 ];
 
 const BOTTOM_NAV = [

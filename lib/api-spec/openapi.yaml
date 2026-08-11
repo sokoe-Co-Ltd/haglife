@@ -47,8 +47,6 @@ tags:
     description: Weekly route sheet templates
   - name: audit
     description: Audit (admin-only) views for route-sheet plan vs actual
-  - name: transfer-requests
-    description: Transfer payment requests management
 
 paths:
   /healthz:
@@ -1114,88 +1112,6 @@ paths:
           description: Deleted
 
   # ── Settings ──────────────────────────────────────────────────
-  # ── Transfer Requests ────────────────────────────────────────────
-  /transfer-requests:
-    get:
-      operationId: listTransferRequests
-      tags: [transfer-requests]
-      summary: List transfer requests
-      parameters:
-        - in: query
-          name: status
-          schema:
-            type: string
-            enum: [未処理, 処理済]
-        - in: query
-          name: sort
-          schema:
-            type: string
-            enum: [due_date, payer_company]
-            default: due_date
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/TransferRequest"
-    post:
-      operationId: createTransferRequest
-      tags: [transfer-requests]
-      summary: Create a transfer request
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateTransferRequestBody"
-      responses:
-        "201":
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TransferRequest"
-
-  /transfer-requests/{id}:
-    patch:
-      operationId: updateTransferRequest
-      tags: [transfer-requests]
-      summary: Update a transfer request
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateTransferRequestBody"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TransferRequest"
-    delete:
-      operationId: deleteTransferRequest
-      tags: [transfer-requests]
-      summary: Delete a transfer request
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-      responses:
-        "204":
-          description: Deleted
 
   /settings/vital-thresholds:
     get:
@@ -2905,89 +2821,6 @@ components:
         validFrom:
           type: ["string", "null"]
         validUntil:
-          type: ["string", "null"]
-
-    # ── Transfer Requests ─────────────────────────────────────────
-    TransferRequest:
-      type: object
-      required: [id, title, payeeCompany, payerCompany, dueDate, status, requestedByName, createdAt]
-      properties:
-        id:
-          type: integer
-        title:
-          type: string
-        payeeCompany:
-          type: string
-        payerCompany:
-          type: string
-        dueDate:
-          type: string
-        status:
-          type: string
-          enum: [未処理, 処理済]
-        amount:
-          type: ["integer", "null"]
-        pdfUrl:
-          type: ["string", "null"]
-        requestedByName:
-          type: string
-        bankInfo:
-          type: ["string", "null"]
-        notes:
-          type: ["string", "null"]
-        createdAt:
-          type: string
-
-    CreateTransferRequestBody:
-      type: object
-      required: [title, payeeCompany, payerCompany, dueDate, requestedByName]
-      properties:
-        title:
-          type: string
-        payeeCompany:
-          type: string
-        payerCompany:
-          type: string
-        dueDate:
-          type: string
-        status:
-          type: string
-          enum: [未処理, 処理済]
-          default: 未処理
-        amount:
-          type: ["integer", "null"]
-        pdfUrl:
-          type: ["string", "null"]
-        requestedByName:
-          type: string
-        bankInfo:
-          type: ["string", "null"]
-        notes:
-          type: ["string", "null"]
-
-    UpdateTransferRequestBody:
-      type: object
-      properties:
-        title:
-          type: string
-        payeeCompany:
-          type: string
-        payerCompany:
-          type: string
-        dueDate:
-          type: string
-        status:
-          type: string
-          enum: [未処理, 処理済]
-        amount:
-          type: ["integer", "null"]
-        pdfUrl:
-          type: ["string", "null"]
-        requestedByName:
-          type: string
-        bankInfo:
-          type: ["string", "null"]
-        notes:
           type: ["string", "null"]
 
     # ── Dashboard ─────────────────────────────────────────────────

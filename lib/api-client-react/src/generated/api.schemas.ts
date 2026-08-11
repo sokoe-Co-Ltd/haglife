@@ -898,83 +898,6 @@ export interface UpdateInsuranceBody {
   validUntil?: string | null;
 }
 
-export type TransferRequestStatus =
-  (typeof TransferRequestStatus)[keyof typeof TransferRequestStatus];
-
-export const TransferRequestStatus = {
-  未処理: "未処理",
-  処理済: "処理済",
-} as const;
-
-export interface TransferRequest {
-  id: number;
-  title: string;
-  payeeCompany: string;
-  payerCompany: string;
-  dueDate: string;
-  status: TransferRequestStatus;
-  /** @nullable */
-  amount?: number | null;
-  /** @nullable */
-  pdfUrl?: string | null;
-  requestedByName: string;
-  /** @nullable */
-  bankInfo?: string | null;
-  /** @nullable */
-  notes?: string | null;
-  createdAt: string;
-}
-
-export type CreateTransferRequestBodyStatus =
-  (typeof CreateTransferRequestBodyStatus)[keyof typeof CreateTransferRequestBodyStatus];
-
-export const CreateTransferRequestBodyStatus = {
-  未処理: "未処理",
-  処理済: "処理済",
-} as const;
-
-export interface CreateTransferRequestBody {
-  title: string;
-  payeeCompany: string;
-  payerCompany: string;
-  dueDate: string;
-  status?: CreateTransferRequestBodyStatus;
-  /** @nullable */
-  amount?: number | null;
-  /** @nullable */
-  pdfUrl?: string | null;
-  requestedByName: string;
-  /** @nullable */
-  bankInfo?: string | null;
-  /** @nullable */
-  notes?: string | null;
-}
-
-export type UpdateTransferRequestBodyStatus =
-  (typeof UpdateTransferRequestBodyStatus)[keyof typeof UpdateTransferRequestBodyStatus];
-
-export const UpdateTransferRequestBodyStatus = {
-  未処理: "未処理",
-  処理済: "処理済",
-} as const;
-
-export interface UpdateTransferRequestBody {
-  title?: string;
-  payeeCompany?: string;
-  payerCompany?: string;
-  dueDate?: string;
-  status?: UpdateTransferRequestBodyStatus;
-  /** @nullable */
-  amount?: number | null;
-  /** @nullable */
-  pdfUrl?: string | null;
-  requestedByName?: string;
-  /** @nullable */
-  bankInfo?: string | null;
-  /** @nullable */
-  notes?: string | null;
-}
-
 export interface DashboardToday {
   date: string;
   totalResidents: number;
@@ -1556,27 +1479,6 @@ export type ListBathReportsParams = {
 export type ListInsurancesParams = {
   resident_id: number;
 };
-
-export type ListTransferRequestsParams = {
-  status?: ListTransferRequestsStatus;
-  sort?: ListTransferRequestsSort;
-};
-
-export type ListTransferRequestsStatus =
-  (typeof ListTransferRequestsStatus)[keyof typeof ListTransferRequestsStatus];
-
-export const ListTransferRequestsStatus = {
-  未処理: "未処理",
-  処理済: "処理済",
-} as const;
-
-export type ListTransferRequestsSort =
-  (typeof ListTransferRequestsSort)[keyof typeof ListTransferRequestsSort];
-
-export const ListTransferRequestsSort = {
-  due_date: "due_date",
-  payer_company: "payer_company",
-} as const;
 
 export type ListServiceTypesParams = {
   isActive?: boolean;

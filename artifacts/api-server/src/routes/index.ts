@@ -23,9 +23,6 @@ import residentPhotosRouter from "./residentPhotos";
 import eliminationPhotosRouter from "./eliminationPhotos";
 import dayServicePhotosRouter from "./dayServicePhotos";
 import auditRouter from "./audit";
-import transferRequestsRouter from "./transferRequests";
-import transferRequestFilesRouter from "./transferRequestFiles";
-import transferRequestAnalyzeRouter from "./transferRequestAnalyze";
 
 const router: IRouter = Router();
 
@@ -53,8 +50,5 @@ router.use(shiftsRouter);
 router.use(residentServicesRouter);
 router.use(routeSheetTemplatesRouter);
 router.use(auditRouter);
-router.use(transferRequestFilesRouter);
-router.use(transferRequestAnalyzeRouter);
-router.use(transferRequestsRouter);
 
 export default router;
