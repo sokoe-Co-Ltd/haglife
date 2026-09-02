@@ -3129,13 +3129,14 @@ components:
 
     ShiftType:
       type: object
-      required: [id, code, name, isActive, sortOrder]
+      required: [id, code, name, isActive, sortOrder, requiredStaffCount]
       properties:
         id: { type: string, format: uuid }
         code: { type: string }
         name: { type: string }
         defaultStartTime: { type: string, nullable: true }
         defaultEndTime: { type: string, nullable: true }
+        requiredStaffCount: { type: integer, minimum: 0, default: 0 }
         sortOrder: { type: integer }
         color: { type: string, nullable: true }
         isActive: { type: boolean }
@@ -3149,6 +3150,7 @@ components:
         name: { type: string }
         defaultStartTime: { type: string, nullable: true }
         defaultEndTime: { type: string, nullable: true }
+        requiredStaffCount: { type: integer, minimum: 0, default: 0 }
         sortOrder: { type: integer, default: 0 }
         color: { type: string, nullable: true }
         isActive: { type: boolean, default: true }
@@ -3159,6 +3161,7 @@ components:
         name: { type: string }
         defaultStartTime: { type: string, nullable: true }
         defaultEndTime: { type: string, nullable: true }
+        requiredStaffCount: { type: integer, minimum: 0 }
         sortOrder: { type: integer }
         color: { type: string, nullable: true }
         isActive: { type: boolean }

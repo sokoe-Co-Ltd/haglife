@@ -1076,6 +1076,8 @@ export interface ShiftType {
   name: string;
   defaultStartTime?: string | null;
   defaultEndTime?: string | null;
+  /** @minimum 0 */
+  requiredStaffCount: number;
   sortOrder: number;
   color?: string | null;
   isActive: boolean;
@@ -1088,6 +1090,8 @@ export interface ShiftTypeCreate {
   name: string;
   defaultStartTime?: string | null;
   defaultEndTime?: string | null;
+  /** @minimum 0 */
+  requiredStaffCount?: number;
   sortOrder?: number;
   color?: string | null;
   isActive?: boolean;
@@ -1098,6 +1102,8 @@ export interface ShiftTypeUpdate {
   name?: string;
   defaultStartTime?: string | null;
   defaultEndTime?: string | null;
+  /** @minimum 0 */
+  requiredStaffCount?: number;
   sortOrder?: number;
   color?: string | null;
   isActive?: boolean;

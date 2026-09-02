@@ -1798,12 +1798,19 @@ export const ListShiftTypesQueryParams = zod.object({
   isActive: zod.coerce.boolean().optional(),
 });
 
+export const listShiftTypesResponseRequiredStaffCountDefault = 0;
+export const listShiftTypesResponseRequiredStaffCountMin = 0;
+
 export const ListShiftTypesResponseItem = zod.object({
   id: zod.string().uuid(),
   code: zod.string(),
   name: zod.string(),
   defaultStartTime: zod.string().nullish(),
   defaultEndTime: zod.string().nullish(),
+  requiredStaffCount: zod
+    .number()
+    .min(listShiftTypesResponseRequiredStaffCountMin)
+    .default(listShiftTypesResponseRequiredStaffCountDefault),
   sortOrder: zod.number(),
   color: zod.string().nullish(),
   isActive: zod.boolean(),
@@ -1811,6 +1818,9 @@ export const ListShiftTypesResponseItem = zod.object({
   updatedAt: zod.coerce.date().optional(),
 });
 export const ListShiftTypesResponse = zod.array(ListShiftTypesResponseItem);
+
+export const createShiftTypeBodyRequiredStaffCountDefault = 0;
+export const createShiftTypeBodyRequiredStaffCountMin = 0;
 
 export const createShiftTypeBodySortOrderDefault = 0;
 export const createShiftTypeBodyIsActiveDefault = true;
@@ -1820,6 +1830,10 @@ export const CreateShiftTypeBody = zod.object({
   name: zod.string(),
   defaultStartTime: zod.string().nullish(),
   defaultEndTime: zod.string().nullish(),
+  requiredStaffCount: zod
+    .number()
+    .min(createShiftTypeBodyRequiredStaffCountMin)
+    .default(createShiftTypeBodyRequiredStaffCountDefault),
   sortOrder: zod.number().default(createShiftTypeBodySortOrderDefault),
   color: zod.string().nullish(),
   isActive: zod.boolean().default(createShiftTypeBodyIsActiveDefault),
@@ -1829,12 +1843,19 @@ export const GetShiftTypeParams = zod.object({
   id: zod.coerce.string().uuid(),
 });
 
+export const getShiftTypeResponseRequiredStaffCountDefault = 0;
+export const getShiftTypeResponseRequiredStaffCountMin = 0;
+
 export const GetShiftTypeResponse = zod.object({
   id: zod.string().uuid(),
   code: zod.string(),
   name: zod.string(),
   defaultStartTime: zod.string().nullish(),
   defaultEndTime: zod.string().nullish(),
+  requiredStaffCount: zod
+    .number()
+    .min(getShiftTypeResponseRequiredStaffCountMin)
+    .default(getShiftTypeResponseRequiredStaffCountDefault),
   sortOrder: zod.number(),
   color: zod.string().nullish(),
   isActive: zod.boolean(),
@@ -1846,15 +1867,24 @@ export const UpdateShiftTypeParams = zod.object({
   id: zod.coerce.string().uuid(),
 });
 
+export const updateShiftTypeBodyRequiredStaffCountMin = 0;
+
 export const UpdateShiftTypeBody = zod.object({
   code: zod.string().optional(),
   name: zod.string().optional(),
   defaultStartTime: zod.string().nullish(),
   defaultEndTime: zod.string().nullish(),
+  requiredStaffCount: zod
+    .number()
+    .min(updateShiftTypeBodyRequiredStaffCountMin)
+    .optional(),
   sortOrder: zod.number().optional(),
   color: zod.string().nullish(),
   isActive: zod.boolean().optional(),
 });
+
+export const updateShiftTypeResponseRequiredStaffCountDefault = 0;
+export const updateShiftTypeResponseRequiredStaffCountMin = 0;
 
 export const UpdateShiftTypeResponse = zod.object({
   id: zod.string().uuid(),
@@ -1862,6 +1892,10 @@ export const UpdateShiftTypeResponse = zod.object({
   name: zod.string(),
   defaultStartTime: zod.string().nullish(),
   defaultEndTime: zod.string().nullish(),
+  requiredStaffCount: zod
+    .number()
+    .min(updateShiftTypeResponseRequiredStaffCountMin)
+    .default(updateShiftTypeResponseRequiredStaffCountDefault),
   sortOrder: zod.number(),
   color: zod.string().nullish(),
   isActive: zod.boolean(),

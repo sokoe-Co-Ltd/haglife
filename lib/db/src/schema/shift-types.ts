@@ -6,6 +6,7 @@ export const shiftTypesTable = pgTable("shift_types", {
   name: text("name").notNull(),
   defaultStartTime: text("default_start_time"),
   defaultEndTime: text("default_end_time"),
+  requiredStaffCount: integer("required_staff_count").default(0).notNull(),
   sortOrder: integer("sort_order").default(0).notNull(),
   color: text("color"),
   isActive: boolean("is_active").default(true).notNull(),

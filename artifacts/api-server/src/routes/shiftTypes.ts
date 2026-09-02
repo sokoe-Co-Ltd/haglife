@@ -10,6 +10,7 @@ const createSchema = z.object({
   name: z.string().min(1),
   defaultStartTime: z.string().nullable().optional(),
   defaultEndTime: z.string().nullable().optional(),
+  requiredStaffCount: z.number().int().min(0).default(0),
   sortOrder: z.number().int().default(0),
   color: z.string().nullable().optional(),
   isActive: z.boolean().default(true),

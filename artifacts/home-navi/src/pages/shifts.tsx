@@ -92,6 +92,20 @@ export default function ShiftsPage() {
   const isLoading = shiftsQuery.isLoading || shiftTypesQuery.isLoading || staffQuery.isLoading;
   const hasError = shiftsQuery.isError || shiftTypesQuery.isError || staffQuery.isError;
   const isThisWeek = toDateStr(weekStart) === toDateStr(startOfWeek(new Date(), { weekStartsOn: 0 }));
+  const activeRequiredTypes = (shiftTypes as any[]).filter(t => t.isActive && (t.requiredStaffCount ?? 0) > 0);
+  const shortages = weekDates.flatMap(d => {
+    const date = toDateStr(d);
+    return activeRequiredTypes.flatMap(type => {
+      const assigned = (shifts as any[]).filter(s => s.date === date && s.shiftTypeId === type.id).length;
+      return assigned < type.requiredStaffCount
+        ? [{ date, type, assigned, missing: type.requiredStaffCount - assigned }]
+        : [];
+    });
+  });
+  const consecutiveWarnings = (staffList as any[]).flatMap(staff => {
+    const worked = weekDates.filter(d => Boolean(getShift(staff.id, toDateStr(d)))).length;
+    return worked === 7 ? [{ staff, worked }] : [];
+  });
 
   return (
     <Layout>
@@ -131,6 +145,27 @@ export default function ShiftsPage() {
           <MoveHorizontal className="h-4 w-4 shrink-0" />
           表を横にスワイプすると、ほかの曜日を確認できます
         </div>
+
+        {!isLoading && !hasError && (shortages.length > 0 || consecutiveWarnings.length > 0) && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+            <div className="flex items-center gap-2 font-semibold text-amber-900 text-sm">
+              <AlertCircle className="h-4 w-4" />
+              確認が必要な項目が{shortages.length + consecutiveWarnings.length}件あります
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {shortages.map(item => (
+                <span key={`${item.date}-${item.type.id}`} className="rounded-full bg-white border border-amber-200 px-2.5 py-1 text-xs text-amber-800">
+                  {format(parseISO(item.date), "M/d")} {item.type.name}：あと{item.missing}人
+                </span>
+              ))}
+              {consecutiveWarnings.map(item => (
+                <span key={item.staff.id} className="rounded-full bg-white border border-amber-200 px-2.5 py-1 text-xs text-amber-800">
+                  {item.staff.lastName} {item.staff.firstName}：週7日勤務
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {hasError ? (
           <div className="bg-white rounded-xl border border-red-200 py-12 px-4 text-center">
@@ -257,6 +292,23 @@ export default function ShiftsPage() {
               ))}
             </tbody>
           </table>
+          {!isLoading && activeRequiredTypes.length > 0 && (
+            <div className="sticky bottom-0 left-0 min-w-max border-t border-gray-200 bg-gray-50/95 backdrop-blur px-3 py-2">
+              <div className="flex gap-3 pl-28">
+                {weekDates.map(d => {
+                  const date = toDateStr(d);
+                  const dayShortages = shortages.filter(s => s.date === date);
+                  return (
+                    <div key={date} className="w-[112px] text-center text-[11px]">
+                      {dayShortages.length === 0
+                        ? <span className="text-green-700">配置OK</span>
+                        : <span className="font-semibold text-amber-700">不足 {dayShortages.reduce((n, s) => n + s.missing, 0)}人</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
         )}
       </div>

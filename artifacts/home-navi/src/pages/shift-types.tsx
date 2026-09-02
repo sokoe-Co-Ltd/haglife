@@ -15,6 +15,7 @@ type ShiftTypeForm = {
   name: string;
   defaultStartTime: string;
   defaultEndTime: string;
+  requiredStaffCount: number;
   sortOrder: number;
   color: string;
   isActive: boolean;
@@ -22,7 +23,7 @@ type ShiftTypeForm = {
 
 const DEFAULTS: ShiftTypeForm = {
   code: "", name: "", defaultStartTime: "", defaultEndTime: "",
-  sortOrder: 0, color: "", isActive: true,
+  requiredStaffCount: 0, sortOrder: 0, color: "", isActive: true,
 };
 
 export default function ShiftTypesPage() {
@@ -42,6 +43,7 @@ export default function ShiftTypesPage() {
       code: st.code, name: st.name,
       defaultStartTime: st.defaultStartTime ?? "",
       defaultEndTime: st.defaultEndTime ?? "",
+      requiredStaffCount: st.requiredStaffCount ?? 0,
       sortOrder: st.sortOrder, color: st.color ?? "", isActive: st.isActive,
     } : DEFAULTS);
     setEditingId(st ? st.id : null);
@@ -163,6 +165,11 @@ export default function ShiftTypesPage() {
                   <label className="text-xs text-gray-500 mb-1 block">終了時刻</label>
                   <Input value={form.defaultEndTime} onChange={(e) => setForm({ ...form, defaultEndTime: e.target.value })} className="h-8 text-sm" placeholder="17:30" />
                 </div>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">1日あたりの必要人数</label>
+                <Input type="number" min={0} value={form.requiredStaffCount} onChange={(e) => setForm({ ...form, requiredStaffCount: Math.max(0, parseInt(e.target.value) || 0) })} className="h-8 text-sm" />
+                <p className="text-[11px] text-gray-400 mt-1">0人の場合は不足判定を行いません</p>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
