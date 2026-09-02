@@ -6,9 +6,39 @@ id = "vT5B2-VtRxjGOH41w1hKv"
 uri = "file://screenshots/day-services-mobile.jpg"
 type = "image"
 title = "デイ準備物ページ（スマホ表示）"
+logical_id = "e5e810b2-177e-4203-9c2e-80c219315651"
 
 [[outputs]]
 id = "1NpMPHZZ6u-TvvlFaz_EF"
 uri = "file://screenshots/resident-detail-dayservice-mobile.jpg"
 type = "image"
 title = "利用者詳細のデイサービスカード（スマホ表示）"
+logical_id = "a020fdb2-6bf9-4dcd-8bb4-c49159a3cea6"
+
+[[outputs]]
+id = "3_6tOAofpgH7Uoovo5rcM"
+uri = "file://research/notes.md"
+type = "text"
+title = "調査ノート：シフト表アプリ"
+description = "競合UI/UXとデータ処理の調査計画・進行メモです。"
+logical_id = "6e3781a2-f53a-4ed6-b960-a1a15e3aa617"
+content_hash = "sha256:4b76ae4dff8e9d43a4710a5fa488af238ca87474f3d3f5a73576d78b6a6be7d6"
+size = 1278
+mtime_ms = 1788325605642
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:fcc9d0fd-475f-47eb-af74-2c7b4dcaf04f/6e3781a2-f53a-4ed6-b960-a1a15e3aa617/90d96a4e-6c47-4035-ab9f-0d0ea945e918"
+storage_version_token = "1788325607988226"
+content_type = "text/markdown"
+
+[[outputs]]
+id = "Mvyjm5aFjPpak4uQHZFLW"
+uri = "file://research/shift-scheduling-competitive-report.md"
+type = "text"
+title = "シフト表アプリ 競合・技術調査レポート"
+description = "国内外の競合UI/UX、データ処理、最適化技術、Home-Naviへの推奨優先順位をまとめました。"
+logical_id = "93cdb6c9-9264-4bc3-ac00-94ea485f5954"
+content_hash = "sha256:64b16cf4f1be9fc3b3866e18b6bc408c8f125c6a675cc8b8d515634e3ed59b75"
+size = 5393
+mtime_ms = 1788325913372
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:fcc9d0fd-475f-47eb-af74-2c7b4dcaf04f/93cdb6c9-9264-4bc3-ac00-94ea485f5954/6ebc887e-35b2-45d3-975a-29c4c8b3bb83"
+storage_version_token = "1788325915720531"
+content_type = "text/markdown"
