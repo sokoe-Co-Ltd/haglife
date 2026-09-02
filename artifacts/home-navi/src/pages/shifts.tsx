@@ -190,17 +190,17 @@ export default function ShiftsPage() {
   return (
     <Layout>
       <div className="space-y-4 max-w-6xl">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div>
             <h1 className="text-xl font-bold text-gray-800">シフト管理</h1>
             <p className="text-xs text-gray-500 mt-0.5">職員の週次シフトを設定します</p>
           </div>
-          <div className="flex w-full items-center gap-1.5 lg:w-auto lg:justify-end">
+          <div className="flex w-full items-center gap-1.5 xl:w-auto xl:justify-end">
             <Button variant="outline" size="icon" className="h-8 w-8" onClick={prevWeek}>
               <ChevronLeft className="h-4 w-4" />
               <span className="sr-only">前の週</span>
             </Button>
-            <span className="min-w-0 flex-1 text-center text-sm font-medium text-gray-700 sm:min-w-[170px] lg:flex-none">
+            <span className="min-w-0 flex-1 text-center text-sm font-medium text-gray-700 sm:min-w-[170px] xl:flex-none">
               {format(weekDates[0], "yyyy年M月d日", { locale: ja })} 〜 {format(weekDates[6], "M月d日", { locale: ja })}
             </span>
             <Button variant="outline" size="icon" className="h-8 w-8" onClick={nextWeek}>
@@ -215,7 +215,7 @@ export default function ShiftsPage() {
         </div>
 
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="flex flex-col gap-2 border-b border-gray-100 p-2.5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-2 border-b border-gray-100 p-2.5 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant={bulkMode ? "secondary" : "outline"}
