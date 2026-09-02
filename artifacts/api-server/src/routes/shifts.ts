@@ -51,10 +51,12 @@ router.post("/shifts/bulk", async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.format() });
   await db.transaction(async (tx) => {
     for (const s of parsed.data.shifts) {
-      await tx.insert(shiftsTable).values(s).onConflictDoUpdate({
-        target: [shiftsTable.date, shiftsTable.shiftTypeId, shiftsTable.slotLabel, shiftsTable.staffId],
-        set: { ...s, updatedAt: new Date() },
-      });
+      await tx.delete(shiftsTable).where(and(
+        eq(shiftsTable.staffId, s.staffId),
+        eq(shiftsTable.date, s.date),
+        eq(shiftsTable.slotLabel, s.slotLabel),
+      ));
+      await tx.insert(shiftsTable).values(s);
     }
   });
   return res.json({ ok: true });

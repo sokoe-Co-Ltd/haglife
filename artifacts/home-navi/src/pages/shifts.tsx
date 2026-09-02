@@ -12,8 +12,10 @@ import {
   AlertCircle,
   CalendarDays,
   CheckCircle2,
+  CheckSquare2,
   ChevronLeft,
   ChevronRight,
+  Copy,
   Loader2,
   MoveHorizontal,
 } from "lucide-react";
@@ -32,6 +34,9 @@ export default function ShiftsPage() {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 0 }));
   const [savingCell, setSavingCell] = useState<string | null>(null);
   const [savedCell, setSavedCell] = useState<string | null>(null);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
+  const [bulkShiftTypeId, setBulkShiftTypeId] = useState<string>("");
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -39,6 +44,11 @@ export default function ShiftsPage() {
   const to = toDateStr(weekDates[6]);
 
   const shiftsQuery = useListShifts({ from, to });
+  const previousWeekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i - 7));
+  const previousShiftsQuery = useListShifts({
+    from: toDateStr(previousWeekDates[0]),
+    to: toDateStr(previousWeekDates[6]),
+  });
   const shiftTypesQuery = useListShiftTypes();
   const staffQuery = useListStaff();
   const shifts = shiftsQuery.data ?? [];
@@ -85,6 +95,77 @@ export default function ShiftsPage() {
       });
     } finally {
       setSavingCell(null);
+    }
+  }
+
+  function toggleCell(staffId: number, date: string) {
+    const key = `${staffId}-${date}`;
+    setSelectedCells(current => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  async function applyBulkShift() {
+    if (!bulkShiftTypeId || selectedCells.size === 0) return;
+    const targets = [...selectedCells].map(key => {
+      const splitAt = key.indexOf("-");
+      return {
+        staffId: Number(key.slice(0, splitAt)),
+        date: key.slice(splitAt + 1),
+        shiftTypeId: bulkShiftTypeId,
+        slotLabel: "",
+      };
+    });
+    const overwriteCount = targets.filter(t => Boolean(getShift(t.staffId, t.date))).length;
+    if (overwriteCount > 0 && !confirm(`${targets.length}件のうち${overwriteCount}件は登録済みです。上書きしますか？`)) return;
+    try {
+      await bulkMut.mutateAsync({ data: { shifts: targets } });
+      setSelectedCells(new Set());
+      setBulkMode(false);
+      setBulkShiftTypeId("");
+      toast({ title: `${targets.length}件のシフトを設定しました` });
+    } catch {
+      toast({
+        title: "一括設定に失敗しました",
+        description: `対象${targets.length}件は保存されていません。もう一度実行してください。`,
+        variant: "destructive",
+      });
+    }
+  }
+
+  async function copyPreviousWeek() {
+    const visibleStaffIds = new Set((staffList as any[]).map(s => s.id));
+    const source = (previousShiftsQuery.data ?? []).filter((s: any) => visibleStaffIds.has(s.staffId));
+    if (source.length === 0) {
+      toast({ title: "前週にコピーできるシフトがありません" });
+      return;
+    }
+    const targets = (source as any[]).map(s => ({
+      staffId: s.staffId,
+      date: toDateStr(addDays(parseISO(s.date), 7)),
+      shiftTypeId: s.shiftTypeId,
+      slotLabel: s.slotLabel ?? "",
+      startTime: s.startTime ?? null,
+      endTime: s.endTime ?? null,
+      notes: s.notes ?? null,
+    }));
+    const overwriteCount = targets.filter(t => Boolean(getShift(t.staffId, t.date))).length;
+    const message = overwriteCount > 0
+      ? `前週から${targets.length}件をコピーします。登録済みの${overwriteCount}件は上書きされます。よろしいですか？`
+      : `前週から${targets.length}件をコピーします。よろしいですか？`;
+    if (!confirm(message)) return;
+    try {
+      await bulkMut.mutateAsync({ data: { shifts: targets } });
+      toast({ title: `${targets.length}件を前週からコピーしました` });
+    } catch {
+      toast({
+        title: "前週のコピーに失敗しました",
+        description: `対象${targets.length}件は保存されていません。もう一度実行してください。`,
+        variant: "destructive",
+      });
     }
   }
 
@@ -139,6 +220,50 @@ export default function ShiftsPage() {
               今週
             </Button>
           </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-white p-2.5">
+          <Button
+            variant={bulkMode ? "secondary" : "outline"}
+            size="sm"
+            onClick={() => {
+              setBulkMode(value => !value);
+              setSelectedCells(new Set());
+              setBulkShiftTypeId("");
+            }}
+          >
+            <CheckSquare2 className="mr-1.5 h-4 w-4" />
+            {bulkMode ? "一括設定を終了" : "複数セルを一括設定"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={copyPreviousWeek}
+            disabled={previousShiftsQuery.isLoading || bulkMut.isPending}
+          >
+            {bulkMut.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Copy className="mr-1.5 h-4 w-4" />}
+            前週をコピー
+          </Button>
+          {bulkMode && (
+            <>
+              <span className="text-xs font-medium text-gray-600">{selectedCells.size}件選択中</span>
+              <div className="w-40">
+                <Select value={bulkShiftTypeId} onValueChange={setBulkShiftTypeId}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="勤務を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(shiftTypes as any[]).filter(t => t.isActive).map(st => (
+                      <SelectItem key={st.id} value={st.id}>{st.code}　{st.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button size="sm" disabled={!bulkShiftTypeId || selectedCells.size === 0 || bulkMut.isPending} onClick={applyBulkShift}>
+                選択セルに設定
+              </Button>
+            </>
+          )}
         </div>
 
         <div className="md:hidden flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700">
@@ -226,9 +351,26 @@ export default function ShiftsPage() {
                     const shift = getShift(staff.id, dateStr);
                     const currentTypeId = shift?.shiftTypeId ?? "__clear__";
                     const cellKey = `${staff.id}-${dateStr}`;
+                    const isSelected = selectedCells.has(cellKey);
                     const selectedType = (shiftTypes as any[]).find(t => t.id === shift?.shiftTypeId);
                     return (
-                      <td key={dateStr} className="px-1 py-1 relative">
+                      <td
+                        key={dateStr}
+                        className={`px-1 py-1 relative ${bulkMode ? "cursor-pointer" : ""}`}
+                        onClick={() => bulkMode && toggleCell(staff.id, dateStr)}
+                      >
+                        {bulkMode ? (
+                          <button
+                            type="button"
+                            className={`h-10 w-full rounded-md border-2 text-xs font-semibold transition-colors ${
+                              isSelected
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "border-dashed border-gray-300 bg-gray-50 text-gray-500 hover:border-primary/50"
+                            }`}
+                          >
+                            {isSelected ? "選択済み" : selectedType?.code ?? "選択"}
+                          </button>
+                        ) : (
                         <Select
                           value={currentTypeId}
                           onValueChange={(v) => setShiftType(staff.id, dateStr, v)}
@@ -282,6 +424,7 @@ export default function ShiftsPage() {
                             ))}
                           </SelectContent>
                         </Select>
+                        )}
                         {savedCell === cellKey && (
                           <CheckCircle2 className="absolute right-0.5 top-0.5 h-3 w-3 text-green-600 bg-white rounded-full" />
                         )}
