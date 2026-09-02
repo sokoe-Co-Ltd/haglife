@@ -42,3 +42,17 @@ mtime_ms = 1788325913372
 storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:fcc9d0fd-475f-47eb-af74-2c7b4dcaf04f/93cdb6c9-9264-4bc3-ac00-94ea485f5954/6ebc887e-35b2-45d3-975a-29c4c8b3bb83"
 storage_version_token = "1788325915720531"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "k3_KpuE0hFSRfae-bxfVB"
+uri = "file://docs/CODEX_HANDOFF.md"
+type = "text"
+title = "Home-Navi Codex 引き継ぎ資料"
+description = "Codexへそのまま渡せる指示、データ保存先、主要ファイル、実装済み内容、次の作業候補をまとめています。"
+logical_id = "21684c13-a50e-4241-8692-05c384aab00d"
+content_hash = "sha256:6ca88ec6661e49b28272931bdbbbb7c4202667a281c53338aacb1d5cc6ac6d83"
+size = 5036
+mtime_ms = 1788328837848
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:fcc9d0fd-475f-47eb-af74-2c7b4dcaf04f/21684c13-a50e-4241-8692-05c384aab00d/2b9bbc9f-2dd2-4677-9ae1-938901a8efd9"
+storage_version_token = "1788328840084478"
+content_type = "text/markdown"
