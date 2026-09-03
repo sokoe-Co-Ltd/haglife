@@ -215,7 +215,7 @@ export default function ShiftsPage() {
         </div>
 
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="flex flex-col gap-2 border-b border-gray-100 p-2.5 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex flex-col gap-2 p-2.5 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant={bulkMode ? "secondary" : "outline"}
@@ -246,8 +246,43 @@ export default function ShiftsPage() {
             </div>
           </div>
 
+        </div>
+
+        <div className="md:hidden flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700">
+          <MoveHorizontal className="h-4 w-4 shrink-0" />
+          表を横にスワイプすると、ほかの曜日を確認できます
+        </div>
+
+        {!isLoading && !hasError && (shortages.length > 0 || consecutiveWarnings.length > 0) && (
+          <details className="group rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-amber-900">
+              <span className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                確認が必要な項目が
+                {shortages.length + consecutiveWarnings.length}件あります
+              </span>
+              <span className="text-xs font-normal text-amber-700 group-open:hidden">詳細を見る</span>
+              <span className="hidden text-xs font-normal text-amber-700 group-open:inline">閉じる</span>
+            </summary>
+            <div className="mt-2 flex flex-wrap gap-2 border-t border-amber-200 pt-2">
+              {shortages.map((item) => (
+                <span key={`${item.date}-${item.type.id}`} className="rounded-full bg-white border border-amber-200 px-2.5 py-1 text-xs text-amber-800">
+                  {format(parseISO(item.date), "M/d")} {item.type.name}：あと
+                  {item.missing}人
+                </span>
+              ))}
+              {consecutiveWarnings.map((item) => (
+                <span key={item.staff.id} className="rounded-full bg-white border border-amber-200 px-2.5 py-1 text-xs text-amber-800">
+                  {item.staff.lastName} {item.staff.firstName}：週7日勤務
+                </span>
+              ))}
+            </div>
+          </details>
+        )}
+
+        <div className={`sticky top-0 z-30 overflow-hidden rounded-xl border shadow-sm ${bulkMode ? "border-blue-200 bg-blue-50" : "border-gray-200 bg-white"}`}>
           {bulkMode ? (
-            <div className="flex flex-wrap items-center gap-2 bg-blue-50/70 p-2.5">
+            <div className="flex flex-wrap items-center gap-2 p-2.5">
               <span className="min-w-[76px] text-xs font-semibold text-blue-900">{selectedCells.size}枠を選択</span>
               <div className="w-44">
                 <Select value={bulkShiftTypeId} onValueChange={setBulkShiftTypeId}>
@@ -313,38 +348,6 @@ export default function ShiftsPage() {
             </div>
           )}
         </div>
-
-        <div className="md:hidden flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700">
-          <MoveHorizontal className="h-4 w-4 shrink-0" />
-          表を横にスワイプすると、ほかの曜日を確認できます
-        </div>
-
-        {!isLoading && !hasError && (shortages.length > 0 || consecutiveWarnings.length > 0) && (
-          <details className="group rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-amber-900">
-              <span className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4" />
-                確認が必要な項目が
-                {shortages.length + consecutiveWarnings.length}件あります
-              </span>
-              <span className="text-xs font-normal text-amber-700 group-open:hidden">詳細を見る</span>
-              <span className="hidden text-xs font-normal text-amber-700 group-open:inline">閉じる</span>
-            </summary>
-            <div className="mt-2 flex flex-wrap gap-2 border-t border-amber-200 pt-2">
-              {shortages.map((item) => (
-                <span key={`${item.date}-${item.type.id}`} className="rounded-full bg-white border border-amber-200 px-2.5 py-1 text-xs text-amber-800">
-                  {format(parseISO(item.date), "M/d")} {item.type.name}：あと
-                  {item.missing}人
-                </span>
-              ))}
-              {consecutiveWarnings.map((item) => (
-                <span key={item.staff.id} className="rounded-full bg-white border border-amber-200 px-2.5 py-1 text-xs text-amber-800">
-                  {item.staff.lastName} {item.staff.firstName}：週7日勤務
-                </span>
-              ))}
-            </div>
-          </details>
-        )}
 
         {hasError ? (
           <div className="bg-white rounded-xl border border-red-200 py-12 px-4 text-center">
