@@ -91,6 +91,7 @@ POST /shifts/bulk は、同じ staffId・date・slotLabel の既存シフトを�
 
 - research/shift-scheduling-competitive-report.md
 - research/notes.md
+- シフト機能のUI・データ・既存機能への影響確認基準: docs/SHIFT_FEATURE_IMPACT_MATRIX.md
 
 ### 開発コマンド
 
